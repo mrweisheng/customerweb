@@ -1,0 +1,80 @@
+:root {
+  --primary: #007AFF;
+  --primary-light: rgba(0, 122, 255, 0.1);
+  --success: #34C759;
+  --warning: #FF9500;
+  --danger: #FF3B30;
+  --text-primary: #1D1D1F;
+  --text-secondary: rgba(29, 29, 31, 0.55);
+  --text-tertiary: rgba(29, 29, 31, 0.28);
+  --bg-primary: #F5F5F7;
+  --bg-card: rgba(255, 255, 255, 0.72);
+  --border-glass: rgba(0, 0, 0, 0.06);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+}
+
+input, textarea {
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.page {
+  padding: 0 14px 80px;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .page {
+    max-width: 414px;
+    margin: 0 auto;
+  }
+}
