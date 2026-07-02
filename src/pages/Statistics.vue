@@ -214,6 +214,17 @@
       </div>
     </div>
 
+    <ConfirmDialog
+      :show="showConfirmRemove"
+      title="確認移除"
+      :desc="`確定將「${visitCustomerName}」從重點客戶中移除？`"
+      cancel-text="再想想"
+      confirm-text="確認移除"
+      danger
+      @cancel="cancelConfirmRemove"
+      @confirm="doRemovePriority"
+    />
+
     <div class="toast" v-if="toast.show">{{ toast.message }}</div>
   </div>
 </template>
@@ -224,6 +235,7 @@ import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
 import { AVATAR_COLORS, calcVisitStatus } from '../utils/constants'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const router = useRouter()
 const loggedIn = ref(false)
@@ -258,6 +270,7 @@ const visitRemark = ref('')
 const visitLastRemark = ref('')
 const visitDaysAgo = ref('')
 const toast = reactive({ show: false, message: '' })
+const showConfirmRemove = ref(false)
 
 const trendCanvasRef = ref(null)
 const monthlyCanvasRef = ref(null)
@@ -716,11 +729,24 @@ async function saveVisit() {
 
 function removePriority() {
   if (!visitRemark.value.trim()) { showToast('請填寫取消原因'); return }
-  if (confirm(`確定將「${visitCustomerName.value}」從重點客戶中移除？`)) {
-    api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: false, remark: visitRemark.value })
-      .then(() => { showToast('已移除'); closeVisitModal(); loadPriorityCustomers(); loadStats() })
-      .catch(() => { showToast('操作失敗') })
-  }
+  showVisitModal.value = false
+  showConfirmRemove.value = true
+}
+
+function cancelConfirmRemove() {
+  showConfirmRemove.value = false
+  showVisitModal.value = true
+}
+
+async function doRemovePriority() {
+  showConfirmRemove.value = false
+  try {
+    await api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: false, remark: visitRemark.value })
+    showToast('已移除')
+    closeVisitModal()
+    loadPriorityCustomers()
+    loadStats()
+  } catch (e) { showToast('操作失敗') }
 }
 
 async function confirmAddPriorityFromDetail() {

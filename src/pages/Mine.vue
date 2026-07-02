@@ -65,6 +65,17 @@
       <button class="btn-logout" @click="onLogout">退出登錄</button>
     </div>
 
+    <ConfirmDialog
+      :show="showConfirmLogout"
+      title="退出登錄"
+      desc="確定要退出登錄嗎？"
+      cancel-text="取消"
+      confirm-text="退出"
+      danger
+      @cancel="showConfirmLogout = false"
+      @confirm="doLogout"
+    />
+
     <div class="toast" v-if="toast.show">{{ toast.message }}</div>
   </div>
 </template>
@@ -75,6 +86,7 @@ import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo, setUserInfo, clearAuth, getToken } from '../utils/auth'
 import { getAvatarColor } from '../utils/constants'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const router = useRouter()
 const userInfo = ref(null)
@@ -82,6 +94,7 @@ const loggedIn = ref(false)
 const editNickname = ref('')
 const avatarInput = ref(null)
 const toast = reactive({ show: false, message: '' })
+const showConfirmLogout = ref(false)
 
 const isAdmin = computed(() => userInfo.value?.role === 'admin')
 const avatarText = computed(() => {
@@ -161,12 +174,15 @@ async function onNicknameBlur() {
 }
 
 function onLogout() {
-  if (confirm('確定要退出登錄嗎？')) {
-    clearAuth()
-    loggedIn.value = false
-    userInfo.value = null
-    showToast('已退出')
-  }
+  showConfirmLogout.value = true
+}
+
+function doLogout() {
+  showConfirmLogout.value = false
+  clearAuth()
+  loggedIn.value = false
+  userInfo.value = null
+  showToast('已退出')
 }
 
 onMounted(() => {

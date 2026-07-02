@@ -12,6 +12,12 @@ const routes = [
     meta: { title: '首頁', showTabbar: true },
   },
   {
+    path: '/priority',
+    name: 'Priority',
+    component: () => import('../pages/Priority.vue'),
+    meta: { title: '重點', showTabbar: true },
+  },
+  {
     path: '/statistics',
     name: 'Statistics',
     component: () => import('../pages/Statistics.vue'),
