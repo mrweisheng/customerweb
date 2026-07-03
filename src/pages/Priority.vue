@@ -118,7 +118,11 @@
             </span>
           </div>
           <div class="card-remark" :class="{ placeholder: !customer.remark }">
-            {{ customer.remark || '暫無標注' }}
+            <svg class="remark-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+              <line x1="4" y1="22" x2="4" y2="15"></line>
+            </svg>
+            <span class="remark-text">{{ customer.remark || '暫無標注' }}</span>
           </div>
           <div class="card-foot">
             <span class="visit-dot"></span>
@@ -669,21 +673,48 @@ onMounted(() => {
 .copy-btn.copied { color: var(--success); }
 .copy-btn svg { width: 13px; height: 13px; }
 .card-remark {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  margin: 0 0 10px;
-  padding-left: 8px;
-  border-left: 2px solid rgba(0, 0, 0, 0.07);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: linear-gradient(135deg, #FFF8F0 0%, #FFE8CC 100%);
+  border: 1px solid rgba(234, 88, 12, 0.22);
+  border-left: 3px solid #EA580C;
+  border-radius: 9px;
+  padding: 7px 9px 7px 8px;
+  margin: 2px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #9A3412;
   word-break: break-all;
   overflow-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(180, 83, 9, 0.06);
+}
+.remark-flag {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+  color: #EA580C;
+}
+.remark-text {
+  flex: 1;
+  min-width: 0;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 18px;
 }
-.card-remark.placeholder { color: var(--text-tertiary); border-left-color: transparent; }
+.card-remark.placeholder {
+  background: rgba(0, 0, 0, 0.025);
+  border-color: transparent;
+  border-left-color: rgba(0, 0, 0, 0.1);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  box-shadow: none;
+}
+.card-remark.placeholder .remark-flag { color: var(--text-tertiary); opacity: 0.5; }
 .card-foot { display: flex; align-items: center; gap: 5px; }
 .visit-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 .visit-text { font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
