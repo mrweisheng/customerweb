@@ -154,7 +154,7 @@
           </div>
           <div class="result-meta">{{ customer.remark || '—' }}</div>
         </div>
-        <div class="result-visit" v-if="customer.visitStatus" :class="customer.visitStatus.class">
+        <div class="result-visit" v-if="customer.is_priority && customer.visitStatus" :class="customer.visitStatus.class">
           {{ customer.visitStatus.text }}
         </div>
         <span class="action-arrow">›</span>
