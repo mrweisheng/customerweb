@@ -184,7 +184,7 @@ async function doSearch() {
   }
 
   try {
-    const res = await api.get('/customers/search', { params: { q: query } })
+    const res = await api.get('/customers/search', { params: { keyword: query } })
     searchResults.value = (res || []).map((c, idx) => ({
       ...c,
       lead_date_short: c.lead_date ? c.lead_date.slice(5).replace('-', '') : '',
