@@ -4,18 +4,18 @@
     <div class="demo-banner" v-if="!loggedIn">
       <div class="demo-banner-text">
         <div class="demo-banner-badge">示例</div>
-        <span class="demo-banner-label">當前為示例數據</span>
+        <span class="demo-banner-label">当前为示例数据</span>
       </div>
-      <div class="demo-banner-btn" @click="onAccountLogin">立即登錄</div>
+      <div class="demo-banner-btn" @click="onAccountLogin">立即登录</div>
     </div>
 
     <!-- 管理员用户切换 -->
     <div v-if="loggedIn && isAdmin" class="admin-user-select">
       <div class="user-select-trigger" @click="showUserPicker = true">
-        <span class="user-select-label">查看用戶:</span>
+        <span class="user-select-label">查看用户:</span>
         <div class="user-select-value">
           {{ currentUserName }}
-          <span class="user-select-arrow">▼</span>
+          <span class="user-select-arrow">▾</span>
         </div>
       </div>
     </div>
@@ -24,7 +24,7 @@
     <div class="modal-mask" v-if="showUserPicker" @click="showUserPicker = false">
       <div class="modal-sheet" @click.stop>
         <div class="modal-handle"></div>
-        <div class="modal-title">選擇用戶</div>
+        <div class="modal-title">切换用户</div>
         <div class="user-picker-list">
           <div
             v-for="(user, index) in userPickerList"
@@ -39,76 +39,86 @@
       </div>
     </div>
 
-    <div class="greeting-section">
-      <div class="greeting-hi">{{ greetingTime }}</div>
-      <div class="greeting-quote">{{ greetingQuote }}</div>
-    </div>
-
-    <!-- 重点优先客户 -->
-    <div class="hero-stat-card">
-      <div>
-        <div class="hero-label">重點優先客戶</div>
-        <div class="hero-value">{{ priorityCount }}</div>
+    <!-- 顶部行：问候 + 操作 -->
+    <div class="page-top-row">
+      <div class="greeting-section">
+        <div class="greeting-hi">{{ greetingTime }}</div>
+        <div class="greeting-quote">{{ greetingQuote }}</div>
       </div>
-      <div class="hero-icon-wrap">★</div>
-    </div>
 
-    <div class="secondary-stats-grid">
-      <div class="sec-stat-card">
-        <div class="sec-content-row">
-          <div class="sec-label-new">
-            <div class="sec-label-line1">昨日</div>
-            <div class="sec-label-line2">新增</div>
+      <div class="quick-actions" v-if="loggedIn && !isAdmin">
+        <div class="action-card ai-card" @click="goToAiImport">
+          <div class="action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#32ADE6" stroke-width="2" width="20" height="20">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
           </div>
-          <div class="sec-value-wrap">
-            <div class="sec-value">{{ yesterdayCount }}</div>
-            <div v-if="yesterdayCompareAbs > 0" class="trend-text" :class="yesterdayComparePercent >= 0 ? 'up' : 'down'">
-              {{ yesterdayComparePercent >= 0 ? '↑' : '↓' }}{{ yesterdayCompareAbs }}%
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="sec-stat-card">
-        <div class="sec-content-row">
-          <div class="sec-label-new">
-            <div class="sec-label-line1">本月</div>
-            <div class="sec-label-line2">新增</div>
-          </div>
-          <div class="sec-value-wrap">
-            <div class="sec-value">{{ monthCount }}</div>
-            <div v-if="monthCompareAbs > 0" class="trend-text" :class="monthComparePercent >= 0 ? 'up' : 'down'">
-              {{ monthComparePercent >= 0 ? '↑' : '↓' }}{{ monthCompareAbs }}%
-            </div>
+          <div class="action-text-group">
+            <div class="action-title">拍照导入</div>
+            <div class="action-desc">拍照智能识别</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="tertiary-stats">
-      <div class="tertiary-stat">上月客資<span class="tertiary-value">{{ lastMonthCount }}</span></div>
-      <div class="tertiary-divider"></div>
-      <div class="tertiary-stat">歷史客資<span class="tertiary-value">{{ totalCount }}</span></div>
-    </div>
-
-    <div class="quick-actions" v-if="loggedIn && !isAdmin">
-      <div class="action-card ai-card" @click="goToAiImport">
-        <div class="action-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#32ADE6" stroke-width="2" width="20" height="20">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-            <polyline points="21 15 16 10 5 21"></polyline>
-          </svg>
+    <!-- 统计卡片行：4 个等宽 KPI 卡 -->
+    <div class="stats-row">
+      <div class="kpi-card kpi-orange">
+        <div class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.94 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 7.06-1.01L12 2z"/></svg>
         </div>
-        <div class="action-text-group">
-          <div class="action-title">截圖導入</div>
-          <div class="action-desc">截圖智能識別</div>
+        <div class="kpi-body">
+          <div class="kpi-label">重点优先</div>
+          <div class="kpi-value">{{ priorityCount }}</div>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-green">
+        <div class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-label">昨日新增</div>
+          <div class="kpi-value">{{ yesterdayCount }}</div>
+          <div class="kpi-trend" :class="yesterdayComparePercent >= 0 ? 'up' : 'down'" v-if="yesterdayCompareAbs > 0">{{ yesterdayComparePercent >= 0 ? '↑' : '↓' }}{{ yesterdayCompareAbs }}%</div>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-label">本月新增</div>
+          <div class="kpi-value">{{ monthCount }}</div>
+          <div class="kpi-trend" :class="monthComparePercent >= 0 ? 'up' : 'down'" v-if="monthCompareAbs > 0">{{ monthComparePercent >= 0 ? '↑' : '↓' }}{{ monthCompareAbs }}%</div>
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-cyan">
+        <div class="kpi-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-label">历史客户</div>
+          <div class="kpi-value">{{ totalCount }}</div>
+          <div class="kpi-sub">上月 +{{ lastMonthCount }}</div>
         </div>
       </div>
     </div>
 
-    <div class="section-block">
+    <!-- 左列：客户趋势 + 快速导入 / 右列：更新日集 -->
+    <div class="home-grid-2col">
+    <div class="home-col-left">
+    <!-- 客户趋势 -->
+    <div class="section-block trend-block">
       <div class="section-header">
-        <div class="section-title">客資趨勢</div>
+        <div class="section-title">
+          <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          客户趋势
+        </div>
         <div class="trend-pills">
           <div class="trend-pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
           <div class="trend-pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
@@ -128,12 +138,12 @@
       <div class="trend-summary" v-if="trendSummary">
         <div class="trend-summary-item">
           <div class="trend-summary-value">{{ trendSummary.currentTotal }}</div>
-          <div class="trend-summary-label">本期合計</div>
+          <div class="trend-summary-label">本期合计</div>
           <div class="trend-summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
         </div>
         <div class="trend-summary-item">
           <div class="trend-summary-value secondary">{{ trendSummary.prevTotal }}</div>
-          <div class="trend-summary-label">上期合計</div>
+          <div class="trend-summary-label">上期合计</div>
           <div class="trend-summary-label" style="margin-top:0">—</div>
         </div>
         <div class="trend-summary-item">
@@ -144,13 +154,87 @@
       </div>
     </div>
 
-    <div class="section-block">
+    <!-- PC 端内嵌导入区域（仅桌面端显示） -->
+    <div class="home-import" v-if="isDesktop && loggedIn && !isAdmin">
       <div class="section-header">
-        <div class="section-title">更新日曆</div>
+        <div class="section-title">
+          <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          快速导入
+        </div>
+        <div class="import-progress" v-if="importQueue.length">{{ importDoneCount }}/{{ importQueue.length }} 已识别</div>
+      </div>
+
+      <!-- 选图区：点击 / 拖拽 / 全局粘贴 -->
+      <div
+        class="import-dropzone"
+        :class="{ dragging: importDragging }"
+        @click="chooseImportImage"
+        @dragover.prevent="importDragging = true"
+        @dragleave.prevent="importDragging = false"
+        @drop.prevent="onImportDrop"
+      >
+        <div class="dropzone-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div class="dropzone-text">粘贴截图 · 点击选择 · 拖拽到此处</div>
+        <div class="dropzone-hint">支持 JPG / PNG，最多 {{ IMPORT_MAX }} 张，可分多次添加</div>
+      </div>
+
+      <!-- 缩略图队列 -->
+      <div class="import-thumbs" v-if="importQueue.length">
+        <div class="import-thumb" v-for="item in importQueue" :key="item.id" :class="item.status">
+          <img v-if="item.thumb" :src="item.thumb" />
+          <div class="import-thumb-status">
+            <span v-if="item.status === 'pending'">等待中</span>
+            <span v-else-if="item.status === 'processing'" class="processing">识别中…</span>
+            <span v-else-if="item.status === 'done'" class="done">{{ item.contactsFound }} 人</span>
+            <span v-else class="error">失败</span>
+          </div>
+          <button v-if="item.status === 'error'" class="import-thumb-retry" @click.stop="retryImportItem(item.id)">重试</button>
+          <button class="import-thumb-remove" @click.stop="removeImportItem(item.id)">✕</button>
+        </div>
+      </div>
+
+      <!-- 识别结果原地展开 -->
+      <div class="import-contacts" v-if="importContacts.length">
+        <div class="import-contacts-header">
+          <span>识别到 {{ importContacts.length }} 位联系人</span>
+          <span class="import-valid-count">已选 {{ importValidCount }} 位有效</span>
+        </div>
+        <div class="import-contact-list">
+          <label class="import-contact" v-for="(c, i) in importContacts" :key="i" :class="{ invalid: !c.date }">
+            <input type="checkbox" v-model="c.selected" :disabled="!c.date" />
+            <span class="import-contact-name">{{ c.name }}</span>
+            <span class="import-contact-date" v-if="c.date">{{ c.date }}</span>
+            <span class="import-contact-date invalid" v-else>日期无效</span>
+          </label>
+        </div>
+        <div class="import-actions">
+          <button class="btn-import-secondary" @click="clearImport">清空</button>
+          <button class="btn-import-primary" :disabled="importValidCount === 0 || importing" @click="startHomeImport">
+            {{ importing ? '导入中…' : `导入 ${importValidCount} 位` }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 导入结果反馈 -->
+      <div class="import-result" v-if="importResult" :class="importResult.success ? 'success' : 'error'">
+        {{ importResult.success ? `✓ 成功导入 ${importResult.count} 位联系人` : `✗ ${importResult.error}` }}
+      </div>
+    </div>
+    </div><!-- /.home-col-left -->
+
+    <!-- 更新日集 -->
+    <div class="section-block calendar-block">
+      <div class="section-header">
+        <div class="section-title">
+          <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          更新日集
+        </div>
         <div class="cal-nav">
-          <div class="cal-nav-btn" @click="prevMonth">◀</div>
+          <div class="cal-nav-btn" @click="prevMonth">‹</div>
           <div class="cal-month-label">{{ calendarYear }}年{{ calendarMonth }}月</div>
-          <div class="cal-nav-btn" :class="{ disabled: isCurrentMonth }" @click="nextMonth">▶</div>
+          <div class="cal-nav-btn" :class="{ disabled: isCurrentMonth }" @click="nextMonth">›</div>
         </div>
       </div>
       <div class="cal-legend">
@@ -172,12 +256,12 @@
       <div class="cal-summary" v-if="calendarData">
         <div class="cal-summary-item">
           <div class="cal-summary-value cal-text-updated">{{ calendarData.updated_count }}</div>
-          <div class="cal-summary-label">已更新天數</div>
+          <div class="cal-summary-label">已更新天数</div>
         </div>
         <div class="cal-summary-divider"></div>
         <div class="cal-summary-item">
           <div class="cal-summary-value cal-text-missed">{{ calendarData.missed_count }}</div>
-          <div class="cal-summary-label">未更新天數</div>
+          <div class="cal-summary-label">未更新天数</div>
         </div>
         <div class="cal-summary-divider"></div>
         <div class="cal-summary-item">
@@ -186,14 +270,15 @@
         </div>
       </div>
     </div>
+    </div><!-- /.home-grid-2col -->
 
-    <!-- 设置优先弹窗 -->
+    <!-- 设置重点弹窗 -->
     <div class="modal-mask" v-if="showPriorityModal" @click="closePriorityModal">
       <div class="modal-sheet" @click.stop>
         <div class="modal-handle"></div>
-        <div class="modal-title">設為優先客戶</div>
-        <input class="priority-input" placeholder="請輸入備註原因" v-model="priorityRemark" />
-        <div class="btn-full primary" @click="confirmPriority">確認設置</div>
+        <div class="modal-title">备注重点客户</div>
+        <input class="priority-input" placeholder="请输入备注原因" v-model="priorityRemark" />
+        <div class="btn-full primary" @click="confirmPriority">确认设置</div>
       </div>
     </div>
 
@@ -206,8 +291,21 @@ import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
+import { recognizeImage } from '../utils/aiRecognize'
+import { useDevice } from '../composables/useDevice'
 
 const router = useRouter()
+const { isDesktop } = useDevice()
+
+// PC 端内嵌导入区域
+const IMPORT_MAX = 20
+const importQueue = ref([])
+const importContacts = ref([])
+const importing = ref(false)
+const importResult = ref(null)
+const importDragging = ref(false)
+const activeImportControllers = new Map()
+let importProcessing = false
 
 const loggedIn = ref(false)
 const greetingTime = ref('')
@@ -239,19 +337,22 @@ const currentUserId = ref(null)
 const usersList = ref([])
 const showUserPicker = ref(false)
 const currentUserPickerIndex = ref(0)
-const userPickerList = ref([{ id: 0, label: '全部用戶', value: null }])
+const userPickerList = ref([{ id: 0, label: '全部用户', value: null }])
 const toast = reactive({ show: false, message: '' })
 
 let animTimer = null
 
 const currentUserName = computed(() => {
-  return userPickerList.value[currentUserPickerIndex.value]?.label || '全部用戶'
+  return userPickerList.value[currentUserPickerIndex.value]?.label || '全部用户'
 })
 
 const isCurrentMonth = computed(() => {
   const today = new Date()
   return calendarYear.value === today.getFullYear() && calendarMonth.value === today.getMonth() + 1
 })
+
+const importDoneCount = computed(() => importQueue.value.filter(i => i.status === 'done').length)
+const importValidCount = computed(() => importContacts.value.filter(c => c.selected && c.date).length)
 
 function showToast(message, duration = 2000) {
   toast.message = message
@@ -268,13 +369,13 @@ function setGreeting() {
   else if (hour >= 18) g = '晚上好'
 
   const quotes = [
-    '每一步，都算數',
-    '相信過程，靜待花開',
-    '積跬步，至千里',
-    '好的關係，值得用心經營',
-    '每一次回訪，都是新的開始',
-    '客喺邊，專業喺邊',
-    '日拱一卒，功不唐捐',
+    '每一步，都算数',
+    '相信过程，静待花开',
+    '笃行者，至千里',
+    '好的开始，值得用心经营',
+    '每一次回访，都是新的开始',
+    '客户至上，用心服务',
+    '日积一卒，功不唐捐',
   ]
   const dayQuote = quotes[new Date().getDay()]
 
@@ -313,7 +414,7 @@ function loadMockData() {
     prevTotal: 52,
     todayCount: 12,
     compareDir: 'up',
-    compareText: '↑ 31%',
+    compareText: '↑31%',
   }
 
   nextTick(() => {
@@ -365,11 +466,11 @@ function drawTrendCanvas(counts, prevCounts) {
 
   const ctx = canvas.getContext('2d')
   const dpr = window.devicePixelRatio || 1
-  
+
   const container = canvas.parentElement
   const width = container.clientWidth
-  const height = 120
-  
+  const height = window.innerWidth >= 1024 ? 200 : 120
+
   canvas.width = width * dpr
   canvas.height = height * dpr
   canvas.style.width = width + 'px'
@@ -387,7 +488,7 @@ function drawTrendCanvas(counts, prevCounts) {
 
   function drawLine(data, color, fillColor) {
     if (data.length < 2) return
-    
+
     ctx.beginPath()
     ctx.strokeStyle = color
     ctx.lineWidth = 2
@@ -425,7 +526,7 @@ async function loadUsersList() {
   try {
     const res = await api.get('/customers/users/list')
     const users = res || []
-    const pickerList = [{ id: 0, label: '全部用戶', value: null }]
+    const pickerList = [{ id: 0, label: '全部用户', value: null }]
     users.forEach((user) => {
       pickerList.push({
         id: user.id,
@@ -502,7 +603,7 @@ async function loadStats() {
 
     animateNumbers(targetData)
   } catch (e) {
-    showToast('加載統計失敗')
+    showToast('加载统计失败')
   }
 }
 
@@ -569,7 +670,7 @@ async function loadTrend() {
       compareText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
     } else {
       compareDir = 'up'
-      compareText = currentTotal > 0 ? '↑ 新增' : '—'
+      compareText = currentTotal > 0 ? '↑新增' : '—'
     }
 
     trendDateLabels.value = labels
@@ -587,13 +688,13 @@ async function loadTrend() {
       }, 100)
     })
   } catch (e) {
-    showToast('加載趨勢失敗')
+    showToast('加载趋势失败')
   }
 }
 
 function switchTrendDays(days) {
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
   trendDays.value = days
@@ -602,7 +703,7 @@ function switchTrendDays(days) {
 
 function prevMonth() {
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
   let year = calendarYear.value
@@ -616,18 +717,18 @@ function prevMonth() {
 
 function nextMonth() {
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
   const today = new Date()
   const currentYear = today.getFullYear()
   const currentMonth = today.getMonth() + 1
-  
+
   // 不允许查看未来月份
   if (calendarYear.value > currentYear || (calendarYear.value === currentYear && calendarMonth.value >= currentMonth)) {
     return
   }
-  
+
   let year = calendarYear.value
   let month = calendarMonth.value + 1
   if (month > 12) {
@@ -673,17 +774,17 @@ async function loadCalendar(year, month) {
       update_rate: res.update_rate,
     }
   } catch (e) {
-    showToast('加載日曆失敗')
+    showToast('加载日集失败')
   }
 }
 
 function openPriorityModal(id) {
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
   if (isAdmin.value) {
-    showToast('管理員無此權限')
+    showToast('管理员禁止此操作')
     return
   }
   currentCustomerId.value = id
@@ -699,15 +800,15 @@ function closePriorityModal() {
 
 async function confirmPriority() {
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
   if (isAdmin.value) {
-    showToast('管理員無此權限')
+    showToast('管理员禁止此操作')
     return
   }
   if (!priorityRemark.value.trim()) {
-    showToast('請填寫備註')
+    showToast('请填写备注')
     return
   }
   try {
@@ -715,27 +816,187 @@ async function confirmPriority() {
       is_priority: true,
       remark: priorityRemark.value,
     })
-    showToast('設置成功')
+    showToast('设置成功')
     closePriorityModal()
     loadStats()
   } catch (e) {
-    showToast('設置失敗')
+    showToast('设置失败')
   }
 }
 
 function goToAiImport() {
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
   if (isAdmin.value) {
-    showToast('管理員無此權限')
+    showToast('管理员禁止此操作')
     return
   }
   router.push('/ai-import')
 }
 
+// ── PC 端内嵌导入（复用 aiRecognize 的 SSE 识别 + batch-import 入库） ──
+function updateImportItem(id, patch) {
+  const idx = importQueue.value.findIndex(it => it.id === id)
+  if (idx < 0) return
+  importQueue.value[idx] = { ...importQueue.value[idx], ...patch }
+}
+
+function addImportImages(files) {
+  importResult.value = null
+  const imgs = files.filter(f => f.type.startsWith('image/'))
+  if (imgs.length === 0) return
+  const remaining = IMPORT_MAX - importQueue.value.length
+  if (remaining <= 0) {
+    showToast(`最多 ${IMPORT_MAX} 张，请先删除部分`)
+    return
+  }
+  const accepted = imgs.slice(0, remaining)
+  if (imgs.length > remaining) showToast(`已添加 ${remaining} 张，达上限`)
+  const baseId = Date.now()
+  const newItems = accepted.map((file, i) => ({
+    id: baseId + i,
+    fileName: file.name || `pasted-${i}`,
+    file,
+    thumb: URL.createObjectURL(file),
+    status: 'pending',
+    contactsFound: 0,
+    errorMsg: '',
+  }))
+  importQueue.value = [...importQueue.value, ...newItems]
+  processImportQueue()
+}
+
+function chooseImportImage() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.multiple = true
+  input.onchange = (e) => addImportImages(Array.from(e.target.files))
+  input.click()
+}
+
+function onImportDrop(e) {
+  importDragging.value = false
+  addImportImages(Array.from(e.dataTransfer?.files || []))
+}
+
+function onImportPaste(e) {
+  // 仅 PC 端已登录非管理员、仅当剪贴板含图片时拦截；纯文本粘贴放行，不干扰输入框
+  if (!isDesktop.value || !loggedIn.value || isAdmin.value) return
+  const items = e.clipboardData?.items
+  if (!items) return
+  const files = []
+  for (const it of items) {
+    if (it.type.startsWith('image/')) {
+      const f = it.getAsFile()
+      if (f) files.push(f)
+    }
+  }
+  if (files.length === 0) return
+  e.preventDefault()
+  addImportImages(files)
+}
+
+async function runImportItem(id) {
+  const item = importQueue.value.find(it => it.id === id)
+  if (!item) return
+  const controller = new AbortController()
+  activeImportControllers.set(id, controller)
+  updateImportItem(id, { status: 'processing', errorMsg: '' })
+  try {
+    const extracted = await recognizeImage(item.file, controller.signal)
+    // 识别期间用户可能已删除该图，丢弃结果
+    if (!importQueue.value.find(it => it.id === id)) {
+      activeImportControllers.delete(id)
+      return
+    }
+    updateImportItem(id, { status: 'done', contactsFound: extracted.length })
+    if (extracted.length) {
+      const tagged = extracted.map(c => ({ ...c, _sourceId: id, selected: true }))
+      importContacts.value = [...importContacts.value, ...tagged]
+    }
+  } catch (err) {
+    if (controller.signal.aborted) {
+      activeImportControllers.delete(id)
+      return
+    }
+    if (importQueue.value.find(it => it.id === id)) {
+      updateImportItem(id, { status: 'error', errorMsg: err.message || '识别失败' })
+    }
+  } finally {
+    activeImportControllers.delete(id)
+  }
+}
+
+async function processImportQueue() {
+  // 串行识别，避免撞后端限流
+  if (importProcessing) return
+  importProcessing = true
+  try {
+    while (true) {
+      const next = importQueue.value.find(it => it.status === 'pending')
+      if (!next) return
+      await runImportItem(next.id)
+    }
+  } finally {
+    importProcessing = false
+  }
+}
+
+function retryImportItem(id) {
+  // 先清掉该图旧识别结果，避免重试后重复入库
+  importContacts.value = importContacts.value.filter(c => c._sourceId !== id)
+  updateImportItem(id, { status: 'pending', errorMsg: '', contactsFound: 0 })
+  processImportQueue()
+}
+
+function removeImportItem(id) {
+  const ctrl = activeImportControllers.get(id)
+  if (ctrl) { ctrl.abort(); activeImportControllers.delete(id) }
+  const item = importQueue.value.find(it => it.id === id)
+  if (item?.thumb) URL.revokeObjectURL(item.thumb)
+  importQueue.value = importQueue.value.filter(it => it.id !== id)
+  importContacts.value = importContacts.value.filter(c => c._sourceId !== id)
+}
+
+function clearImport() {
+  activeImportControllers.forEach(ctrl => ctrl.abort())
+  activeImportControllers.clear()
+  importQueue.value.forEach(it => { if (it.thumb) URL.revokeObjectURL(it.thumb) })
+  importQueue.value = []
+  importContacts.value = []
+  importResult.value = null
+}
+
+async function startHomeImport() {
+  if (importing.value) return
+  const valid = importContacts.value
+    .filter(c => c.selected && c.date)
+    // 入库前剥离前端字段，避免污染后端
+    .map(({ selected, _sourceId, ...rest }) => rest)
+  if (valid.length === 0) return
+  importing.value = true
+  try {
+    const res = await api.post('/customers/batch-import', { contacts: valid })
+    importResult.value = { success: true, count: res.added ?? valid.length }
+    // 清空已导入的图与联系人（保留 importResult 反馈几秒）
+    importQueue.value.forEach(it => { if (it.thumb) URL.revokeObjectURL(it.thumb) })
+    importQueue.value = []
+    importContacts.value = []
+    loadStats() // 刷新首页统计
+  } catch (err) {
+    importResult.value = { success: false, error: err.message || '导入失败' }
+  } finally {
+    importing.value = false
+  }
+}
+
 onMounted(() => {
+  // PC 端全局粘贴监听：随时 Ctrl+V 截图即可加入导入队列
+  window.addEventListener('paste', onImportPaste)
+
   loggedIn.value = checkLoggedIn()
   if (loggedIn.value) {
     const userInfo = getUserInfo()
@@ -756,6 +1017,12 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('paste', onImportPaste)
+  // 中止还在跑的识别，释放缩略图 objectURL
+  activeImportControllers.forEach(ctrl => ctrl.abort())
+  activeImportControllers.clear()
+  importQueue.value.forEach(it => { if (it.thumb) URL.revokeObjectURL(it.thumb) })
+
   if (animTimer) {
     clearTimeout(animTimer)
     animTimer = null
@@ -871,9 +1138,17 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.greeting-section {
+/* 顶部行 */
+.page-top-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 14px;
   padding-top: 14px;
+}
+
+.greeting-section {
+  margin-bottom: 0;
 }
 
 .greeting-hi {
@@ -893,144 +1168,113 @@ onUnmounted(() => {
   line-height: 1.3;
 }
 
-.hero-stat-card {
-  background: linear-gradient(145deg, #ffffff 0%, #fffcf8 100%);
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.02);
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid rgba(255, 149, 0, 0.15);
-}
-
-.hero-label {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.6);
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.hero-value {
-  font-size: 36px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #FF9500 0%, #FF5E3A 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  line-height: 1;
-}
-
-.hero-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
-}
-
-.secondary-stats-grid {
+/* 统计行：移动端 2 列，PC 4 列等宽（见 @media） */
+.stats-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-bottom: 10px;
 }
 
-.sec-stat-card {
-  background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%);
+.kpi-card {
   border-radius: 14px;
-  padding: 14px 12px;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.03);
-  border: 1px solid rgba(0, 122, 255, 0.08);
-}
-
-.sec-content-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.sec-value-wrap {
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
 }
 
-.sec-value {
+.kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.kpi-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+}
+
+.kpi-value {
   font-size: 28px;
   font-weight: 800;
-  background: linear-gradient(135deg, #007AFF 0%, #32ADE6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #1D1D1F;
   line-height: 1;
 }
 
-.trend-text {
-  font-size: 10px;
-  font-weight: 600;
-  margin-top: 2px;
+.kpi-trend {
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.trend-text.up {
+.kpi-trend.up {
   color: var(--success);
 }
 
-.trend-text.down {
+.kpi-trend.down {
   color: var(--danger);
 }
 
-.sec-label-new {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sec-label-line1,
-.sec-label-line2 {
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.55);
+.kpi-sub {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.45);
   font-weight: 600;
-  line-height: 1.2;
 }
 
-.tertiary-stats {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  margin-bottom: 14px;
+.kpi-orange {
+  background: linear-gradient(145deg, #ffffff 0%, #fffcf6 100%);
+  border: 1px solid rgba(255, 149, 0, 0.18);
+  box-shadow: 0 2px 10px rgba(255, 149, 0, 0.05);
 }
 
-.tertiary-stat {
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
-  font-weight: 600;
-  display: flex;
-  align-items: baseline;
+.kpi-orange .kpi-icon {
+  background: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%);
 }
 
-.tertiary-value {
-  font-weight: 800;
-  color: #222;
-  margin-left: 8px;
-  font-size: 16px;
+.kpi-green {
+  background: linear-gradient(145deg, #ffffff 0%, #f5fdf7 100%);
+  border: 1px solid rgba(52, 199, 89, 0.18);
+  box-shadow: 0 2px 10px rgba(52, 199, 89, 0.05);
 }
 
-.tertiary-divider {
-  width: 1px;
-  background: rgba(0, 0, 0, 0.06);
+.kpi-green .kpi-icon {
+  background: linear-gradient(135deg, #34C759 0%, #30D158 100%);
+}
+
+.kpi-blue {
+  background: linear-gradient(145deg, #ffffff 0%, #f6faff 100%);
+  border: 1px solid rgba(0, 122, 255, 0.18);
+  box-shadow: 0 2px 10px rgba(0, 122, 255, 0.05);
+}
+
+.kpi-blue .kpi-icon {
+  background: linear-gradient(135deg, #007AFF 0%, #32ADE6 100%);
+}
+
+.kpi-cyan {
+  background: linear-gradient(145deg, #ffffff 0%, #f4fbfd 100%);
+  border: 1px solid rgba(90, 200, 250, 0.2);
+  box-shadow: 0 2px 10px rgba(90, 200, 250, 0.05);
+}
+
+.kpi-cyan .kpi-icon {
+  background: linear-gradient(135deg, #5AC8FA 0%, #32ADE6 100%);
 }
 
 .quick-actions {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .action-card {
@@ -1449,5 +1693,492 @@ onUnmounted(() => {
     max-width: 414px;
     margin: 0 auto;
   }
+}
+
+/* PC 适配 */
+@media (min-width: 1024px) {
+  /* 解除 768 断点的 414px 锁宽,PC 下铺满(由外层 .app-main 收口居中) */
+  .page {
+    max-width: none;
+    margin: 0;
+  }
+
+  .demo-banner {
+    position: relative;
+    border-radius: 12px;
+    margin: 0 0 16px;
+    padding: 12px 18px;
+  }
+
+  .admin-user-select {
+    padding-top: 0;
+    margin-bottom: 12px;
+  }
+
+  /* 顶部行：问候 + 操作横排 */
+  .page-top-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0;
+    margin-bottom: 18px;
+  }
+
+  .greeting-hi {
+    font-size: 12px;
+  }
+
+  .greeting-quote {
+    font-size: 22px;
+  }
+
+  /* PC 端隐藏首页拍照导入入口（改用客户趋势下方的内嵌导入区域） */
+  .quick-actions {
+    display: none;
+  }
+
+  /* 统计行：4 列等宽 */
+  .stats-row {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .kpi-card {
+    padding: 18px 16px;
+    gap: 14px;
+  }
+
+  .kpi-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .kpi-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .kpi-value {
+    font-size: 34px;
+  }
+
+  .kpi-label {
+    font-size: 13px;
+  }
+
+  /* 趋势与日历区块在 PC 下卡片化 */
+  .section-block {
+    padding: 18px 22px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  /* 趋势图 + 更新日集并排:左图右历,1.2:1 */
+  .home-grid-2col {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+    align-items: stretch;
+    margin-bottom: 16px;
+  }
+
+  /* 并排后两个区块自身不再需要下边距 */
+  .home-grid-2col .section-block {
+    margin-bottom: 0;
+  }
+
+  /* 左列：客户趋势 + 快速导入 上下叠放 */
+  .home-col-left {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  /* 右列日集随左列等高，摘要沉底，视觉对齐 */
+  .calendar-block {
+    display: flex;
+    flex-direction: column;
+  }
+  .calendar-block .cal-summary {
+    margin-top: auto;
+  }
+
+  /* 弹窗改为居中卡片 */
+  .modal-mask {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .modal-sheet {
+    width: 460px;
+    max-width: calc(100vw - 48px);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    animation: pop-in 0.2s ease;
+  }
+
+  .modal-handle {
+    display: none;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .priority-input {
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+
+  .btn-full {
+    padding: 14px;
+  }
+
+  /* Toast 在 PC 下靠上提示 */
+  .toast {
+    top: 80px;
+    bottom: auto;
+  }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ============ PC 端配色与密度增强（方案 A：丰富颜色 + 增加图标） ============ */
+@media (min-width: 1024px) {
+  /* 区块标题图标 */
+  .section-title {
+    display: flex;
+    align-items: center;
+  }
+  .title-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 7px;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+  .calendar-block .title-icon {
+    color: var(--success);
+  }
+
+  /* 趋势图加高，曲线更舒展 */
+  .trend-chart-wrapper {
+    height: 200px;
+  }
+
+  /* 日历格自适应填充（去掉 30px 固定） */
+  .cal-day-inner {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    max-width: 46px;
+    margin: 0 auto;
+  }
+  .cal-day-num {
+    font-size: 13px;
+  }
+
+  /* 趋势摘要：今日新增用绿色突出 */
+  .trend-summary-item:nth-child(3) .trend-summary-value {
+    color: var(--success);
+  }
+}
+
+/* ============ PC 端内嵌导入区域（客户趋势下方） ============ */
+.home-import {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .home-import {
+    display: block;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: 14px;
+    padding: 18px 22px;
+  }
+
+  .import-progress {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .import-dropzone {
+    border: 2px dashed var(--border-glass);
+    border-radius: 14px;
+    padding: 26px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(0, 122, 255, 0.02);
+    margin-top: 12px;
+  }
+
+  .import-dropzone:hover,
+  .import-dropzone.dragging {
+    border-color: var(--primary);
+    background: rgba(0, 122, 255, 0.06);
+    transform: translateY(-1px);
+  }
+
+  .dropzone-icon {
+    color: var(--primary);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .dropzone-icon svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .dropzone-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .dropzone-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .import-thumbs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .import-thumb {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid var(--border-glass);
+    aspect-ratio: 1;
+    background: var(--bg-primary);
+    transition: border-color 0.2s;
+  }
+
+  .import-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .import-thumb-status {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 14px 6px 5px;
+    text-align: center;
+  }
+
+  .import-thumb.processing {
+    border-color: var(--primary);
+    animation: pulse-border 1.4s ease-in-out infinite;
+  }
+
+  .import-thumb.done {
+    border-color: var(--success);
+  }
+
+  .import-thumb.error {
+    border-color: var(--danger);
+  }
+
+  .import-thumb-status .processing {
+    color: #5AC8FA;
+  }
+
+  .import-thumb-status .done {
+    color: #34C759;
+  }
+
+  .import-thumb-status .error {
+    color: #FF9500;
+  }
+
+  .import-thumb-remove,
+  .import-thumb-retry {
+    position: absolute;
+    top: 5px;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .import-thumb-remove {
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+  }
+
+  .import-thumb-retry {
+    right: 30px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--primary);
+  }
+
+  .import-contacts {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border-glass);
+  }
+
+  .import-contacts-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+  }
+
+  .import-valid-count {
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  .import-contact-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+  }
+
+  .import-contact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--border-glass);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .import-contact:hover {
+    border-color: var(--primary);
+    background: rgba(0, 122, 255, 0.04);
+  }
+
+  .import-contact.invalid {
+    opacity: 0.5;
+  }
+
+  .import-contact input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+  }
+
+  .import-contact-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .import-contact-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .import-contact-date.invalid {
+    color: var(--danger);
+  }
+
+  .import-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .btn-import-secondary {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: white;
+    color: var(--text-primary);
+    border: 1px solid var(--border-glass);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-import-primary {
+    flex: 1;
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.18);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .btn-import-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .btn-import-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .import-result {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .import-result.success {
+    background: rgba(52, 199, 89, 0.1);
+    color: var(--success);
+  }
+
+  .import-result.error {
+    background: rgba(255, 59, 48, 0.1);
+    color: var(--danger);
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: var(--primary); }
+  50% { border-color: rgba(0, 122, 255, 0.35); }
 }
 </style>

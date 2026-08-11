@@ -17,7 +17,7 @@ defineProps({
   title: { type: String, default: '提示' },
   desc: { type: String, default: '' },
   cancelText: { type: String, default: '取消' },
-  confirmText: { type: String, default: '確認' },
+  confirmText: { type: String, default: '确认' },
   danger: { type: Boolean, default: false },
 })
 defineEmits(['cancel', 'confirm'])
@@ -104,5 +104,18 @@ defineEmits(['cancel', 'confirm'])
 @keyframes pop-in {
   from { opacity: 0; transform: scale(1.08); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* PC 适配:确认弹窗居中 + 加阴影 */
+@media (min-width: 1024px) {
+  .confirm-mask {
+    padding: 0;
+    align-items: center;
+  }
+  .confirm-sheet {
+    max-width: 420px;
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  }
 }
 </style>

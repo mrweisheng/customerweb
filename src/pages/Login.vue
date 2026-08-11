@@ -9,6 +9,11 @@
       </div>
       <div class="login-title">歡迎登錄</div>
       <div class="login-subtitle">管理您的客戶資源</div>
+      <div class="hero-features">
+        <div class="hero-feature"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>AI 智能識別導入</span></div>
+        <div class="hero-feature"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>重點客戶優先管理</span></div>
+        <div class="hero-feature"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span>回訪數據可視化</span></div>
+      </div>
     </div>
 
     <div class="login-form">
@@ -175,6 +180,9 @@ async function onLogin() {
   font-weight: 500;
 }
 
+/* hero 特性列表仅 PC 显示,移动端隐藏 */
+.hero-features { display: none; }
+
 .login-form {
   width: 100%;
   max-width: 320px;
@@ -229,5 +237,58 @@ async function onLogin() {
 .btn-login.disabled {
   opacity: 0.6;
   pointer-events: none;
+}
+@media (min-width: 1024px) {
+  .login-page { display: grid; grid-template-columns: 1.1fr 1fr; align-items: stretch; padding: 0; min-height: 100vh; overflow: hidden; }
+  .login-page::before, .login-page::after { display: none; }
+  .login-hero { text-align: left; margin: 0; padding: 0 72px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; align-self: stretch; background: linear-gradient(135deg, #eaf2ff 0%, #f7faff 60%, #ffffff 100%); position: relative; }
+  .login-hero::after { content: ''; position: absolute; right: -120px; top: 50%; transform: translateY(-50%); width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, rgba(0, 122, 255, 0.1) 0%, transparent 70%); pointer-events: none; }
+  .login-logo { margin: 0 0 24px; width: 68px; height: 68px; border-radius: 20px; }
+  .login-title { font-size: 32px; margin-bottom: 8px; }
+  .login-subtitle { font-size: 15px; }
+  .login-form { max-width: 360px; width: 100%; margin: 0; padding: 0; align-self: center; justify-self: center; }
+
+  /* ============ PC 增强:hero 特性列表 + 装饰球 + logo 动效（方案 A） ============ */
+  .hero-features {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 36px;
+  }
+  .hero-feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .hero-feature svg {
+    width: 22px;
+    height: 22px;
+    padding: 5px;
+    box-sizing: content-box;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .hero-feature:nth-child(1) svg { background: var(--blue-light); color: var(--primary); }
+  .hero-feature:nth-child(2) svg { background: var(--orange-light); color: var(--warning); }
+  .hero-feature:nth-child(3) svg { background: var(--green-light); color: var(--success); }
+
+  /* 左栏第二个装饰球(橙),呼应右侧蓝球,丰富色彩 */
+  .login-hero::before {
+    content: '';
+    position: absolute;
+    left: -80px;
+    bottom: 8%;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 149, 0, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .login-logo { transition: transform 0.3s; }
+  .login-logo:hover { transform: scale(1.06) rotate(-3deg); }
 }
 </style>

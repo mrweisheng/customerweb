@@ -8,19 +8,19 @@
         </svg>
         <input
           class="search-input"
-          placeholder="搜索客戶名稱或備註"
+          placeholder="搜索客户名称或备注"
           v-model="searchQuery"
           @input="onSearchInput"
           @keyup.enter="doSearch"
         />
-        <div v-if="searchQuery" class="search-clear" @click="clearSearch">✕</div>
+        <div v-if="searchQuery" class="search-clear" @click="clearSearch">×</div>
       </div>
       <div class="search-cancel" @click="goBack">取消</div>
     </div>
 
     <!-- 搜索历史 -->
     <div v-if="!searchQuery && searchHistory.length > 0" class="search-section">
-      <div class="section-label">最近搜索</div>
+      <div class="section-label"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>最近搜索</div>
       <div class="history-tags">
         <div
           v-for="(item, index) in searchHistory"
@@ -31,13 +31,13 @@
           {{ item }}
         </div>
       </div>
-      <div class="clear-history" @click="clearHistory">清除歷史</div>
+      <div class="clear-history" @click="clearHistory">清除历史</div>
     </div>
 
     <!-- 搜索结果 -->
     <div v-if="searchQuery && searchResults.length > 0" class="search-results">
       <div class="results-header">
-        <span>找到 {{ searchResults.length }} 個結果</span>
+        <span><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 12l4-4 4 4 5-5"/></svg>找到 {{ searchResults.length }} 条结果</span>
       </div>
       <div
         v-for="customer in searchResults"
@@ -51,7 +51,7 @@
         <div class="result-info">
           <div class="result-name">
             {{ customer.customer_name }}
-            <span v-if="customer.is_priority" class="priority-badge">重點</span>
+            <span v-if="customer.is_priority" class="priority-badge">重点</span>
             <span v-if="customer.visitStatus" class="visit-badge" :style="{ color: customer.visitStatus.color, background: customer.visitStatus.bgColor }">
               {{ customer.visitStatus.text }}
             </span>
@@ -66,38 +66,38 @@
 
     <!-- 无结果 -->
     <div v-if="searchQuery && searchResults.length === 0 && hasSearched" class="empty-state">
-      <div class="empty-icon">🔍</div>
-      <div class="empty-title">未找到相關客戶</div>
-      <div class="empty-desc">嘗試其他關鍵詞</div>
+      <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+      <div class="empty-title">未找到相关客户</div>
+      <div class="empty-desc">试试其他关键字</div>
     </div>
 
     <!-- 未登录提示 -->
     <div v-if="!loggedIn" class="login-prompt">
-      <div class="prompt-icon">🔒</div>
-      <div class="prompt-title">需要登錄</div>
-      <div class="prompt-desc">登錄後即可搜索客戶</div>
-      <button class="btn-login" @click="goToLogin">立即登錄</button>
+      <div class="prompt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="prompt-title">需要登录</div>
+      <div class="prompt-desc">登录后即可搜索客户</div>
+      <button class="btn-login" @click="goToLogin">立即登录</button>
     </div>
 
     <!-- 回访弹窗 -->
     <div class="modal-mask" v-if="showVisitModal" @click="closeVisitModal">
       <div class="modal-sheet" @click.stop>
         <div class="modal-handle"></div>
-        <div class="modal-title">{{ visitModalMode === 'visit' ? '記錄回訪' : '設為重點客戶' }}</div>
+        <div class="modal-title">{{ visitModalMode === 'visit' ? '记录回访' : '标注重点客户' }}</div>
         <div class="visit-customer-name">{{ visitCustomerName }}</div>
         <div v-if="visitModalMode === 'visit'" class="visit-info">
-          <div class="visit-last-remark" v-if="visitLastRemark">上次備註: {{ visitLastRemark }}</div>
+          <div class="visit-last-remark" v-if="visitLastRemark">上次备注: {{ visitLastRemark }}</div>
           <div class="visit-days-ago">{{ visitDaysAgo }}</div>
         </div>
         <textarea
           class="visit-textarea"
-          :placeholder="visitModalMode === 'visit' ? '請輸入回訪記錄...' : '請輸入備註原因...'"
+          :placeholder="visitModalMode === 'visit' ? '请输入回访记录...' : '请输入备注原因...'"
           v-model="visitRemark"
         ></textarea>
         <div class="visit-actions">
-          <button v-if="visitModalMode === 'visit'" class="btn-remove" @click="removePriority">取消重點</button>
+          <button v-if="visitModalMode === 'visit'" class="btn-remove" @click="removePriority">取消重点</button>
           <button class="btn-save" @click="visitModalMode === 'visit' ? saveVisit() : confirmAddPriority()">
-            {{ visitModalMode === 'visit' ? '保存記錄' : '確認設置' }}
+            {{ visitModalMode === 'visit' ? '保存记录' : '确认标注' }}
           </button>
         </div>
       </div>
@@ -105,10 +105,10 @@
 
     <ConfirmDialog
       :show="showConfirmRemove"
-      title="確認移除"
-      :desc="`確定將「${visitCustomerName}」從重點客戶中移除？`"
+      title="确认移除"
+      :desc="`确认将「${visitCustomerName}」从重点客户中移除？`"
       cancel-text="再想想"
-      confirm-text="確認移除"
+      confirm-text="确认移除"
       danger
       @cancel="cancelConfirmRemove"
       @confirm="doRemovePriority"
@@ -179,7 +179,7 @@ async function doSearch() {
   if (!query) return
 
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
 
@@ -202,7 +202,7 @@ async function doSearch() {
       localStorage.setItem('searchHistory', JSON.stringify(searchHistory.value))
     }
   } catch (e) {
-    showToast('搜索失敗')
+    showToast('搜索失败')
   }
 }
 
@@ -224,7 +224,7 @@ function clearHistory() {
 
 function onResultTap(customer) {
   if (!loggedIn.value) {
-    showToast('請先登錄')
+    showToast('请先登录')
     return
   }
   if (isAdmin.value) return
@@ -238,7 +238,7 @@ function onResultTap(customer) {
     visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
     visitLastRemark.value = customer.remark || ''
     visitRemark.value = ''
-    visitDaysAgo.value = daysAgo === null ? '從未回訪' : `${daysAgo}天前`
+    visitDaysAgo.value = daysAgo === null ? '还未回访' : `${daysAgo}天前`
   } else {
     visitModalMode.value = 'add-priority'
     visitCustomerId.value = customer.id
@@ -260,22 +260,22 @@ function closeVisitModal() {
 
 async function saveVisit() {
   if (!visitRemark.value.trim()) {
-    showToast('請填寫回訪記錄')
+    showToast('请填写回访记录')
     return
   }
   try {
     await api.put(`/customers/${visitCustomerId.value}/visit`, { remark: visitRemark.value })
-    showToast('回訪已記錄')
+    showToast('回访已记录')
     closeVisitModal()
     doSearch()
   } catch (e) {
-    showToast('保存失敗')
+    showToast('保存失败')
   }
 }
 
 function removePriority() {
   if (!visitRemark.value.trim()) {
-    showToast('請填寫取消原因')
+    showToast('请填写取消原因')
     return
   }
   showVisitModal.value = false
@@ -295,22 +295,22 @@ async function doRemovePriority() {
     closeVisitModal()
     doSearch()
   } catch (e) {
-    showToast('操作失敗')
+    showToast('操作失败')
   }
 }
 
 async function confirmAddPriority() {
   if (!visitRemark.value.trim()) {
-    showToast('請填寫備註')
+    showToast('请填写备注')
     return
   }
   try {
     await api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: true, remark: visitRemark.value })
-    showToast('已標記重點')
+    showToast('已标为重点')
     closeVisitModal()
     doSearch()
   } catch (e) {
-    showToast('操作失敗')
+    showToast('操作失败')
   }
 }
 
@@ -540,7 +540,6 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 48px;
   margin-bottom: 16px;
 }
 
@@ -556,6 +555,13 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
+.empty-icon svg, .prompt-icon svg {
+  width: 48px;
+  height: 48px;
+  color: var(--text-tertiary);
+}
+.prompt-icon svg { color: var(--primary); }
+
 .login-prompt {
   display: flex;
   flex-direction: column;
@@ -566,7 +572,6 @@ onMounted(() => {
 }
 
 .prompt-icon {
-  font-size: 48px;
   margin-bottom: 16px;
 }
 
@@ -702,3 +707,154 @@ onMounted(() => {
   font-weight: 600;
 }
 </style>
+
+/* PC 适配 */
+@media (min-width: 1024px) {
+  .search-page {
+    padding: 24px 28px 40px;
+  }
+
+  .search-header {
+    padding: 8px 0 24px;
+    position: relative;
+    top: auto;
+  }
+
+  .search-bar {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .search-input {
+    padding: 12px 44px 12px 46px;
+    font-size: 15px;
+  }
+
+  .search-cancel {
+    font-size: 15px;
+  }
+
+  .search-section {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .section-label {
+    font-size: 13px;
+  }
+
+  /* 搜索结果在 PC 下三列 */
+  .search-results {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .results-header {
+    grid-column: 1 / -1;
+    margin-bottom: 4px;
+  }
+
+  .result-card {
+    padding: 16px;
+    margin-bottom: 0;
+  }
+
+  /* 弹窗居中 */
+  .modal-mask {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .modal-sheet {
+    width: 460px;
+    max-width: calc(100vw - 48px);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    animation: pop-in 0.2s ease;
+    max-height: calc(100vh - 80px);
+  }
+
+  .modal-handle {
+    display: none;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    text-align: center;
+  }
+
+  .visit-customer-name {
+    text-align: center;
+  }
+
+  .toast {
+    top: 80px;
+    bottom: auto;
+  }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ============ PC 端增强:去 iOS 取消键 + 彩色标签 + 卡片 hover（方案 A） ============ */
+@media (min-width: 1024px) {
+  /* PC 有侧边栏导航,隐藏 iOS 风格「取消」返回键 */
+  .search-cancel { display: none; }
+
+  /* 标题图标配色 */
+  .title-icon { width: 14px; height: 14px; margin-right: 5px; vertical-align: -2px; }
+  .section-label .title-icon { color: var(--primary); }
+  .results-header .title-icon { color: var(--info); }
+
+  /* 最近搜索标签:毛玻璃 + hover 高亮 */
+  .history-tag {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    transition: all 0.2s;
+  }
+  .history-tag:hover {
+    background: var(--blue-light);
+    color: var(--primary);
+    border-color: transparent;
+    transform: translateY(-1px);
+  }
+
+  /* 结果卡片:毛玻璃 + hover 提升描边 */
+  .result-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    transition: all 0.2s;
+  }
+  .result-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 122, 255, 0.18);
+    transform: translateY(-2px);
+  }
+
+  /* 搜索输入框毛玻璃 */
+  .search-input {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* 空状态 / 未登录大图标放大 */
+  .empty-icon svg, .prompt-icon svg {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* 超宽屏:结果四列 */
+@media (min-width: 1440px) {
+  .search-results {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+

@@ -2,7 +2,8 @@ import axios from 'axios'
 import { getToken, clearAuth } from './auth'
 import router from '../router'
 
-const BASE_URL = 'https://kehu.gaoshanguoji.top/customerapi'
+// 后端地址统一从 .env 读取（VITE_API_BASE），切换环境只改 .env 即可
+const BASE_URL = `${import.meta.env.VITE_API_BASE}/customerapi`
 
 const api = axios.create({
   baseURL: BASE_URL,

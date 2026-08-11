@@ -4,18 +4,18 @@
     <div class="demo-banner" v-if="!loggedIn">
       <div class="demo-banner-text">
         <div class="demo-banner-badge">示例</div>
-        <span class="demo-banner-label">當前為示例數據</span>
+        <span class="demo-banner-label">当前为示例数据</span>
       </div>
-      <div class="demo-banner-btn" @click="onAccountLogin">立即登錄</div>
+      <div class="demo-banner-btn" @click="onAccountLogin">立即登录</div>
     </div>
 
     <!-- 管理员用户切换 -->
     <div v-if="loggedIn && isAdmin" class="admin-select">
       <div class="select-trigger" @click="showUserPicker = true">
-        <span class="select-label">查看用戶:</span>
+        <span class="select-label">查看用户:</span>
         <div class="select-value">
           {{ currentUserName }}
-          <span class="select-arrow">▼</span>
+          <span class="select-arrow">▾</span>
         </div>
       </div>
     </div>
@@ -24,7 +24,7 @@
     <div class="modal-mask" v-if="showUserPicker" @click="showUserPicker = false">
       <div class="modal-sheet" @click.stop>
         <div class="modal-handle"></div>
-        <div class="modal-title">選擇用戶</div>
+        <div class="modal-title">切换用户</div>
         <div class="picker-list">
           <div
             v-for="(user, index) in userPickerList"
@@ -40,9 +40,9 @@
     </div>
 
     <!-- 环形图统计 -->
-    <div class="card">
+    <div class="card overview-card">
       <div class="card-header">
-        <div class="card-title">數據概覽</div>
+        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>数据总览</div>
       </div>
       <div class="ring-grid">
         <div v-for="(ring, idx) in ringData" :key="idx" class="ring-card">
@@ -59,16 +59,16 @@
     </div>
 
     <!-- 重点优先客户 -->
-    <div class="card">
+    <div class="card priority-card-block">
       <div class="card-header">
-        <div class="card-title">重點優先客戶</div>
+        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>重点优先客户</div>
         <div class="expand-btn" @click="toggleKeyList">
-          {{ keyListExpanded ? '收起' : '展開' }}
+          {{ keyListExpanded ? '收起' : '展开' }}
         </div>
       </div>
       <div v-if="priorityCustomers.length === 0" class="empty-box">
         <div class="empty-icon">📋</div>
-        <div class="empty-text">暫無重點客戶</div>
+        <div class="empty-text">暂无重点客户</div>
       </div>
       <div v-else class="priority-list" :class="{ expanded: keyListExpanded }">
         <div
@@ -94,10 +94,10 @@
       </div>
     </div>
 
-    <!-- 客资趋势 -->
-    <div class="card">
+    <!-- 客户趋势 -->
+    <div class="card chart-trend">
       <div class="card-header">
-        <div class="card-title">客資趨勢</div>
+        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>客户趋势</div>
         <div class="trend-pills">
           <div class="pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
           <div class="pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
@@ -117,12 +117,12 @@
       <div class="summary" v-if="trendSummary">
         <div class="summary-item">
           <div class="summary-value">{{ trendSummary.currentTotal }}</div>
-          <div class="summary-label">本期合計</div>
+          <div class="summary-label">本期合计</div>
           <div class="summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
         </div>
         <div class="summary-item">
           <div class="summary-value secondary">{{ trendSummary.prevTotal }}</div>
-          <div class="summary-label">上期合計</div>
+          <div class="summary-label">上期合计</div>
           <div class="summary-label">—</div>
         </div>
         <div class="summary-item">
@@ -134,9 +134,9 @@
     </div>
 
     <!-- 月度统计 -->
-    <div class="card">
+    <div class="card chart-monthly">
       <div class="card-header">
-        <div class="card-title">月度統計</div>
+        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>月度统计</div>
       </div>
       <div class="chart-container">
         <canvas ref="monthlyCanvasRef"></canvas>
@@ -155,21 +155,21 @@
         </div>
         <div class="summary-item">
           <div class="summary-value" :class="monthlySummary.compareDir">{{ monthlySummary.diff }}</div>
-          <div class="summary-label">差異</div>
+          <div class="summary-label">差数</div>
           <div class="summary-compare" :class="monthlySummary.compareDir">{{ monthlySummary.compareText }}</div>
         </div>
       </div>
     </div>
 
     <!-- 按日期查看客户 -->
-    <div class="card">
+    <div class="card customer-detail-card">
       <div class="card-header">
-        <div class="card-title">客戶明細</div>
+        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>客户明细</div>
         <input type="date" class="date-input" v-model="selectedDateFilter" @change="loadCustomersByDate" />
       </div>
       <div v-if="dateCustomerList.length === 0" class="empty-box">
-        <div class="empty-icon">👥</div>
-        <div class="empty-text">該日期暫無客戶</div>
+        <div class="empty-icon">📅</div>
+        <div class="empty-text">该日期暂无客户</div>
       </div>
       <div v-else class="customer-list">
         <div
@@ -181,7 +181,7 @@
           <div class="customer-info">
             <div class="customer-name">
               {{ customer.customer_name }}
-              <span v-if="customer.is_priority" class="badge">重點</span>
+              <span v-if="customer.is_priority" class="badge">重点</span>
             </div>
             <div class="customer-date">{{ customer.lead_date_short }}</div>
           </div>
@@ -194,21 +194,21 @@
     <div class="modal-mask" v-if="showVisitModal" @click="closeVisitModal">
       <div class="modal-sheet" @click.stop>
         <div class="modal-handle"></div>
-        <div class="modal-title">{{ visitModalMode === 'visit' ? '記錄回訪' : '設為重點客戶' }}</div>
+        <div class="modal-title">{{ visitModalMode === 'visit' ? '记录回访' : '标注重点客户' }}</div>
         <div class="visit-name">{{ visitCustomerName }}</div>
         <div v-if="visitModalMode === 'visit'" class="visit-info">
-          <div v-if="visitLastRemark" class="visit-remark">上次備註: {{ visitLastRemark }}</div>
+          <div v-if="visitLastRemark" class="visit-remark">上次备注: {{ visitLastRemark }}</div>
           <div class="visit-days">{{ visitDaysAgo }}</div>
         </div>
         <textarea
           class="visit-input"
-          :placeholder="visitModalMode === 'visit' ? '請輸入回訪記錄...' : '請輸入備註原因...'"
+          :placeholder="visitModalMode === 'visit' ? '请输入回访记录...' : '请输入备注原因...'"
           v-model="visitRemark"
         ></textarea>
         <div class="modal-btns">
-          <button v-if="visitModalMode === 'visit'" class="btn-danger" @click="removePriority">取消重點</button>
+          <button v-if="visitModalMode === 'visit'" class="btn-danger" @click="removePriority">取消重点</button>
           <button class="btn-primary" @click="visitModalMode === 'visit' ? saveVisit() : confirmAddPriorityFromDetail()">
-            {{ visitModalMode === 'visit' ? '保存記錄' : '確認設置' }}
+            {{ visitModalMode === 'visit' ? '保存记录' : '确认标注' }}
           </button>
         </div>
       </div>
@@ -216,10 +216,10 @@
 
     <ConfirmDialog
       :show="showConfirmRemove"
-      title="確認移除"
-      :desc="`確定將「${visitCustomerName}」從重點客戶中移除？`"
+      title="确认移除"
+      :desc="`确认将「${visitCustomerName}」从重点客户中移除？`"
       cancel-text="再想想"
-      confirm-text="確認移除"
+      confirm-text="确认移除"
       danger
       @cancel="cancelConfirmRemove"
       @confirm="doRemovePriority"
@@ -240,7 +240,7 @@ import ConfirmDialog from '../components/ConfirmDialog.vue'
 const router = useRouter()
 const loggedIn = ref(false)
 
-const ringLabels = ['歷史客資', '上月客資', '本月客資', '重點客戶']
+const ringLabels = ['历史客户', '上月客户', '本月客户', '重点客户']
 const ringData = ref([
   { value: '0', percent: 0, trendDir: 'up', trendText: '' },
   { value: '0', percent: 0, trendDir: 'flat', trendText: '' },
@@ -261,7 +261,7 @@ const isAdmin = ref(false)
 const currentUserId = ref(null)
 const showUserPicker = ref(false)
 const currentUserPickerIndex = ref(0)
-const userPickerList = ref([{ id: 0, label: '全部用戶', value: null }])
+const userPickerList = ref([{ id: 0, label: '全部用户', value: null }])
 const showVisitModal = ref(false)
 const visitModalMode = ref('visit')
 const visitCustomerId = ref(null)
@@ -279,7 +279,7 @@ const ringCanvasRefs = reactive({})
 let ringAnimTimer = null
 
 const currentUserName = computed(() => {
-  return userPickerList.value[currentUserPickerIndex.value]?.label || '全部用戶'
+  return userPickerList.value[currentUserPickerIndex.value]?.label || '全部用户'
 })
 
 const displayPriorityCustomers = computed(() => {
@@ -300,7 +300,7 @@ async function loadUsersList() {
   try {
     const res = await api.get('/customers/users/list')
     const users = res || []
-    const pickerList = [{ id: 0, label: '全部用戶', value: null }]
+    const pickerList = [{ id: 0, label: '全部用户', value: null }]
     users.forEach((user) => {
       pickerList.push({ id: user.id, label: user.nickname, value: user.id })
     })
@@ -329,20 +329,20 @@ async function loadAllData() {
 
 function loadMockData() {
   const mockRingData = [
-    { value: '1.3k', percent: 100, trendDir: 'up', trendText: '↑ 18%' },
-    { value: '342', percent: 27, trendDir: 'flat', trendText: '→ —' },
-    { value: '156', percent: 12, trendDir: 'up', trendText: '↑ 15%' },
+    { value: '1.3k', percent: 100, trendDir: 'up', trendText: '↑18%' },
+    { value: '342', percent: 27, trendDir: 'flat', trendText: '—' },
+    { value: '156', percent: 12, trendDir: 'up', trendText: '↑15%' },
     { value: '28', percent: 2, trendDir: 'flat', trendText: '' },
   ]
   ringData.value = mockRingData
   nextTick(() => setTimeout(() => drawRings(), 50))
 
   priorityCustomers.value = [
-    { id: 1, lead_date_short: '0510', customer_name: '張先生', remark: '大客戶', avatarColor: AVATAR_COLORS[0], visitStatus: { text: '3天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
-    { id: 2, lead_date_short: '0508', customer_name: '李女士', remark: '回頭客', avatarColor: AVATAR_COLORS[1], visitStatus: { text: '12天前', color: '#FF9500', bgColor: 'rgba(255,149,0,0.1)' } },
-    { id: 3, lead_date_short: '0505', customer_name: '王生', remark: '', avatarColor: AVATAR_COLORS[2], visitStatus: { text: '20天前', color: '#FF3B30', bgColor: 'rgba(255,59,48,0.1)' } },
-    { id: 4, lead_date_short: '0501', customer_name: '陳小姐', remark: 'VIP', avatarColor: AVATAR_COLORS[3], visitStatus: { text: '5天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
-    { id: 5, lead_date_short: '0428', customer_name: '劉先生', remark: '', avatarColor: AVATAR_COLORS[4], visitStatus: { text: '8天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
+    { id: 1, lead_date_short: '0510', customer_name: '李先生', remark: '大客户', avatarColor: AVATAR_COLORS[0], visitStatus: { text: '3天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
+    { id: 2, lead_date_short: '0508', customer_name: '王女士', remark: '团购单', avatarColor: AVATAR_COLORS[1], visitStatus: { text: '12天前', color: '#FF9500', bgColor: 'rgba(255,149,0,0.1)' } },
+    { id: 3, lead_date_short: '0505', customer_name: '张总', remark: '', avatarColor: AVATAR_COLORS[2], visitStatus: { text: '20天前', color: '#FF3B30', bgColor: 'rgba(255,59,48,0.1)' } },
+    { id: 4, lead_date_short: '0501', customer_name: '陈小姐', remark: 'VIP', avatarColor: AVATAR_COLORS[3], visitStatus: { text: '5天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
+    { id: 5, lead_date_short: '0428', customer_name: '赵先生', remark: '', avatarColor: AVATAR_COLORS[4], visitStatus: { text: '8天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
   ]
 
   const today = new Date()
@@ -353,17 +353,17 @@ function loadMockData() {
     dates.push(`${d.getMonth() + 1}/${d.getDate()}`)
   }
   trendDateLabels.value = dates.map((d, i) => (i === 0 || i === dates.length - 1 || i === Math.floor(dates.length / 2)) ? d : '')
-  trendSummary.value = { currentTotal: 68, prevTotal: 52, todayCount: 12, compareDir: 'up', compareText: '↑ 31%' }
+  trendSummary.value = { currentTotal: 68, prevTotal: 52, todayCount: 12, compareDir: 'up', compareText: '↑31%' }
   nextTick(() => setTimeout(() => drawTrendCanvas([5, 8, 12, 6, 15, 10, 12], [3, 6, 9, 8, 11, 7, 8]), 50))
 
   monthlyLabels.value = ['12月', '1月', '2月', '3月', '4月', '5月']
-  monthlySummary.value = { currentMonth: 156, lastMonth: 135, diff: '+21', compareDir: 'up', compareText: '↑ 16%' }
+  monthlySummary.value = { currentMonth: 156, lastMonth: 135, diff: '+21', compareDir: 'up', compareText: '↑16%' }
   nextTick(() => setTimeout(() => drawMonthlyCanvas([98, 112, 125, 135, 135, 156]), 50))
 
   dateCustomerList.value = [
-    { id: 1, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '趙先生', is_priority: false },
-    { id: 2, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '錢女士', is_priority: true },
-    { id: 3, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '孫先生', is_priority: false },
+    { id: 1, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '钱先生', is_priority: false },
+    { id: 2, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '孙女士', is_priority: true },
+    { id: 3, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '周先生', is_priority: false },
   ]
   dateCustomerTotal.value = 3
   selectedDateFilter.value = '2026-05-11'
@@ -398,12 +398,12 @@ async function loadStats() {
       monthTrend = pct >= 0 ? 'up' : 'down'
       monthTrendText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
     } else if (monthCount > 0) {
-      monthTrendText = '↑ 新增'
+      monthTrendText = '↑新增'
     }
 
     const targetRingData = [
       { value: totalCount >= 1000 ? (totalCount / 1000).toFixed(1) + 'k' : String(totalCount), percent: totalPercent, trendDir: totalTrend, trendText: totalTrendText },
-      { value: String(lastMonthTotal), percent: lastMonthPercent, trendDir: 'flat', trendText: '→ —' },
+      { value: String(lastMonthTotal), percent: lastMonthPercent, trendDir: 'flat', trendText: '—' },
       { value: String(monthCount), percent: monthPercent, trendDir: monthTrend, trendText: monthTrendText },
       { value: String(priorityCount), percent: priorityPercent, trendDir: 'flat', trendText: '' },
     ]
@@ -411,7 +411,7 @@ async function loadStats() {
     animateRingNumbers(targetRingData)
     nextTick(() => setTimeout(() => drawRings(), 50))
   } catch (e) {
-    showToast('加載統計失敗')
+    showToast('加载统计失败')
   }
 }
 
@@ -460,7 +460,7 @@ function drawRings() {
 function drawRing(canvas, percent, color) {
   const ctx = canvas.getContext('2d')
   const dpr = window.devicePixelRatio || 1
-  const size = 72
+  const size = window.innerWidth >= 1024 ? 96 : 72
   canvas.width = size * dpr
   canvas.height = size * dpr
   canvas.style.width = size + 'px'
@@ -469,8 +469,8 @@ function drawRing(canvas, percent, color) {
 
   const cx = size / 2
   const cy = size / 2
-  const r = 28
-  const lw = 5
+  const r = size * 0.39
+  const lw = size * 0.07
 
   ctx.clearRect(0, 0, size, size)
   ctx.beginPath()
@@ -505,14 +505,14 @@ async function loadTrend() {
       compareDir = pct >= 0 ? 'up' : 'down'
       compareText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
     } else {
-      compareText = currentTotal > 0 ? '↑ 新增' : '—'
+      compareText = currentTotal > 0 ? '↑新增' : '—'
     }
 
     trendDateLabels.value = labels
     trendSummary.value = { currentTotal, prevTotal, todayCount: counts[counts.length - 1] || 0, compareDir, compareText }
     nextTick(() => setTimeout(() => drawTrendCanvas(counts, prevCounts), 50))
   } catch (e) {
-    showToast('加載趨勢失敗')
+    showToast('加载趋势失败')
   }
 }
 
@@ -523,7 +523,7 @@ function drawTrendCanvas(counts, prevCounts) {
   const ctx = canvas.getContext('2d')
   const dpr = window.devicePixelRatio || 1
   const w = canvas.parentElement.clientWidth || 300
-  const h = 100
+  const h = window.innerWidth >= 1024 ? 170 : 100
   canvas.width = w * dpr
   canvas.height = h * dpr
   canvas.style.width = w + 'px'
@@ -568,7 +568,7 @@ function drawTrendCanvas(counts, prevCounts) {
 }
 
 function switchTrendDays(days) {
-  if (!loggedIn.value) { showToast('請先登錄'); return }
+  if (!loggedIn.value) { showToast('请先登录'); return }
   trendDays.value = days
   loadTrend()
 }
@@ -590,14 +590,14 @@ async function loadMonthlyStats() {
       compareDir = pct >= 0 ? 'up' : 'down'
       compareText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
     } else {
-      compareText = diff >= 0 ? '持續增長' : '—'
+      compareText = diff >= 0 ? '持续增长' : '—'
     }
 
     monthlyLabels.value = labels
     monthlySummary.value = { currentMonth, lastMonth, diff: diff >= 0 ? `+${diff}` : `${diff}`, compareDir, compareText }
     nextTick(() => setTimeout(() => drawMonthlyCanvas(counts), 50))
   } catch (e) {
-    showToast('加載月度統計失敗')
+    showToast('加载月度统计失败')
   }
 }
 
@@ -608,7 +608,7 @@ function drawMonthlyCanvas(counts) {
   const ctx = canvas.getContext('2d')
   const dpr = window.devicePixelRatio || 1
   const w = canvas.parentElement.clientWidth || 300
-  const h = 80
+  const h = window.innerWidth >= 1024 ? 130 : 80
   canvas.width = w * dpr
   canvas.height = h * dpr
   canvas.style.width = w + 'px'
@@ -667,14 +667,14 @@ async function loadPriorityCustomers() {
       visitStatus: calcVisitStatus(c.last_visit_at),
     }))
   } catch (e) {
-    showToast('加載優先客戶失敗')
+    showToast('加载优先客户失败')
   }
 }
 
 function toggleKeyList() { keyListExpanded.value = !keyListExpanded.value }
 
 function onKeyListItemTap(customer) {
-  if (!loggedIn.value) { showToast('請先登錄'); return }
+  if (!loggedIn.value) { showToast('请先登录'); return }
   if (isAdmin.value) return
   const daysAgo = customer.last_visit_at ? Math.floor((Date.now() - new Date(customer.last_visit_at).getTime()) / 86400000) : null
   visitModalMode.value = 'visit'
@@ -682,12 +682,12 @@ function onKeyListItemTap(customer) {
   visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
   visitLastRemark.value = customer.remark || ''
   visitRemark.value = ''
-  visitDaysAgo.value = daysAgo === null ? '從未回訪' : `${daysAgo}天前`
+  visitDaysAgo.value = daysAgo === null ? '还未回访' : `${daysAgo}天前`
   showVisitModal.value = true
 }
 
 function onDateCustomerTap(customer) {
-  if (!loggedIn.value) { showToast('請先登錄'); return }
+  if (!loggedIn.value) { showToast('请先登录'); return }
   if (isAdmin.value) return
   if (customer.is_priority) {
     const daysAgo = customer.last_visit_at ? Math.floor((Date.now() - new Date(customer.last_visit_at).getTime()) / 86400000) : null
@@ -696,7 +696,7 @@ function onDateCustomerTap(customer) {
     visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
     visitLastRemark.value = customer.remark || ''
     visitRemark.value = ''
-    visitDaysAgo.value = daysAgo === null ? '從未回訪' : `${daysAgo}天前`
+    visitDaysAgo.value = daysAgo === null ? '还未回访' : `${daysAgo}天前`
   } else {
     visitModalMode.value = 'add-priority'
     visitCustomerId.value = customer.id
@@ -717,18 +717,18 @@ function closeVisitModal() {
 }
 
 async function saveVisit() {
-  if (!visitRemark.value.trim()) { showToast('請填寫回訪記錄'); return }
+  if (!visitRemark.value.trim()) { showToast('请填写回访记录'); return }
   try {
     await api.put(`/customers/${visitCustomerId.value}/visit`, { remark: visitRemark.value })
-    showToast('回訪已記錄')
+    showToast('回访已记录')
     closeVisitModal()
     loadPriorityCustomers()
     if (selectedDateFilter.value) loadCustomersByDate()
-  } catch (e) { showToast('保存失敗') }
+  } catch (e) { showToast('保存失败') }
 }
 
 function removePriority() {
-  if (!visitRemark.value.trim()) { showToast('請填寫取消原因'); return }
+  if (!visitRemark.value.trim()) { showToast('请填写取消原因'); return }
   showVisitModal.value = false
   showConfirmRemove.value = true
 }
@@ -746,18 +746,18 @@ async function doRemovePriority() {
     closeVisitModal()
     loadPriorityCustomers()
     loadStats()
-  } catch (e) { showToast('操作失敗') }
+  } catch (e) { showToast('操作失败') }
 }
 
 async function confirmAddPriorityFromDetail() {
-  if (!visitRemark.value.trim()) { showToast('請填寫備註'); return }
+  if (!visitRemark.value.trim()) { showToast('请填写备注'); return }
   try {
     await api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: true, remark: visitRemark.value })
-    showToast('已標記重點')
+    showToast('已标重点')
     closeVisitModal()
     loadPriorityCustomers()
     loadStats()
-  } catch (e) { showToast('操作失敗') }
+  } catch (e) { showToast('操作失败') }
 }
 
 async function loadDefaultDate() {
@@ -778,7 +778,7 @@ async function loadCustomersByDate() {
     const res = await api.get('/customers/by-date', { params })
     dateCustomerList.value = (res.customers || []).map(c => ({ ...c, lead_date_short: c.lead_date ? c.lead_date.slice(5).replace('-', '') : '' }))
     dateCustomerTotal.value = dateCustomerList.value.length
-  } catch (e) { showToast('加載客戶失敗') }
+  } catch (e) { showToast('加载客户失败') }
 }
 
 onMounted(() => {
@@ -929,9 +929,209 @@ onUnmounted(() => {
 .btn-primary { flex: 1; padding: 10px; border-radius: 10px; background: #007AFF; color: white; font-size: 13px; font-weight: 600; }
 
 /* Toast */
-.toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.75); color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; }
+.toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.75); color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; }
 
 @media (min-width: 768px) {
   .stats-page { max-width: 414px; margin: 0 auto; }
+}
+
+/* PC 适配 */
+@media (min-width: 1024px) {
+  /* 解除 768 断点的 414px 锁宽,PC 下铺满 */
+  .stats-page {
+    max-width: none;
+    margin: 0;
+  }
+
+  .demo-banner {
+    position: relative;
+    border-radius: 12px;
+    margin: 0 0 16px;
+    padding: 12px 18px;
+  }
+
+  .admin-select {
+    padding-top: 0;
+    margin-bottom: 12px;
+  }
+
+  /* 数据总览 + 月度同行 */
+  .card {
+    padding: 18px 22px;
+    margin-bottom: 14px;
+  }
+
+  .card-title {
+    font-size: 16px;
+  }
+
+  /* 趋势图 + 月度统计 并排:父容器用 grid,这两个卡各占一半,其余卡占满宽 */
+  .stats-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* 默认所有直接子元素跨满两列(banner / admin-select / 数据总览 / 重点客户 / 客户明细 / 弹窗等) */
+  .stats-page > * {
+    grid-column: 1 / -1;
+  }
+
+  /* 仅"图表对"各占一半 */
+  .chart-trend,
+  .chart-monthly {
+    grid-column: span 1;
+    margin-bottom: 0;
+  }
+
+  /* 卡片自身下边距交给 grid gap 统一管理 */
+  .stats-page > .card {
+    margin-bottom: 0;
+  }
+
+  /* 环形图 4 列一行 */
+  .ring-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+
+  .ring-card {
+    padding: 16px 14px;
+  }
+
+  .ring-chart {
+    width: 96px;
+    height: 96px;
+  }
+
+  .ring-value {
+    font-size: 18px;
+  }
+
+  .ring-label {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  /* 重点客户列表区域 */
+  .priority-list {
+    max-height: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 18px;
+  }
+
+  .priority-list.expanded {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .priority-item {
+    padding: 10px 0;
+  }
+
+  /* 趋势图 / 月度图更大画布 */
+  .chart-container {
+    height: 140px;
+  }
+
+  .summary-value {
+    font-size: 18px;
+  }
+
+  /* 客户明细：双列 */
+  .customer-list {
+    max-height: 320px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 18px;
+  }
+
+  .customer-item {
+    padding: 12px 0;
+  }
+
+  /* 弹窗居中 */
+  .modal-mask {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .modal-sheet {
+    width: 460px;
+    max-width: calc(100vw - 48px);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    animation: pop-in 0.2s ease;
+    max-height: calc(100vh - 80px);
+  }
+
+  .modal-handle {
+    display: none;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .visit-name {
+    text-align: center;
+  }
+
+  .visit-input {
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+
+  .modal-btns .btn-danger,
+  .modal-btns .btn-primary {
+    padding: 12px;
+  }
+
+  .toast {
+    top: 80px;
+    bottom: auto;
+  }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ============ PC 端增强：布局重组 + 配色 + 图标（方案 A） ============ */
+@media (min-width: 1024px) {
+  /* 卡片标题图标 */
+  .card-title { display: flex; align-items: center; }
+  .title-icon { width: 18px; height: 18px; margin-right: 7px; flex-shrink: 0; }
+  .overview-card .title-icon { color: var(--primary); }
+  .priority-card-block .title-icon { color: var(--warning); }
+  .chart-trend .title-icon { color: var(--info); }
+  .chart-monthly .title-icon { color: var(--purple); }
+  .customer-detail-card .title-icon { color: var(--success); }
+
+  /* 4 个内容卡两两并排：重点+趋势 / 月度+明细 */
+  .priority-card-block,
+  .customer-detail-card {
+    grid-column: span 1;
+  }
+
+  /* 环形图卡片彩色底，呼应环形图配色 */
+  .ring-grid .ring-card:nth-child(1) { background: var(--blue-light); border-color: rgba(0,122,255,0.12); }
+  .ring-grid .ring-card:nth-child(2) { background: var(--green-light); border-color: rgba(52,199,89,0.12); }
+  .ring-grid .ring-card:nth-child(3) { background: var(--orange-light); border-color: rgba(255,149,0,0.12); }
+  .ring-grid .ring-card:nth-child(4) { background: var(--red-light); border-color: rgba(255,59,48,0.12); }
+  .ring-card { transition: transform 0.15s ease; }
+  .ring-card:hover { transform: translateY(-2px); }
+
+  /* 半宽卡内列表收为单列，避免拥挤 */
+  .priority-list { grid-template-columns: 1fr; }
+  .priority-list.expanded { grid-template-columns: repeat(2, 1fr); }
+  .customer-list { grid-template-columns: 1fr; }
+
+  /* 图表加高 */
+  .chart-container { height: 170px; }
 }
 </style>

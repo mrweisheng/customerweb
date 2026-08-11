@@ -19,7 +19,7 @@
     </div>
 
     <!-- 步骤1：选择图片 -->
-    <div v-if="currentStep === 1" class="step-content">
+    <div v-if="currentStep === 1" class="step-content step-1">
       <div class="upload-area" @click="chooseImage">
         <div class="upload-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
@@ -184,12 +184,12 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../utils/api'
-import { isLoggedIn as checkLoggedIn, getUserInfo, getToken } from '../utils/auth'
+import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
+import { recognizeImage } from '../utils/aiRecognize'
 
 const router = useRouter()
 
 // ── 常量 ────────────────────────────────────────────────────────────
-const API_BASE_URL = 'https://kehu.gaoshanguoji.top/customerapi'
 const MAX_IMAGES = 20
 
 // ── 状态 ────────────────────────────────────────────────────────────
@@ -253,20 +253,6 @@ function showToast(message, duration = 2000) {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
-// 去掉 data:image/xxx;base64, 前缀
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('文件讀取失敗'))
-    reader.onload = () => {
-      const result = reader.result
-      const idx = typeof result === 'string' ? result.indexOf(',') : -1
-      resolve(idx >= 0 ? result.slice(idx + 1) : '')
-    }
-    reader.readAsDataURL(file)
-  })
-}
-
 // 通过 id 找到当前队列项并打补丁（避开下标错位问题）
 function updateQueueItem(itemId, patch) {
   const idx = imageQueue.value.findIndex(it => it.id === itemId)
@@ -293,74 +279,6 @@ function removeContactsBySource(sourceId) {
 
 function getQueueItem(itemId) {
   return imageQueue.value.find(it => it.id === itemId) || null
-}
-
-// ── AI 识别（对齐后端 SSE 流式契约） ────────────────────────────────
-async function recognizeImage(file, signal) {
-  const base64 = await fileToBase64(file)
-  if (signal?.aborted) throw new Error('aborted')
-
-  const res = await fetch(`${API_BASE_URL}/customers/analyze-image`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getToken() || ''}`,
-    },
-    body: JSON.stringify({ image_base64: base64 }),
-    signal,
-  })
-
-  if (!res.ok) {
-    let msg = `請求失敗 (${res.status})`
-    try {
-      const errBody = await res.json()
-      if (errBody?.detail) msg = errBody.detail
-    } catch (_) {}
-    throw new Error(msg)
-  }
-  if (!res.body) throw new Error('無法讀取識別結果流')
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
-  let resultContacts = []
-
-  // SSE 解析（按 \n\n 切事件，data: {...}）
-  const flushEvents = (raw) => {
-    const events = raw.split('\n\n')
-    for (const ev of events) {
-      const line = ev.trim()
-      if (!line.startsWith('data:')) continue
-      const payload = line.slice(5).trim()
-      if (!payload) continue
-      try {
-        const evt = JSON.parse(payload)
-        if (evt.step === 'complete' && Array.isArray(evt.contacts)) {
-          resultContacts = evt.contacts
-        } else if (evt.step === 'empty') {
-          resultContacts = []
-        } else if (evt.step === 'error') {
-          throw new Error(evt.message || '識別失敗')
-        }
-        // 其他 step (vl_ocr / text_structuring / …) 暂不展示，留作扩展
-      } catch (e) {
-        if (e instanceof Error && /識別失敗|失敗/.test(e.message)) throw e
-      }
-    }
-  }
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const parts = buffer.split('\n\n')
-    buffer = parts.pop() || ''
-    if (parts.length > 0) flushEvents(parts.join('\n\n'))
-  }
-  buffer += decoder.decode()
-  if (buffer.trim()) flushEvents(buffer)
-
-  return resultContacts
 }
 
 // ── 队列调度 ────────────────────────────────────────────────────────
@@ -1117,5 +1035,149 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   margin-top: 16px;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* PC 适配 */
+@media (min-width: 1024px) {
+  .ai-import-page {
+    padding: 32px 28px 40px;
+    max-width: none;
+    margin: 0;
+  }
+
+  .step-indicator {
+    padding: 0 60px;
+    margin-bottom: 40px;
+  }
+
+  .step-number {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .upload-area {
+    padding: 60px 24px;
+    border-radius: 20px;
+  }
+
+  .upload-text {
+    font-size: 18px;
+  }
+
+  .contacts-list {
+    max-height: 540px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .contact-item {
+    margin-bottom: 0;
+  }
+
+  .result-card {
+    padding: 60px 24px;
+  }
+
+  /* 弹窗居中 */
+  .modal-mask {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .modal-sheet {
+    width: 460px;
+    max-width: calc(100vw - 48px);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    animation: pop-in 0.2s ease;
+  }
+
+  .modal-handle {
+    display: none;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    text-align: center;
+  }
+
+  .toast {
+    top: 80px;
+    bottom: auto;
+  }
+
+  /* ============ PC 增强:满宽 + 步骤1双栏 + 毛玻璃（方案 A） ============ */
+  .step-content { max-width: none; }
+
+  /* 步骤1 无队列:上传区居中限宽 */
+  .step-content.step-1:not(:has(.image-queue)) .upload-area {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* 步骤1 有队列:左上传区 + 右队列双栏(:has 渐进增强,不支持则退化为单列) */
+  .step-content.step-1:has(.image-queue) {
+    display: grid;
+    grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .step-content.step-1:has(.image-queue) .action-buttons {
+    grid-column: 1 / -1;
+  }
+
+  /* 队列项右侧双列排布 */
+  .image-queue {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .image-queue .queue-header { grid-column: 1 / -1; }
+
+  /* 卡片毛玻璃化 */
+  .upload-area {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .upload-area:hover {
+    border-color: var(--primary);
+    background: rgba(0, 122, 255, 0.04);
+  }
+  .queue-item {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .contact-item {
+    background: var(--bg-card);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    transition: all 0.2s;
+  }
+  .contact-item:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    transform: translateY(-1px);
+  }
+  .result-card {
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+/* 超宽屏:确认页联系人三列 */
+@media (min-width: 1440px) {
+  .contacts-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 </style>
