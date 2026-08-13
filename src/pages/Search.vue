@@ -79,39 +79,11 @@
       <button class="btn-login" @click="goToLogin">立即登录</button>
     </div>
 
-    <!-- 回访弹窗 -->
-    <div class="modal-mask" v-if="showVisitModal" @click="closeVisitModal">
-      <div class="modal-sheet" @click.stop>
-        <div class="modal-handle"></div>
-        <div class="modal-title">{{ visitModalMode === 'visit' ? '记录回访' : '标注重点客户' }}</div>
-        <div class="visit-customer-name">{{ visitCustomerName }}</div>
-        <div v-if="visitModalMode === 'visit'" class="visit-info">
-          <div class="visit-last-remark" v-if="visitLastRemark">上次备注: {{ visitLastRemark }}</div>
-          <div class="visit-days-ago">{{ visitDaysAgo }}</div>
-        </div>
-        <textarea
-          class="visit-textarea"
-          :placeholder="visitModalMode === 'visit' ? '请输入回访记录...' : '请输入备注原因...'"
-          v-model="visitRemark"
-        ></textarea>
-        <div class="visit-actions">
-          <button v-if="visitModalMode === 'visit'" class="btn-remove" @click="removePriority">取消重点</button>
-          <button class="btn-save" @click="visitModalMode === 'visit' ? saveVisit() : confirmAddPriority()">
-            {{ visitModalMode === 'visit' ? '保存记录' : '确认标注' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <ConfirmDialog
-      :show="showConfirmRemove"
-      title="确认移除"
-      :desc="`确认将「${visitCustomerName}」从重点客户中移除？`"
-      cancel-text="再想想"
-      confirm-text="确认移除"
-      danger
-      @cancel="cancelConfirmRemove"
-      @confirm="doRemovePriority"
+    <!-- 客户详情/操作面板（跟进记录 + 成交记录 + 重点开关） -->
+    <CustomerDetailPanel
+      v-model:show="showDetailPanel"
+      :customer="activeCustomer"
+      @updated="doSearch"
     />
 
     <div class="toast" v-if="toast.show">{{ toast.message }}</div>
@@ -124,7 +96,7 @@ import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
 import { AVATAR_COLORS, calcVisitStatus } from '../utils/constants'
-import ConfirmDialog from '../components/ConfirmDialog.vue'
+import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 
 const router = useRouter()
 const loggedIn = ref(false)
@@ -134,15 +106,9 @@ const searchResults = ref([])
 const searchHistory = ref([])
 const hasSearched = ref(false)
 const isAdmin = ref(false)
-const showVisitModal = ref(false)
-const visitModalMode = ref('visit')
-const visitCustomerId = ref(null)
-const visitCustomerName = ref('')
-const visitRemark = ref('')
-const visitLastRemark = ref('')
-const visitDaysAgo = ref('')
+const showDetailPanel = ref(false)
+const activeCustomer = ref({})
 const toast = reactive({ show: false, message: '' })
-const showConfirmRemove = ref(false)
 
 let searchTimer = null
 
@@ -187,7 +153,7 @@ async function doSearch() {
     const res = await api.get('/customers/search', { params: { keyword: query } })
     searchResults.value = (res || []).map((c, idx) => ({
       ...c,
-      lead_date_short: c.lead_date ? c.lead_date.slice(5).replace('-', '') : '',
+      lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '',
       avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
       visitStatus: calcVisitStatus(c.last_visit_at),
     }))
@@ -228,90 +194,8 @@ function onResultTap(customer) {
     return
   }
   if (isAdmin.value) return
-
-  if (customer.is_priority) {
-    const daysAgo = customer.last_visit_at
-      ? Math.floor((Date.now() - new Date(customer.last_visit_at).getTime()) / 86400000)
-      : null
-    visitModalMode.value = 'visit'
-    visitCustomerId.value = customer.id
-    visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
-    visitLastRemark.value = customer.remark || ''
-    visitRemark.value = ''
-    visitDaysAgo.value = daysAgo === null ? '还未回访' : `${daysAgo}天前`
-  } else {
-    visitModalMode.value = 'add-priority'
-    visitCustomerId.value = customer.id
-    visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
-    visitRemark.value = ''
-    visitLastRemark.value = ''
-    visitDaysAgo.value = ''
-  }
-  showVisitModal.value = true
-}
-
-function closeVisitModal() {
-  showVisitModal.value = false
-  visitModalMode.value = 'visit'
-  visitCustomerId.value = null
-  visitRemark.value = ''
-  visitLastRemark.value = ''
-}
-
-async function saveVisit() {
-  if (!visitRemark.value.trim()) {
-    showToast('请填写回访记录')
-    return
-  }
-  try {
-    await api.put(`/customers/${visitCustomerId.value}/visit`, { remark: visitRemark.value })
-    showToast('回访已记录')
-    closeVisitModal()
-    doSearch()
-  } catch (e) {
-    showToast('保存失败')
-  }
-}
-
-function removePriority() {
-  if (!visitRemark.value.trim()) {
-    showToast('请填写取消原因')
-    return
-  }
-  showVisitModal.value = false
-  showConfirmRemove.value = true
-}
-
-function cancelConfirmRemove() {
-  showConfirmRemove.value = false
-  showVisitModal.value = true
-}
-
-async function doRemovePriority() {
-  showConfirmRemove.value = false
-  try {
-    await api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: false, remark: visitRemark.value })
-    showToast('已移除')
-    closeVisitModal()
-    doSearch()
-  } catch (e) {
-    showToast('操作失败')
-  }
-}
-
-async function confirmAddPriority() {
-  if (!visitRemark.value.trim()) {
-    showToast('请填写备注')
-    return
-  }
-  try {
-    await api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: true, remark: visitRemark.value })
-    showToast('已标为重点')
-    closeVisitModal()
-    doSearch()
-  } catch (e) {
-    showToast('操作失败')
-  }
+  activeCustomer.value = customer
+  showDetailPanel.value = true
 }
 
 onMounted(() => {

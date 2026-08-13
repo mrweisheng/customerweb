@@ -78,7 +78,9 @@
     <div v-if="currentStep === 2" class="step-content">
       <div class="confirm-header">
         <div class="confirm-title">識別結果</div>
-        <div class="confirm-subtitle">共 {{ contacts.length }} 個聯繫人，已選 {{ validContactCount }} 個有效可導入</div>
+        <div class="confirm-subtitle">
+          共 {{ contacts.length }} 個聯繫人，已選 {{ validContactCount }} 個有效可導入<span v-if="duplicateCount > 0" class="dup-tag">（{{ duplicateCount }} 位重複）</span>
+        </div>
       </div>
 
       <div class="contacts-list">
@@ -102,7 +104,10 @@
               <input type="checkbox" v-model="contact.selected" :disabled="!contact.date" />
             </label>
             <div class="contact-info">
-              <div class="contact-name">{{ contact.name }}</div>
+              <div class="contact-name">
+                {{ contact.name }}
+                <span v-if="isDuplicate(contact)" class="dup-badge">已存在</span>
+              </div>
               <div class="contact-date" v-if="contact.date">{{ contact.date }}</div>
               <div class="contact-date invalid" v-else>日期無效（不可導入）</div>
             </div>
@@ -127,11 +132,16 @@
 
     <!-- 步骤3：导入结果 -->
     <div v-if="currentStep === 3" class="step-content">
-      <div class="result-card" :class="importResult?.success ? 'success' : 'error'">
+      <div class="result-card" :class="resultCardClass">
         <div class="result-icon">
           <svg v-if="importResult?.success" viewBox="0 0 24 24" fill="none" stroke="#34C759" stroke-width="2" width="48" height="48">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <svg v-else-if="isAllDuplicates" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2" width="48" height="48">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <svg v-else viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2" width="48" height="48">
             <circle cx="12" cy="12" r="10"></circle>
@@ -140,13 +150,41 @@
           </svg>
         </div>
         <div class="result-title">
-          {{ importResult?.success ? '導入成功' : '導入失敗' }}
+          {{ importResult?.success ? (isAllDuplicates ? '全部為重複聯繫人' : '導入成功') : '導入失敗' }}
         </div>
-        <div class="result-desc" v-if="importResult?.success">
-          成功導入 {{ importResult.imported_count }} 個聯繫人
+
+        <!-- 成功：新增/更新/跳过 三栏 -->
+        <div v-if="importResult?.success && !isAllDuplicates" class="result-stats">
+          <div class="result-stat added">
+            <div class="result-stat-value">{{ importResult.added || 0 }}</div>
+            <div class="result-stat-label">新增</div>
+          </div>
+          <div class="result-stat updated">
+            <div class="result-stat-value">{{ importResult.updated || 0 }}</div>
+            <div class="result-stat-label">更新</div>
+          </div>
+          <div class="result-stat skipped">
+            <div class="result-stat-value">{{ importResult.skipped || 0 }}</div>
+            <div class="result-stat-label">跳過（重複）</div>
+          </div>
         </div>
+
+        <!-- 全部重复态 -->
+        <div v-else-if="importResult?.success && isAllDuplicates" class="result-desc">
+          識別到的 {{ importResult.skipped }} 位聯繫人均已存在，未重複入庫
+        </div>
+
         <div class="result-desc" v-else>
           {{ importResult?.error || '請稍後重試' }}
+        </div>
+
+        <!-- 重复名单 -->
+        <div v-if="importResult?.success && importResult.skipped_names && importResult.skipped_names.length > 0" class="skip-detail">
+          <div class="skip-detail-title">以下聯繫人已存在，已自動跳過：</div>
+          <div class="skip-row" v-for="name in importResult.skipped_names" :key="name">
+            <span class="skip-name">{{ name }}</span>
+            <span class="skip-reason">已存在</span>
+          </div>
         </div>
       </div>
 
@@ -186,6 +224,7 @@ import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
 import { recognizeImage } from '../utils/aiRecognize'
+import { emitContactsImported } from '../utils/events'
 
 const router = useRouter()
 
@@ -201,6 +240,8 @@ const importResult = ref(null)
 const showEditModal = ref(false)
 const editingContact = reactive({ index: -1, name: '', date: '' })
 const toast = reactive({ show: false, message: '' })
+// 查重结果：key = `${date}|${name}` -> 是否已存在；失败/未查时为空对象
+const duplicateMap = ref({})
 
 // 进行中的请求（itemId -> AbortController），用于 removeItem / clearQueue / 卸载时中止
 const activeControllers = new Map()
@@ -236,6 +277,26 @@ const groupedContacts = computed(() => {
 
 const validContactCount = computed(() => {
   return contacts.value.filter(c => c.selected && c.date).length
+})
+
+const duplicateCount = computed(() => {
+  return Object.values(duplicateMap.value).filter(Boolean).length
+})
+
+const isDuplicate = (c) => !!duplicateMap.value[`${c.date || ''}|${c.name || ''}`]
+
+// 结果页：是否「全部重复」—— added=0 且 skipped>0
+const isAllDuplicates = computed(() => {
+  const r = importResult.value
+  return !!(r && r.success && (r.added || 0) === 0 && (r.skipped || 0) > 0)
+})
+
+// 结果卡片态：成功（绿）/ 全部重复（橙）/ 失败（红）
+const resultCardClass = computed(() => {
+  if (!importResult.value) return ''
+  if (!importResult.value.success) return 'error'
+  if (isAllDuplicates.value) return 'warn'
+  return 'success'
 })
 
 const canProceed = computed(() => {
@@ -429,7 +490,40 @@ function proceedToConfirm() {
     showToast('沒有識別到聯繫人')
     return
   }
+  // 进入确认页前查重：识别已完成但尚未标记重复项；接口失败静默降级
+  duplicateMap.value = {}
+  void checkDuplicatesFor(contacts.value)
   currentStep.value = 2
+}
+
+// 查重辅助：按 date+name 去重键，返回 [{date, name, ...}] 的入参（剥离前端字段）
+// 返回一个 Map<key, exists>，合并写入 duplicateMap，并把命中的 contact.selected = false
+async function checkDuplicatesFor(items) {
+  const arr = Array.isArray(items) ? items : []
+  if (arr.length === 0) return
+  const payload = arr
+    .filter(c => c && c.date && c.name)
+    .map(({ _sourceId, selected, ...rest }) => rest)
+  if (payload.length === 0) return
+  try {
+    const res = await api.post('/customers/check-duplicates', { contacts: payload })
+    const results = Array.isArray(res?.results) ? res.results : []
+    const newMap = { ...duplicateMap.value }
+    for (const r of results) {
+      if (!r) continue
+      const key = `${r.date || ''}|${r.name || ''}`
+      newMap[key] = !!r.exists
+    }
+    duplicateMap.value = newMap
+    // 命中的项默认不勾选（所见即所得）
+    for (const c of arr) {
+      if (!c) continue
+      const key = `${c.date || ''}|${c.name || ''}`
+      if (newMap[key]) c.selected = false
+    }
+  } catch (_) {
+    // 查重接口未就绪/失败：静默降级，duplicateMap 留空，保持默认全选
+  }
 }
 
 // ── 编辑联系人 ──────────────────────────────────────────────────────
@@ -478,8 +572,12 @@ async function startImport() {
 
     importResult.value = {
       success: true,
-      imported_count: res.added ?? validContacts.length,
+      added: res.added ?? 0,
+      updated: res.updated ?? 0,
+      skipped: res.skipped ?? 0,
+      skipped_names: Array.isArray(res.skipped_names) ? res.skipped_names : [],
     }
+    emitContactsImported({ count: res.added ?? validContacts.length })
     currentStep.value = 3
   } catch (e) {
     importResult.value = {
@@ -500,6 +598,7 @@ function resetImport() {
   imageQueue.value = []
   contacts.value = []
   importResult.value = null
+  duplicateMap.value = {}
 }
 
 // ── 生命周期 ────────────────────────────────────────────────────────
@@ -924,6 +1023,24 @@ onUnmounted(() => {
   color: var(--danger);
 }
 
+.dup-tag {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.dup-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #FF9500;
+  background: rgba(255, 149, 0, 0.12);
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
 .contact-action {
   flex-shrink: 0;
 }
@@ -951,6 +1068,78 @@ onUnmounted(() => {
 
 .result-card.error {
   border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.result-card.warn {
+  border: 1px solid rgba(255, 149, 0, 0.25);
+  background: rgba(255, 149, 0, 0.04);
+}
+
+.result-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+
+.result-stat {
+  background: var(--bg-primary);
+  border-radius: 10px;
+  padding: 12px 6px;
+  text-align: center;
+}
+
+.result-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.result-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.result-stat.added .result-stat-value { color: var(--success); }
+.result-stat.updated .result-stat-value { color: var(--primary); }
+.result-stat.skipped .result-stat-value { color: #FF9500; }
+
+.skip-detail {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-glass);
+  text-align: left;
+}
+
+.skip-detail-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.skip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.skip-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.skip-reason {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FF9500;
+  background: rgba(255, 149, 0, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .result-icon {

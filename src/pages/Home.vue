@@ -198,13 +198,14 @@
       <!-- 识别结果原地展开 -->
       <div class="import-contacts" v-if="importContacts.length">
         <div class="import-contacts-header">
-          <span>识别到 {{ importContacts.length }} 位联系人</span>
+          <span>识别到 {{ importContacts.length }} 位联系人<span v-if="importDuplicateCount > 0" class="dup-tag">（{{ importDuplicateCount }} 位重複）</span></span>
           <span class="import-valid-count">已选 {{ importValidCount }} 位有效</span>
         </div>
         <div class="import-contact-list">
           <label class="import-contact" v-for="(c, i) in importContacts" :key="i" :class="{ invalid: !c.date }">
             <input type="checkbox" v-model="c.selected" :disabled="!c.date" />
             <span class="import-contact-name">{{ c.name }}</span>
+            <span v-if="isImportDuplicate(c)" class="dup-badge">已存在</span>
             <span class="import-contact-date" v-if="c.date">{{ c.date }}</span>
             <span class="import-contact-date invalid" v-else>日期无效</span>
           </label>
@@ -218,8 +219,27 @@
       </div>
 
       <!-- 导入结果反馈 -->
-      <div class="import-result" v-if="importResult" :class="importResult.success ? 'success' : 'error'">
-        {{ importResult.success ? `✓ 成功导入 ${importResult.count} 位联系人` : `✗ ${importResult.error}` }}
+      <div v-if="importResult" :class="['import-result', importResultCls]">
+        <div class="import-result-summary">
+          <template v-if="importResult.success && importResult.added > 0">
+            ✓ 新增 {{ importResult.added }} 位，跳過 {{ importResult.skipped }} 位重複
+          </template>
+          <template v-else-if="importResult.success && importResult.skipped > 0">
+            全部為重複聯繫人（{{ importResult.skipped }} 位）
+          </template>
+          <template v-else-if="importResult.success">
+            ✓ 成功导入 {{ importResult.added }} 位联系人
+          </template>
+          <template v-else>
+            ✗ {{ importResult.error }}
+          </template>
+        </div>
+        <details v-if="importResult.success && importResult.skipped_names && importResult.skipped_names.length > 0" class="import-result-detail">
+          <summary>查看重複名單（{{ importResult.skipped_names.length }}）</summary>
+          <div class="skip-row" v-for="name in importResult.skipped_names" :key="name">
+            <span>{{ name }}</span><span class="skip-reason">已存在</span>
+          </div>
+        </details>
       </div>
     </div>
     </div><!-- /.home-col-left -->
@@ -292,9 +312,11 @@ import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
 import { recognizeImage } from '../utils/aiRecognize'
+import { onContactsImported } from '../utils/events'
 import { useDevice } from '../composables/useDevice'
 
 const router = useRouter()
+let offContactsImported = null
 const { isDesktop } = useDevice()
 
 // PC 端内嵌导入区域
@@ -303,6 +325,8 @@ const importQueue = ref([])
 const importContacts = ref([])
 const importing = ref(false)
 const importResult = ref(null)
+// 内嵌导入查重结果：key = `${date}|${name}` -> 是否已存在
+const importDuplicateMap = ref({})
 const importDragging = ref(false)
 const activeImportControllers = new Map()
 let importProcessing = false
@@ -353,6 +377,14 @@ const isCurrentMonth = computed(() => {
 
 const importDoneCount = computed(() => importQueue.value.filter(i => i.status === 'done').length)
 const importValidCount = computed(() => importContacts.value.filter(c => c.selected && c.date).length)
+const importDuplicateCount = computed(() => Object.values(importDuplicateMap.value).filter(Boolean).length)
+const isImportDuplicate = (c) => !!importDuplicateMap.value[`${c.date || ''}|${c.name || ''}`]
+const importResultCls = computed(() => {
+  if (!importResult.value) return ''
+  if (!importResult.value.success) return 'error'
+  if ((importResult.value.added || 0) === 0 && (importResult.value.skipped || 0) > 0) return 'warn'
+  return 'success'
+})
 
 function showToast(message, duration = 2000) {
   toast.message = message
@@ -899,6 +931,34 @@ function onImportPaste(e) {
   addImportImages(files)
 }
 
+// 增量查重：写入 importDuplicateMap，命中的 contact.selected = false
+async function checkImportDuplicatesFor(items) {
+  const arr = Array.isArray(items) ? items : []
+  if (arr.length === 0) return
+  const payload = arr
+    .filter(c => c && c.date && c.name)
+    .map(({ selected, _sourceId, ...rest }) => rest)
+  if (payload.length === 0) return
+  try {
+    const res = await api.post('/customers/check-duplicates', { contacts: payload })
+    const results = Array.isArray(res?.results) ? res.results : []
+    const newMap = { ...importDuplicateMap.value }
+    for (const r of results) {
+      if (!r) continue
+      const key = `${r.date || ''}|${r.name || ''}`
+      newMap[key] = !!r.exists
+    }
+    importDuplicateMap.value = newMap
+    for (const c of arr) {
+      if (!c) continue
+      const key = `${c.date || ''}|${c.name || ''}`
+      if (newMap[key]) c.selected = false
+    }
+  } catch (_) {
+    // 接口未就绪/失败：静默降级，保持默认全选
+  }
+}
+
 async function runImportItem(id) {
   const item = importQueue.value.find(it => it.id === id)
   if (!item) return
@@ -916,6 +976,8 @@ async function runImportItem(id) {
     if (extracted.length) {
       const tagged = extracted.map(c => ({ ...c, _sourceId: id, selected: true }))
       importContacts.value = [...importContacts.value, ...tagged]
+      // 增量查重：失败静默降级
+      void checkImportDuplicatesFor(tagged)
     }
   } catch (err) {
     if (controller.signal.aborted) {
@@ -968,6 +1030,7 @@ function clearImport() {
   importQueue.value = []
   importContacts.value = []
   importResult.value = null
+  importDuplicateMap.value = {}
 }
 
 async function startHomeImport() {
@@ -980,12 +1043,22 @@ async function startHomeImport() {
   importing.value = true
   try {
     const res = await api.post('/customers/batch-import', { contacts: valid })
-    importResult.value = { success: true, count: res.added ?? valid.length }
+    importResult.value = {
+      success: true,
+      added: res.added ?? 0,
+      updated: res.updated ?? 0,
+      skipped: res.skipped ?? 0,
+      skipped_names: Array.isArray(res.skipped_names) ? res.skipped_names : [],
+    }
     // 清空已导入的图与联系人（保留 importResult 反馈几秒）
     importQueue.value.forEach(it => { if (it.thumb) URL.revokeObjectURL(it.thumb) })
     importQueue.value = []
     importContacts.value = []
-    loadStats() // 刷新首页统计
+    importDuplicateMap.value = {}
+    // 导入改变了统计、趋势和"更新日集"，三者都要刷新
+    loadStats()
+    loadTrend()
+    loadCalendar()
   } catch (err) {
     importResult.value = { success: false, error: err.message || '导入失败' }
   } finally {
@@ -996,6 +1069,8 @@ async function startHomeImport() {
 onMounted(() => {
   // PC 端全局粘贴监听：随时 Ctrl+V 截图即可加入导入队列
   window.addEventListener('paste', onImportPaste)
+  // 监听 AiImport 批量导入完成，自动刷新更新日集
+  offContactsImported = onContactsImported(() => loadCalendar())
 
   loggedIn.value = checkLoggedIn()
   if (loggedIn.value) {
@@ -1020,6 +1095,7 @@ onUnmounted(() => {
   window.removeEventListener('paste', onImportPaste)
   // 中止还在跑的识别，释放缩略图 objectURL
   activeImportControllers.forEach(ctrl => ctrl.abort())
+  if (offContactsImported) offContactsImported()
   activeImportControllers.clear()
   importQueue.value.forEach(it => { if (it.thumb) URL.revokeObjectURL(it.thumb) })
 
@@ -2174,6 +2250,69 @@ onUnmounted(() => {
   .import-result.error {
     background: rgba(255, 59, 48, 0.1);
     color: var(--danger);
+  }
+
+  .import-result.warn {
+    background: rgba(255, 149, 0, 0.1);
+    color: #FF9500;
+  }
+
+  .import-result-summary {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .import-result-detail {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .import-result-detail summary {
+    cursor: pointer;
+    outline: none;
+    list-style: none;
+    opacity: 0.85;
+  }
+  .import-result-detail summary::before {
+    content: '▸ ';
+    display: inline-block;
+    transition: transform 0.2s;
+  }
+  .import-result-detail[open] summary::before {
+    content: '▾ ';
+  }
+  .import-result-detail .skip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    color: var(--text-primary);
+  }
+  .import-result-detail .skip-reason {
+    font-size: 11px;
+    font-weight: 600;
+    color: #FF9500;
+    background: rgba(255, 149, 0, 0.12);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* 内嵌导入查重徽章 */
+  .dup-tag {
+    margin-left: 4px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .dup-badge {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #FF9500;
+    background: rgba(255, 149, 0, 0.12);
+    border-radius: 4px;
+    flex-shrink: 0;
   }
 }
 

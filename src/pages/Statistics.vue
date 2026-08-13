@@ -58,6 +58,95 @@
       </div>
     </div>
 
+    <!-- 成交统计 -->
+    <div class="card deal-stats-card">
+      <div class="card-header">
+        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>成交统计</div>
+      </div>
+
+      <!-- 成交总览 4 格（客户数/单数/车辆/两地牌） -->
+      <div class="deal-grid">
+        <div class="deal-cell">
+          <div class="deal-val">{{ dealStats.customer_count }}</div>
+          <div class="deal-lbl">成交客户数</div>
+        </div>
+        <div class="deal-cell">
+          <div class="deal-val">{{ dealStats.total_count }}</div>
+          <div class="deal-lbl">成交单数</div>
+        </div>
+        <div class="deal-cell">
+          <div class="deal-val">{{ dealStats.vehicle_count }}</div>
+          <div class="deal-lbl">🚗 车辆</div>
+        </div>
+        <div class="deal-cell">
+          <div class="deal-val">{{ dealStats.plate_count }}</div>
+          <div class="deal-lbl">🚦 两地牌</div>
+        </div>
+      </div>
+
+      <template v-if="dealStats.total_count">
+        <!-- 月度成交单数（CSS 条形） -->
+        <div class="deal-section">
+          <div class="deal-sub-title">月度成交单数</div>
+          <div class="deal-bars">
+            <div class="deal-bar-item" v-for="(cnt, i) in dealStats.monthly.counts" :key="i">
+              <div class="deal-bar-num">{{ cnt }}</div>
+              <div class="deal-bar-track">
+                <div class="deal-bar-fill" :style="{ height: (cnt / dealMaxCount * 100) + '%' }"></div>
+              </div>
+              <div class="deal-bar-label">{{ dealMonthLabels[i] }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 成交结构 -->
+        <div class="deal-section">
+          <div class="deal-sub-title">成交结构</div>
+          <div class="deal-row">
+            <span class="deal-row-name">🚗 车辆</span>
+            <div class="deal-row-bar"><div class="fill vehicle" :style="{ width: pct(dealStats.vehicle_count, dealStats.total_count) + '%' }"></div></div>
+            <span class="deal-row-num">{{ dealStats.vehicle_count }}</span>
+          </div>
+          <div class="deal-row">
+            <span class="deal-row-name">🚦 两地牌</span>
+            <div class="deal-row-bar"><div class="fill plate" :style="{ width: pct(dealStats.plate_count, dealStats.total_count) + '%' }"></div></div>
+            <span class="deal-row-num">{{ dealStats.plate_count }}</span>
+          </div>
+          <template v-if="dealStats.plate_count">
+            <div class="deal-row" v-for="(c, port) in dealStats.by_port" :key="'port-' + port">
+              <span class="deal-row-name">{{ port }}</span>
+              <div class="deal-row-bar"><div class="fill port" :style="{ width: pct(c, dealStats.plate_count) + '%' }"></div></div>
+              <span class="deal-row-num">{{ c }}</span>
+            </div>
+          </template>
+          <template v-if="dealStats.plate_count">
+            <div class="deal-row" v-for="(c, kind) in dealStats.by_plate_kind" :key="'kind-' + kind">
+              <span class="deal-row-name">{{ kind }}</span>
+              <div class="deal-row-bar"><div class="fill kind" :style="{ width: pct(c, dealStats.plate_count) + '%' }"></div></div>
+              <span class="deal-row-num">{{ c }}</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- 最近成交 -->
+        <div class="deal-section" v-if="dealStats.recent.length">
+          <div class="deal-sub-title">最近成交</div>
+          <div class="deal-recent-item" v-for="d in dealStats.recent" :key="d.id">
+            <span class="deal-tag-sm" :class="d.deal_type">{{ d.deal_type === 'vehicle' ? '🚗' : '🚦' }}</span>
+            <span class="deal-recent-name">{{ d.customer_name }}</span>
+            <span class="deal-recent-desc">{{ dealDesc(d) }}</span>
+            <span class="deal-recent-date">{{ d.deal_time }}</span>
+          </div>
+        </div>
+      </template>
+
+      <div v-else class="empty-box">
+        <div class="empty-icon">💰</div>
+        <div class="empty-text">暂无成交记录</div>
+        <div class="empty-desc">在重点客户里记录成交后，这里展示统计</div>
+      </div>
+    </div>
+
     <!-- 重点优先客户 -->
     <div class="card priority-card-block">
       <div class="card-header">
@@ -161,6 +250,7 @@
       </div>
     </div>
 
+
     <!-- 按日期查看客户 -->
     <div class="card customer-detail-card">
       <div class="card-header">
@@ -190,39 +280,11 @@
       </div>
     </div>
 
-    <!-- 回访弹窗 -->
-    <div class="modal-mask" v-if="showVisitModal" @click="closeVisitModal">
-      <div class="modal-sheet" @click.stop>
-        <div class="modal-handle"></div>
-        <div class="modal-title">{{ visitModalMode === 'visit' ? '记录回访' : '标注重点客户' }}</div>
-        <div class="visit-name">{{ visitCustomerName }}</div>
-        <div v-if="visitModalMode === 'visit'" class="visit-info">
-          <div v-if="visitLastRemark" class="visit-remark">上次备注: {{ visitLastRemark }}</div>
-          <div class="visit-days">{{ visitDaysAgo }}</div>
-        </div>
-        <textarea
-          class="visit-input"
-          :placeholder="visitModalMode === 'visit' ? '请输入回访记录...' : '请输入备注原因...'"
-          v-model="visitRemark"
-        ></textarea>
-        <div class="modal-btns">
-          <button v-if="visitModalMode === 'visit'" class="btn-danger" @click="removePriority">取消重点</button>
-          <button class="btn-primary" @click="visitModalMode === 'visit' ? saveVisit() : confirmAddPriorityFromDetail()">
-            {{ visitModalMode === 'visit' ? '保存记录' : '确认标注' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <ConfirmDialog
-      :show="showConfirmRemove"
-      title="确认移除"
-      :desc="`确认将「${visitCustomerName}」从重点客户中移除？`"
-      cancel-text="再想想"
-      confirm-text="确认移除"
-      danger
-      @cancel="cancelConfirmRemove"
-      @confirm="doRemovePriority"
+    <!-- 客户详情/操作面板（跟进记录 + 成交记录 + 重点开关） -->
+    <CustomerDetailPanel
+      v-model:show="showDetailPanel"
+      :customer="activeCustomer"
+      @updated="refreshAfterPanelUpdate"
     />
 
     <div class="toast" v-if="toast.show">{{ toast.message }}</div>
@@ -235,7 +297,7 @@ import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
 import { AVATAR_COLORS, calcVisitStatus } from '../utils/constants'
-import ConfirmDialog from '../components/ConfirmDialog.vue'
+import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 
 const router = useRouter()
 const loggedIn = ref(false)
@@ -254,6 +316,11 @@ const trendDateLabels = ref([])
 const trendSummary = ref(null)
 const monthlyLabels = ref([])
 const monthlySummary = ref(null)
+// 成交统计
+const dealStats = ref({
+  total_count: 0, customer_count: 0, vehicle_count: 0, plate_count: 0, month_count: 0,
+  monthly: { months: [], counts: [] }, by_port: {}, by_plate_kind: {}, recent: [],
+})
 const selectedDateFilter = ref('')
 const dateCustomerList = ref([])
 const dateCustomerTotal = ref(0)
@@ -262,15 +329,9 @@ const currentUserId = ref(null)
 const showUserPicker = ref(false)
 const currentUserPickerIndex = ref(0)
 const userPickerList = ref([{ id: 0, label: '全部用户', value: null }])
-const showVisitModal = ref(false)
-const visitModalMode = ref('visit')
-const visitCustomerId = ref(null)
-const visitCustomerName = ref('')
-const visitRemark = ref('')
-const visitLastRemark = ref('')
-const visitDaysAgo = ref('')
+const showDetailPanel = ref(false)
+const activeCustomer = ref({})
 const toast = reactive({ show: false, message: '' })
-const showConfirmRemove = ref(false)
 
 const trendCanvasRef = ref(null)
 const monthlyCanvasRef = ref(null)
@@ -323,6 +384,7 @@ async function loadAllData() {
     loadTrend(),
     loadMonthlyStats(),
     loadPriorityCustomers(),
+    loadDealStats(),
   ])
   loadDefaultDate()
 }
@@ -359,6 +421,18 @@ function loadMockData() {
   monthlyLabels.value = ['12月', '1月', '2月', '3月', '4月', '5月']
   monthlySummary.value = { currentMonth: 156, lastMonth: 135, diff: '+21', compareDir: 'up', compareText: '↑16%' }
   nextTick(() => setTimeout(() => drawMonthlyCanvas([98, 112, 125, 135, 135, 156]), 50))
+
+  // 成交统计示例
+  dealStats.value = {
+    total_count: 18, customer_count: 14, vehicle_count: 11, plate_count: 7, month_count: 4,
+    monthly: { months: ['2025-12','2026-01','2026-02','2026-03','2026-04','2026-05'], counts: [3,4,2,3,3,3] },
+    by_port: { '深圳湾': 3, '莲塘': 2, '沙头角': 1, '港珠澳': 1 },
+    by_plate_kind: { '期牌': 4, '现牌': 3 },
+    recent: [
+      { id: 1, customer_name: '李先生', deal_type: 'vehicle', deal_time: '2026-05-11', vehicle_desc: '21款霸道4000', vin: null, port: null, plate_kind: null, plate_number: null },
+      { id: 2, customer_name: '王女士', deal_type: 'plate', deal_time: '2026-05-10', vehicle_desc: null, vin: null, port: '深圳湾', plate_kind: '现牌', plate_number: 'FV-123' },
+    ],
+  }
 
   dateCustomerList.value = [
     { id: 1, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '钱先生', is_priority: false },
@@ -662,7 +736,7 @@ async function loadPriorityCustomers() {
     const res = await api.get('/customers/priority', { params })
     priorityCustomers.value = (res || []).map((c, idx) => ({
       ...c,
-      lead_date_short: c.lead_date ? c.lead_date.slice(5).replace('-', '') : '',
+      lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '',
       avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
       visitStatus: calcVisitStatus(c.last_visit_at),
     }))
@@ -671,93 +745,48 @@ async function loadPriorityCustomers() {
   }
 }
 
+// ── 成交统计 ──
+const dealMonthLabels = computed(() => (dealStats.value.monthly?.months || []).map((ym) => ym.slice(5) + '月'))
+const dealMaxCount = computed(() => Math.max(...(dealStats.value.monthly?.counts || [0]), 1))
+function pct(part, total) { return total > 0 ? Math.round((part / total) * 100) : 0 }
+function dealDesc(d) {
+  if (d.deal_type === 'vehicle') return d.vehicle_desc || d.vin || '车辆'
+  return [d.port, d.plate_kind, d.plate_number].filter(Boolean).join(' · ')
+}
+async function loadDealStats() {
+  try {
+    const params = {}
+    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
+    dealStats.value = await api.get('/customers/deal-stats', { params })
+  } catch (e) {
+    console.error('加载成交统计失败', e)
+  }
+}
+
 function toggleKeyList() { keyListExpanded.value = !keyListExpanded.value }
+
+function openDetailPanel(customer) {
+  activeCustomer.value = customer
+  showDetailPanel.value = true
+}
 
 function onKeyListItemTap(customer) {
   if (!loggedIn.value) { showToast('请先登录'); return }
   if (isAdmin.value) return
-  const daysAgo = customer.last_visit_at ? Math.floor((Date.now() - new Date(customer.last_visit_at).getTime()) / 86400000) : null
-  visitModalMode.value = 'visit'
-  visitCustomerId.value = customer.id
-  visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
-  visitLastRemark.value = customer.remark || ''
-  visitRemark.value = ''
-  visitDaysAgo.value = daysAgo === null ? '还未回访' : `${daysAgo}天前`
-  showVisitModal.value = true
+  openDetailPanel(customer)
 }
 
 function onDateCustomerTap(customer) {
   if (!loggedIn.value) { showToast('请先登录'); return }
   if (isAdmin.value) return
-  if (customer.is_priority) {
-    const daysAgo = customer.last_visit_at ? Math.floor((Date.now() - new Date(customer.last_visit_at).getTime()) / 86400000) : null
-    visitModalMode.value = 'visit'
-    visitCustomerId.value = customer.id
-    visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
-    visitLastRemark.value = customer.remark || ''
-    visitRemark.value = ''
-    visitDaysAgo.value = daysAgo === null ? '还未回访' : `${daysAgo}天前`
-  } else {
-    visitModalMode.value = 'add-priority'
-    visitCustomerId.value = customer.id
-    visitCustomerName.value = `${customer.lead_date_short}/${customer.customer_name}`
-    visitRemark.value = ''
-    visitLastRemark.value = ''
-    visitDaysAgo.value = ''
-  }
-  showVisitModal.value = true
+  openDetailPanel(customer)
 }
 
-function closeVisitModal() {
-  showVisitModal.value = false
-  visitModalMode.value = 'visit'
-  visitCustomerId.value = null
-  visitRemark.value = ''
-  visitLastRemark.value = ''
-}
-
-async function saveVisit() {
-  if (!visitRemark.value.trim()) { showToast('请填写回访记录'); return }
-  try {
-    await api.put(`/customers/${visitCustomerId.value}/visit`, { remark: visitRemark.value })
-    showToast('回访已记录')
-    closeVisitModal()
-    loadPriorityCustomers()
-    if (selectedDateFilter.value) loadCustomersByDate()
-  } catch (e) { showToast('保存失败') }
-}
-
-function removePriority() {
-  if (!visitRemark.value.trim()) { showToast('请填写取消原因'); return }
-  showVisitModal.value = false
-  showConfirmRemove.value = true
-}
-
-function cancelConfirmRemove() {
-  showConfirmRemove.value = false
-  showVisitModal.value = true
-}
-
-async function doRemovePriority() {
-  showConfirmRemove.value = false
-  try {
-    await api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: false, remark: visitRemark.value })
-    showToast('已移除')
-    closeVisitModal()
-    loadPriorityCustomers()
-    loadStats()
-  } catch (e) { showToast('操作失败') }
-}
-
-async function confirmAddPriorityFromDetail() {
-  if (!visitRemark.value.trim()) { showToast('请填写备注'); return }
-  try {
-    await api.put(`/customers/${visitCustomerId.value}/priority`, { is_priority: true, remark: visitRemark.value })
-    showToast('已标重点')
-    closeVisitModal()
-    loadPriorityCustomers()
-    loadStats()
-  } catch (e) { showToast('操作失败') }
+// 面板内数据变更（跟进/成交/重点）后刷新统计相关列表
+function refreshAfterPanelUpdate() {
+  loadPriorityCustomers()
+  loadStats()
+  if (selectedDateFilter.value) loadCustomersByDate()
 }
 
 async function loadDefaultDate() {
@@ -776,7 +805,7 @@ async function loadCustomersByDate() {
     const params = { date: selectedDateFilter.value }
     if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
     const res = await api.get('/customers/by-date', { params })
-    dateCustomerList.value = (res.customers || []).map(c => ({ ...c, lead_date_short: c.lead_date ? c.lead_date.slice(5).replace('-', '') : '' }))
+    dateCustomerList.value = (res.customers || []).map(c => ({ ...c, lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '' }))
     dateCustomerTotal.value = dateCustomerList.value.length
   } catch (e) { showToast('加载客户失败') }
 }
@@ -916,6 +945,41 @@ onUnmounted(() => {
 .badge { font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 3px; background: rgba(255,149,0,0.1); color: #FF9500; }
 .customer-date { font-size: 11px; color: rgba(29,29,31,0.55); margin-top: 2px; }
 .customer-arrow { font-size: 16px; color: rgba(29,29,31,0.28); }
+
+/* 成交统计 */
+.deal-stats-card .title-icon { color: #EA580C; }
+.deal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 4px; }
+.deal-cell { background: rgba(234,88,12,0.06); border-radius: 10px; padding: 12px; text-align: center; }
+.deal-val { font-size: 20px; font-weight: 800; color: #1D1D1F; line-height: 1.1; }
+.deal-val.money { color: #EA580C; }
+.deal-lbl { font-size: 11px; color: rgba(29,29,31,0.55); margin-top: 4px; line-height: 1.3; }
+.deal-sub { font-size: 10px; color: rgba(29,29,31,0.4); }
+.deal-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.06); }
+.deal-sub-title { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.7); margin-bottom: 10px; }
+.deal-bars { display: flex; align-items: flex-end; gap: 8px; height: 110px; }
+.deal-bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; min-width: 0; }
+.deal-bar-num { font-size: 9px; color: rgba(29,29,31,0.5); margin-bottom: 3px; white-space: nowrap; }
+.deal-bar-track { width: 70%; flex: 1; background: rgba(234,88,12,0.08); border-radius: 6px; display: flex; align-items: flex-end; min-height: 40px; }
+.deal-bar-fill { width: 100%; background: linear-gradient(180deg, #FB923C, #EA580C); border-radius: 6px; min-height: 2px; transition: height 0.4s; }
+.deal-bar-label { font-size: 10px; color: rgba(29,29,31,0.5); margin-top: 4px; }
+.deal-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.deal-row-name { font-size: 12px; color: rgba(29,29,31,0.7); width: 64px; flex-shrink: 0; }
+.deal-row-bar { flex: 1; height: 18px; background: rgba(0,0,0,0.04); border-radius: 9px; overflow: hidden; }
+.deal-row-bar .fill { height: 100%; border-radius: 9px; transition: width 0.4s; }
+.deal-row-bar .fill.vehicle { background: #007AFF; }
+.deal-row-bar .fill.plate { background: #AF52DE; }
+.deal-row-bar .fill.port { background: #34C759; }
+.deal-row-bar .fill.kind { background: #FF9500; }
+.deal-row-num { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.7); width: 24px; text-align: right; }
+.deal-recent-item { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04); font-size: 12px; flex-wrap: wrap; }
+.deal-recent-item:last-child { border-bottom: none; }
+.deal-tag-sm { font-size: 10px; padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+.deal-tag-sm.vehicle { background: rgba(0,122,255,0.1); }
+.deal-tag-sm.plate { background: rgba(175,82,222,0.1); }
+.deal-recent-name { font-weight: 600; color: #1D1D1F; }
+.deal-recent-desc { color: rgba(29,29,31,0.55); flex: 1; min-width: 80px; }
+.deal-recent-amt { color: #EA580C; font-weight: 700; }
+.deal-recent-date { color: rgba(29,29,31,0.4); font-size: 11px; }
 
 /* Visit Modal */
 .visit-name { font-size: 13px; font-weight: 600; color: #1D1D1F; margin-bottom: 6px; }
