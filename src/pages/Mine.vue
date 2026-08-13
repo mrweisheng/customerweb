@@ -18,8 +18,11 @@
       <div class="profile-card">
         <div class="avatar-wrapper" @click="triggerAvatarUpload">
           <div class="avatar" :style="{ background: avatarColor.bg, color: avatarColor.color }">
-            <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" />
+            <img v-if="displayAvatar" :src="displayAvatar" class="avatar-img" />
             <span v-else>{{ avatarText }}</span>
+          </div>
+          <div v-if="avatarUploading" class="avatar-loading" aria-label="上传中">
+            <div class="spinner"></div>
           </div>
           <div class="avatar-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
         </div>
@@ -87,6 +90,7 @@ import api from '../utils/api'
 import { isLoggedIn as checkLoggedIn, getUserInfo, setUserInfo, clearAuth, getToken } from '../utils/auth'
 import { getAvatarColor } from '../utils/constants'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
+import { compressImage } from '../utils/imageCompress'
 
 const router = useRouter()
 const userInfo = ref(null)
@@ -95,6 +99,8 @@ const editNickname = ref('')
 const avatarInput = ref(null)
 const toast = reactive({ show: false, message: '' })
 const showConfirmLogout = ref(false)
+const avatarUploading = ref(false)
+const localPreviewUrl = ref('')
 
 const isAdmin = computed(() => userInfo.value?.role === 'admin')
 const avatarText = computed(() => {
@@ -109,6 +115,8 @@ const avatarUrl = computed(() => {
   const baseUrl = import.meta.env.VITE_API_BASE
   return baseUrl + userInfo.value.avatar_url
 })
+// 上传期间用本地 objectURL 预览，服务器返回 URL 后再切换
+const displayAvatar = computed(() => localPreviewUrl.value || avatarUrl.value)
 
 function showToast(message, duration = 2000) {
   toast.message = message
@@ -125,7 +133,7 @@ function onComingSoon() {
 }
 
 function triggerAvatarUpload() {
-  if (isAdmin.value) return
+  if (isAdmin.value || avatarUploading.value) return
   avatarInput.value?.click()
 }
 
@@ -133,27 +141,45 @@ async function onAvatarChange(e) {
   const file = e.target.files[0]
   if (!file) return
 
-  if (file.size > 5 * 1024 * 1024) {
-    showToast('图片大小不能超过5MB')
+  // 10MB 硬上限，避免直接把超大图喂给 canvas 导致 OOM
+  if (!file.type.startsWith('image/')) {
+    showToast('请选择图片文件')
+    e.target.value = ''
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('图片过大，请选择 10MB 以内的图片')
+    e.target.value = ''
     return
   }
 
-  const formData = new FormData()
-  formData.append('file', file)
+  avatarUploading.value = true
+  // 立即用本地 objectURL 预览，让用户感知到响应
+  const previewUrl = URL.createObjectURL(file)
+  localPreviewUrl.value = previewUrl
 
   try {
-    showToast('上传中...')
+    // 前端压缩到 ≤2MB，对齐后端 MAX_AVATAR_SIZE
+    const compressed = await compressImage(file)
+    const formData = new FormData()
+    formData.append('file', compressed.file)
+
     const res = await api.post('/user/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     const updated = { ...userInfo.value, avatar_url: res.avatar_url }
     setUserInfo(updated)
     userInfo.value = updated
-    showToast('头像更新成功')
-  } catch (e) {
-    showToast('头像上传失败')
+    showToast('头像更新成功', 1500)
+  } catch (err) {
+    // 失败：回滚到原图，错误信息（api 拦截器已从 detail 提取）
+    showToast(err?.message || '上传失败，请稍后重试')
+  } finally {
+    URL.revokeObjectURL(previewUrl)
+    localPreviewUrl.value = ''
+    avatarUploading.value = false
+    e.target.value = ''
   }
-  e.target.value = ''
 }
 
 async function onNicknameBlur() {
@@ -255,6 +281,27 @@ onMounted(() => {
   font-size: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
+.avatar-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: 18px;
+  pointer-events: none;
+}
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--primary-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .profile-info { flex: 1; min-width: 0; }
 .profile-name { font-size: 18px; font-weight: 700; color: #1D1D1F; }
 .profile-name-input {
@@ -382,6 +429,11 @@ onMounted(() => {
     width: 26px;
     height: 26px;
     font-size: 14px;
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
   }
 
   .profile-name,
