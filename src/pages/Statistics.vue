@@ -39,21 +39,74 @@
       </div>
     </div>
 
-    <!-- 环形图统计 -->
+    <!-- 数据总览：Bento 大数字矩阵 -->
     <div class="card overview-card">
       <div class="card-header">
         <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>数据总览</div>
       </div>
-      <div class="ring-grid">
-        <div v-for="(ring, idx) in ringData" :key="idx" class="ring-card">
-          <div class="ring-chart">
-            <canvas :ref="el => { if (el) ringCanvasRefs[idx] = el }" class="ring-canvas"></canvas>
-            <div class="ring-value">{{ ring.value }}</div>
+      <div class="bento-grid">
+        <!-- 主卡：历史客户 + sparkline -->
+        <div class="bento-card bento-main">
+          <div class="bento-head">
+            <span class="bento-label">历史客户</span>
+            <span class="bento-tag">ALL</span>
           </div>
-          <div class="ring-label">{{ ringLabels[idx] }}</div>
-          <div v-if="ring.trendText" class="ring-trend" :class="ring.trendDir">
-            {{ ring.trendText }}
+          <div class="bento-value">{{ formatNumber(bigNumbers.history) }}</div>
+          <div class="bento-spark-wrap">
+            <canvas ref="historySparkRef" class="bento-spark-canvas"></canvas>
           </div>
+          <div class="bento-trend-row">
+            <span class="bento-trend-dot"></span>
+            <span class="bento-trend-text">{{ historyTrendText }}</span>
+          </div>
+        </div>
+
+        <!-- 上月客户：对比条 -->
+        <div class="bento-card">
+          <div class="bento-head">
+            <span class="bento-label">上月客户</span>
+            <span class="bento-dot-mark month"></span>
+          </div>
+          <div class="bento-value">{{ formatNumber(bigNumbers.lastMonth) }}</div>
+          <div class="bento-compare-bar">
+            <div class="bento-compare-fill last" :style="{ width: compareBars.lastMonth + '%' }"></div>
+          </div>
+          <div class="bento-trend-text flat">— 持平</div>
+        </div>
+
+        <!-- 本月客户：对比条 + 趋势 -->
+        <div class="bento-card">
+          <div class="bento-head">
+            <span class="bento-label">本月客户</span>
+            <span class="bento-dot-mark current"></span>
+          </div>
+          <div class="bento-value">{{ formatNumber(bigNumbers.month) }}</div>
+          <div class="bento-compare-bar">
+            <div class="bento-compare-fill current" :style="{ width: compareBars.month + '%' }"></div>
+          </div>
+          <div class="bento-trend-text" :class="monthTrendDir">{{ monthTrendText }}</div>
+        </div>
+
+        <!-- 重点客户：dot grid 反映数量 -->
+        <div class="bento-card">
+          <div class="bento-head">
+            <span class="bento-label">重点客户</span>
+            <span class="bento-dot-mark priority"></span>
+          </div>
+          <div class="bento-value">{{ formatNumber(bigNumbers.priority) }}</div>
+          <div class="bento-dot-grid">
+            <span
+              v-for="i in Math.min(bigNumbers.priority, 8)"
+              :key="i"
+              class="bento-dot-cell filled"
+            ></span>
+            <span
+              v-for="i in Math.max(0, 8 - Math.min(bigNumbers.priority, 8))"
+              :key="'e' + i"
+              class="bento-dot-cell empty"
+            ></span>
+          </div>
+          <div class="bento-trend-text flat">待回访优先</div>
         </div>
       </div>
     </div>
@@ -302,13 +355,27 @@ import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 const router = useRouter()
 const loggedIn = ref(false)
 
-const ringLabels = ['历史客户', '上月客户', '本月客户', '重点客户']
-const ringData = ref([
-  { value: '0', percent: 0, trendDir: 'up', trendText: '' },
-  { value: '0', percent: 0, trendDir: 'flat', trendText: '' },
-  { value: '0', percent: 0, trendDir: 'up', trendText: '' },
-  { value: '0', percent: 0, trendDir: 'flat', trendText: '' },
-])
+// 数据总览：Bento 大数字矩阵（千分位精确显示，无 k 缩写）
+const bigNumbers = ref({
+  history: 0,
+  lastMonth: 0,
+  month: 0,
+  priority: 0,
+})
+// 本月/上月 vs 历史 的占比条（视觉化比例，不显示百分比数字）
+const compareBars = ref({ lastMonth: 0, month: 0 })
+// 趋势文本与方向（保留 ↑/↓/— 这种箭头，但不写 2004% 这种失真百分比）
+const monthTrendText = ref('—')
+const monthTrendDir = ref('flat')
+const historyTrendText = ref('累计增长中')
+// 历史客户 sparkline 数据：取最近 7 天每日新增（复用 trend 接口的 counts）
+const historySparkData = ref([])
+
+// 千分位格式化：1000 → "1,000"；避免 5.1k 这种损失精度的缩写
+function formatNumber(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return '0'
+  return Number(n).toLocaleString('en-US')
+}
 const priorityCustomers = ref([])
 const keyListExpanded = ref(false)
 const trendDays = ref(7)
@@ -335,9 +402,9 @@ const toast = reactive({ show: false, message: '' })
 
 const trendCanvasRef = ref(null)
 const monthlyCanvasRef = ref(null)
-const ringCanvasRefs = reactive({})
+const historySparkRef = ref(null)
 
-let ringAnimTimer = null
+let bigNumberAnimTimer = null
 
 const currentUserName = computed(() => {
   return userPickerList.value[currentUserPickerIndex.value]?.label || '全部用户'
@@ -390,14 +457,14 @@ async function loadAllData() {
 }
 
 function loadMockData() {
-  const mockRingData = [
-    { value: '1.3k', percent: 100, trendDir: 'up', trendText: '↑18%' },
-    { value: '342', percent: 27, trendDir: 'flat', trendText: '—' },
-    { value: '156', percent: 12, trendDir: 'up', trendText: '↑15%' },
-    { value: '28', percent: 2, trendDir: 'flat', trendText: '' },
-  ]
-  ringData.value = mockRingData
-  nextTick(() => setTimeout(() => drawRings(), 50))
+  // 示例数据：千分位精确数字，无 k 缩写
+  bigNumbers.value = { history: 5100, lastMonth: 242, month: 105, priority: 8 }
+  compareBars.value = { lastMonth: 5, month: 2 }    // 占总量比例，移动端视觉化对比条
+  monthTrendText.value = '↑ 18%'
+  monthTrendDir.value = 'up'
+  historyTrendText.value = '近期累计增长 5,100'
+  historySparkData.value = [3, 5, 8, 6, 12, 7, 10]    // 最近 7 天每日新增（示例）
+  nextTick(() => setTimeout(() => drawHistorySpark(), 50))
 
   priorityCustomers.value = [
     { id: 1, lead_date_short: '0510', customer_name: '李先生', remark: '大客户', avatarColor: AVATAR_COLORS[0], visitStatus: { text: '3天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
@@ -454,111 +521,115 @@ async function loadStats() {
     const monthCount = res.month_count || 0
     const priorityCount = res.priority_count || 0
 
-    const totalPercent = totalCount > 0 ? 100 : 0
-    const lastMonthPercent = totalCount > 0 ? Math.round((lastMonthTotal / totalCount) * 100) : 0
-    const monthPercent = totalCount > 0 ? Math.round((monthCount / totalCount) * 100) : 0
-    const priorityPercent = totalCount > 0 ? Math.round((priorityCount / totalCount) * 100) : 0
+    // 对比条：本月/上月 占历史总量的比例（视觉化，不显示百分比文字）
+    const lastMonthBar = totalCount > 0 ? Math.min(100, (lastMonthTotal / totalCount) * 100) : 0
+    const monthBar = totalCount > 0 ? Math.min(100, (monthCount / totalCount) * 100) : 0
 
-    let totalTrend = 'up', totalTrendText = ''
-    if (lastMonthTotal > 0) {
-      const pct = Math.round(((totalCount - lastMonthTotal) / lastMonthTotal) * 100)
-      totalTrend = pct >= 0 ? 'up' : 'down'
-      totalTrendText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
-    }
-
-    let monthTrend = 'up', monthTrendText = ''
+    // 本月趋势（vs 上月）：箭头 + 文字，但避免 2004% 这种失真百分比
+    let mTrendText = '— 持平', mTrendDir = 'flat'
     if (lastMonthCount > 0) {
-      const pct = Math.round(((monthCount - lastMonthCount) / lastMonthCount) * 100)
-      monthTrend = pct >= 0 ? 'up' : 'down'
-      monthTrendText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
+      const diff = monthCount - lastMonthCount
+      if (diff > 0) { mTrendText = `↑ 多 ${diff} 位`; mTrendDir = 'up' }
+      else if (diff < 0) { mTrendText = `↓ 少 ${Math.abs(diff)} 位`; mTrendDir = 'down' }
     } else if (monthCount > 0) {
-      monthTrendText = '↑新增'
+      mTrendText = '↑ 新增'
+      mTrendDir = 'up'
     }
 
-    const targetRingData = [
-      { value: totalCount >= 1000 ? (totalCount / 1000).toFixed(1) + 'k' : String(totalCount), percent: totalPercent, trendDir: totalTrend, trendText: totalTrendText },
-      { value: String(lastMonthTotal), percent: lastMonthPercent, trendDir: 'flat', trendText: '—' },
-      { value: String(monthCount), percent: monthPercent, trendDir: monthTrend, trendText: monthTrendText },
-      { value: String(priorityCount), percent: priorityPercent, trendDir: 'flat', trendText: '' },
-    ]
+    // 历史客户趋势文字：简洁描述累计增长
+    const historyText = lastMonthTotal > 0
+      ? `累计 ${formatNumber(totalCount)}，上月 ${formatNumber(lastMonthTotal)}`
+      : `累计 ${formatNumber(totalCount)}`
 
-    animateRingNumbers(targetRingData)
-    nextTick(() => setTimeout(() => drawRings(), 50))
+    compareBars.value = { lastMonth: Math.round(lastMonthBar), month: Math.round(monthBar) }
+    monthTrendText.value = mTrendText
+    monthTrendDir.value = mTrendDir
+    historyTrendText.value = historyText
+
+    animateBigNumbers({ history: totalCount, lastMonth: lastMonthTotal, month: monthCount, priority: priorityCount })
   } catch (e) {
     showToast('加载统计失败')
   }
 }
 
-function animateRingNumbers(targetRingData) {
-  if (ringAnimTimer) clearTimeout(ringAnimTimer)
-  const duration = 800
+function animateBigNumbers(target) {
+  if (bigNumberAnimTimer) clearTimeout(bigNumberAnimTimer)
   const steps = 25
   let step = 0
+  const start = { ...bigNumbers.value }
 
-  const parseVal = (val) => {
-    if (typeof val === 'string' && val.endsWith('k')) return parseFloat(val) * 1000
-    return parseInt(val) || 0
-  }
-
-  const originals = targetRingData.map(item => ({ value: parseVal(item.value), percent: item.percent }))
-
-  const animate = () => {
+  const tick = () => {
     step++
     const progress = Math.min(step / steps, 1)
-    const ease = 1 - Math.pow(1 - progress, 3)
-
-    ringData.value = targetRingData.map((target, i) => {
-      const animVal = Math.round(originals[i].value * ease)
-      const animPct = Math.round(originals[i].percent * ease)
-      return {
-        value: originals[i].value >= 1000 ? (animVal / 1000).toFixed(1) + 'k' : String(animVal),
-        percent: animPct,
-        trendDir: target.trendDir,
-        trendText: target.trendText,
-      }
-    })
-
-    if (step < steps) ringAnimTimer = setTimeout(animate, 32)
+    const ease = 1 - Math.pow(1 - progress, 3)   // easeOutCubic
+    bigNumbers.value = {
+      history: Math.round(start.history + (target.history - start.history) * ease),
+      lastMonth: Math.round(start.lastMonth + (target.lastMonth - start.lastMonth) * ease),
+      month: Math.round(start.month + (target.month - start.month) * ease),
+      priority: Math.round(start.priority + (target.priority - start.priority) * ease),
+    }
+    if (step < steps) bigNumberAnimTimer = setTimeout(tick, 32)
   }
-  animate()
+  tick()
 }
 
-function drawRings() {
-  const colors = ['#007AFF', '#34C759', '#FF9500', '#FF3B30']
-  ringData.value.forEach((ring, idx) => {
-    const canvas = ringCanvasRefs[idx]
-    if (canvas) drawRing(canvas, ring.percent, colors[idx])
-  })
-}
+function drawHistorySpark() {
+  const canvas = historySparkRef.value
+  if (!canvas) return
+  const data = historySparkData.value
+  if (!data || data.length < 2) return
 
-function drawRing(canvas, percent, color) {
   const ctx = canvas.getContext('2d')
   const dpr = window.devicePixelRatio || 1
-  const size = window.innerWidth >= 1024 ? 96 : 72
-  canvas.width = size * dpr
-  canvas.height = size * dpr
-  canvas.style.width = size + 'px'
-  canvas.style.height = size + 'px'
+  const w = canvas.parentElement.clientWidth || 300
+  const h = 36
+  canvas.width = w * dpr
+  canvas.height = h * dpr
+  canvas.style.width = w + 'px'
+  canvas.style.height = h + 'px'
   ctx.scale(dpr, dpr)
+  ctx.clearRect(0, 0, w, h)
 
-  const cx = size / 2
-  const cy = size / 2
-  const r = size * 0.39
-  const lw = size * 0.07
+  const max = Math.max(...data, 1)
+  const pad = { l: 2, r: 2, t: 4, b: 4 }
+  const cw = w - pad.l - pad.r
+  const ch = h - pad.t - pad.b
+  const pts = data.map((v, i) => ({
+    x: pad.l + (i / (data.length - 1)) * cw,
+    y: pad.t + ch - (v / max) * ch,
+  }))
 
-  ctx.clearRect(0, 0, size, size)
+  // 填充渐变（淡到透明）
   ctx.beginPath()
-  ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)'
-  ctx.lineWidth = lw
-  ctx.stroke()
+  ctx.moveTo(pts[0].x, h)
+  pts.forEach((p, i) => i === 0 ? ctx.lineTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
+  ctx.lineTo(pts[pts.length - 1].x, h)
+  ctx.closePath()
+  const grad = ctx.createLinearGradient(0, pad.t, 0, h)
+  grad.addColorStop(0, 'rgba(0,122,255,0.18)')
+  grad.addColorStop(1, 'rgba(0,122,255,0)')
+  ctx.fillStyle = grad
+  ctx.fill()
 
+  // 折线
   ctx.beginPath()
-  ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (percent / 100) * Math.PI * 2)
-  ctx.strokeStyle = color
-  ctx.lineWidth = lw
+  ctx.strokeStyle = '#007AFF'
+  ctx.lineWidth = 1.5
+  ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
   ctx.stroke()
+
+  // 最后一个点高亮
+  const last = pts[pts.length - 1]
+  ctx.beginPath()
+  ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2)
+  ctx.fillStyle = '#007AFF'
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(last.x, last.y, 1, 0, Math.PI * 2)
+  ctx.fillStyle = '#fff'
+  ctx.fill()
 }
 
 async function loadTrend() {
@@ -584,7 +655,12 @@ async function loadTrend() {
 
     trendDateLabels.value = labels
     trendSummary.value = { currentTotal, prevTotal, todayCount: counts[counts.length - 1] || 0, compareDir, compareText }
-    nextTick(() => setTimeout(() => drawTrendCanvas(counts, prevCounts), 50))
+    // 历史客户 sparkline 数据：取最近 7 天每日新增（trend 接口返回的 counts）
+    historySparkData.value = counts.slice(-7)
+    nextTick(() => setTimeout(() => {
+      drawTrendCanvas(counts, prevCounts)
+      drawHistorySpark()
+    }, 50))
   } catch (e) {
     showToast('加载趋势失败')
   }
@@ -824,7 +900,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (ringAnimTimer) clearTimeout(ringAnimTimer)
+  if (bigNumberAnimTimer) clearTimeout(bigNumberAnimTimer)
 })
 </script>
 
@@ -881,17 +957,150 @@ onUnmounted(() => {
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .card-title { font-size: 14px; font-weight: 600; color: #1D1D1F; }
 
-/* Ring Grid */
-.ring-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.ring-card { display: flex; flex-direction: column; align-items: center; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 10px; border: 1px solid rgba(0,0,0,0.04); }
-.ring-chart { position: relative; width: 72px; height: 72px; margin-bottom: 6px; }
-.ring-canvas { display: block; }
-.ring-value { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 15px; font-weight: 700; color: #1D1D1F; }
-.ring-label { font-size: 11px; color: rgba(29,29,31,0.55); font-weight: 500; margin-bottom: 2px; }
-.ring-trend { font-size: 10px; font-weight: 600; }
-.ring-trend.up { color: #34C759; }
-.ring-trend.down { color: #FF3B30; }
-.ring-trend.flat { color: rgba(29,29,31,0.55); }
+/* ── Bento 大数字矩阵 ─────────────────────────────── */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.bento-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  min-height: 124px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.bento-card:active {
+  transform: scale(0.985);
+}
+.bento-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.bento-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(29, 29, 31, 0.55);
+  letter-spacing: 0.2px;
+}
+.bento-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--blue-light);
+  color: var(--primary);
+  letter-spacing: 0.6px;
+}
+.bento-dot-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.12);
+}
+.bento-dot-mark.month { background: var(--success); }
+.bento-dot-mark.current { background: var(--warning); }
+.bento-dot-mark.priority { background: var(--danger); }
+
+/* 巨号数字：等宽字体强调精确感 */
+.bento-value {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #1D1D1F;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* sparkline 容器（仅主卡） */
+.bento-spark-wrap {
+  margin-top: auto;
+  margin-bottom: 6px;
+  height: 36px;
+  width: 100%;
+}
+.bento-spark-canvas {
+  display: block;
+  width: 100%;
+}
+
+/* 对比条（上月 / 本月） */
+.bento-compare-bar {
+  margin-top: auto;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.bento-compare-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bento-compare-fill.last { background: var(--success); }
+.bento-compare-fill.current { background: var(--warning); }
+
+/* dot grid（重点客户：最多 8 个圆点，未达 8 显示空心占位） */
+.bento-dot-grid {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.bento-dot-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+}
+.bento-dot-cell.filled { background: var(--danger); }
+
+/* 趋势文本与指示 */
+.bento-trend-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: rgba(29, 29, 31, 0.55);
+  font-weight: 500;
+}
+.bento-trend-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.bento-trend-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(29, 29, 31, 0.55);
+  letter-spacing: 0.1px;
+}
+.bento-trend-text.up { color: var(--success); }
+.bento-trend-text.down { color: var(--danger); }
+.bento-trend-text.flat { color: rgba(29, 29, 31, 0.4); }
+
+/* 主卡（历史客户）跨整行 */
+.bento-card.bento-main {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.06), rgba(0, 122, 255, 0.02));
+  border-color: rgba(0, 122, 255, 0.1);
+  min-height: 140px;
+}
+.bento-card.bento-main .bento-value {
+  font-size: 36px;
+}
 
 /* Priority */
 .expand-btn { font-size: 12px; color: #007AFF; font-weight: 500; cursor: pointer; }
@@ -1053,23 +1262,33 @@ onUnmounted(() => {
     margin-bottom: 0;
   }
 
-  /* 环形图 4 列一行 */
-  .ring-grid {
+  /* Bento 大数字矩阵：PC 端 4 列一行，主卡（历史客户）与子卡同高 */
+  .bento-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
   }
 
-  .ring-card {
-    padding: 16px 14px;
+  .bento-card {
+    padding: 16px 16px 14px;
+    min-height: 150px;
   }
 
-  .ring-chart {
-    width: 96px;
-    height: 96px;
+  .bento-value {
+    font-size: 34px;
   }
 
-  .ring-value {
-    font-size: 18px;
+  .bento-card.bento-main {
+    grid-column: span 1;       /* PC 端 4 等权，主卡不跨列 */
+    min-height: 150px;
+  }
+
+  .bento-card.bento-main .bento-value {
+    font-size: 38px;
+  }
+
+  .bento-trend-text,
+  .bento-trend-row {
+    font-size: 12px;
   }
 
   .ring-label {
@@ -1182,13 +1401,20 @@ onUnmounted(() => {
     grid-column: span 1;
   }
 
-  /* 环形图卡片彩色底，呼应环形图配色 */
-  .ring-grid .ring-card:nth-child(1) { background: var(--blue-light); border-color: rgba(0,122,255,0.12); }
-  .ring-grid .ring-card:nth-child(2) { background: var(--green-light); border-color: rgba(52,199,89,0.12); }
-  .ring-grid .ring-card:nth-child(3) { background: var(--orange-light); border-color: rgba(255,149,0,0.12); }
-  .ring-grid .ring-card:nth-child(4) { background: var(--red-light); border-color: rgba(255,59,48,0.12); }
-  .ring-card { transition: transform 0.15s ease; }
-  .ring-card:hover { transform: translateY(-2px); }
+  /* Bento 卡片：保留语义色做点缀（数字主色仍为黑，仅背景轻微着色） */
+  .bento-card.bento-main {
+    background: linear-gradient(135deg, rgba(0,122,255,0.08), rgba(0,122,255,0.02));
+    border-color: rgba(0,122,255,0.12);
+  }
+  .bento-card:nth-child(2) { border-color: rgba(52,199,89,0.14); }
+  .bento-card:nth-child(3) { border-color: rgba(255,149,0,0.14); }
+  .bento-card:nth-child(4) { border-color: rgba(255,59,48,0.14); }
+
+  .bento-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .bento-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+  }
 
   /* 半宽卡内列表收为单列，避免拥挤 */
   .priority-list { grid-template-columns: 1fr; }
