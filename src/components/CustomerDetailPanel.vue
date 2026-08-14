@@ -26,15 +26,15 @@
             <div class="fu-content">{{ f.content }}</div>
           </div>
         </div>
-        <div v-else class="sec-empty">暂无跟进记录</div>
+        <!-- 无任何记录时输入框充当"客户需求"；有记录时才显示「提交」按钮追加跟进 -->
         <div class="fu-input-wrap">
           <textarea
             class="fu-input"
             v-model="newFollowup"
-            placeholder="输入本次跟进内容..."
+            :placeholder="hasAnyRecord ? '输入本次跟进内容...' : '请写明客户需求（标记重点时作为备注）'"
             rows="2"
           ></textarea>
-          <button class="btn-submit" @click="submitFollowup" :disabled="loading">
+          <button v-if="hasAnyRecord" class="btn-submit" @click="submitFollowup" :disabled="loading">
             {{ loading ? '提交中' : '提交' }}
           </button>
         </div>
@@ -305,6 +305,11 @@ const totalAmount = computed(() => {
   return sum > 0 ? sum.toLocaleString() : null
 })
 
+// 客户是否已有任何记录（跟进/到店/成交）：决定跟进输入框的语义与是否显示「提交」按钮
+const hasAnyRecord = computed(() =>
+  followups.value.length > 0 || visits.value.length > 0 || deals.value.length > 0
+)
+
 function showToast(message, duration = 2000) {
   toast.message = message
   toast.show = true
@@ -572,6 +577,28 @@ function confirmRemovePriority() {
 }
 
 async function addPriority() {
+  // 无任何记录时：必须先在输入框写明客户需求，输入框内容会作为重点备注（后端自动追加一条跟进历史）
+  if (!hasAnyRecord.value) {
+    const reason = newFollowup.value.trim()
+    if (!reason) {
+      showToast('请先填写客户需求')
+      return
+    }
+    try {
+      await api.put(`/customers/${props.customer.id}/priority`, {
+        is_priority: true,
+        remark: reason,
+      })
+      newFollowup.value = ''
+      showToast('已标注为重点')
+      emit('update:show', false)
+      emit('updated')
+    } catch (e) {
+      showToast(e.message || '操作失败')
+    }
+    return
+  }
+  // 有记录：保持原逻辑（直接标记重点）
   try {
     await api.put(`/customers/${props.customer.id}/priority`, { is_priority: true })
     showToast('已标注为重点')
