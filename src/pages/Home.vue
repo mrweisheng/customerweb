@@ -39,27 +39,11 @@
       </div>
     </div>
 
-    <!-- 顶部行：问候 + 操作 -->
+    <!-- 顶部行：问候 -->
     <div class="page-top-row">
       <div class="greeting-section">
         <div class="greeting-hi">{{ greetingTime }}</div>
         <div class="greeting-quote">{{ greetingQuote }}</div>
-      </div>
-
-      <div class="quick-actions" v-if="loggedIn && !isAdmin">
-        <div class="action-card ai-card" @click="scrollToHomeImport">
-          <div class="action-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#32ADE6" stroke-width="2" width="20" height="20">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-              <polyline points="21 15 16 10 5 21"></polyline>
-            </svg>
-          </div>
-          <div class="action-text-group">
-            <div class="action-title">图片导入</div>
-            <div class="action-desc">图片智能识别</div>
-          </div>
-        </div>
       </div>
     </div>
 
