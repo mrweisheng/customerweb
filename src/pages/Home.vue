@@ -1408,6 +1408,21 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+}
+
+/* 区块标题图标（移动端基础尺寸，PC 端 @media 中放大并调色） */
+.title-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.calendar-block .title-icon {
+  color: var(--success);
 }
 
 .trend-pills {

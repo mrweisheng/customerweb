@@ -298,7 +298,27 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
 }
+
+.results-header {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+/* 区块标题图标（移动端基础尺寸，PC 端 @media 中微调） */
+.title-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+.section-label .title-icon { color: var(--primary); }
+.results-header .title-icon { color: var(--info); }
 
 .history-tags {
   display: flex;
@@ -334,12 +354,6 @@ onMounted(() => {
 
 .search-results {
   margin-top: 16px;
-}
-
-.results-header {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
 }
 
 .result-card {

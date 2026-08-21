@@ -955,7 +955,20 @@ onUnmounted(() => {
   margin-bottom: 10px;
 }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.card-title { font-size: 14px; font-weight: 600; color: #1D1D1F; }
+.card-title { font-size: 14px; font-weight: 600; color: #1D1D1F; display: flex; align-items: center; }
+
+/* 区块标题图标（移动端基础尺寸，PC 端 @media 中放大） */
+.title-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+.overview-card .title-icon { color: var(--primary); }
+.priority-card-block .title-icon { color: var(--warning); }
+.chart-trend .title-icon { color: var(--info); }
+.chart-monthly .title-icon { color: var(--purple); }
+.customer-detail-card .title-icon { color: var(--success); }
 
 /* ── Bento 大数字矩阵 ─────────────────────────────── */
 .bento-grid {
