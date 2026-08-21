@@ -47,7 +47,7 @@
       </div>
 
       <div class="quick-actions" v-if="loggedIn && !isAdmin">
-        <div class="action-card ai-card" @click="goToAiImport">
+        <div class="action-card ai-card" @click="scrollToHomeImport">
           <div class="action-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="#32ADE6" stroke-width="2" width="20" height="20">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -56,8 +56,8 @@
             </svg>
           </div>
           <div class="action-text-group">
-            <div class="action-title">拍照导入</div>
-            <div class="action-desc">拍照智能识别</div>
+            <div class="action-title">图片导入</div>
+            <div class="action-desc">图片智能识别</div>
           </div>
         </div>
       </div>
@@ -109,53 +109,8 @@
       </div>
     </div>
 
-    <!-- 左列：客户趋势 + 快速导入 / 右列：更新日集 -->
-    <div class="home-grid-2col">
-    <div class="home-col-left">
-    <!-- 客户趋势 -->
-    <div class="section-block trend-block">
-      <div class="section-header">
-        <div class="section-title">
-          <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          客户趋势
-        </div>
-        <div class="trend-pills">
-          <div class="trend-pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
-          <div class="trend-pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
-          <div class="trend-pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">30天</div>
-        </div>
-      </div>
-      <div class="trend-legend">
-        <div class="trend-legend-item"><div class="trend-legend-dot current"></div>本期</div>
-        <div class="trend-legend-item"><div class="trend-legend-dot previous"></div>上期</div>
-      </div>
-      <div class="trend-chart-wrapper">
-        <canvas ref="trendCanvas" class="trend-canvas"></canvas>
-      </div>
-      <div class="trend-x-labels" v-if="trendDateLabels.length > 0">
-        <span class="trend-x-label" v-for="(label, index) in trendDateLabels" :key="index">{{ label }}</span>
-      </div>
-      <div class="trend-summary" v-if="trendSummary">
-        <div class="trend-summary-item">
-          <div class="trend-summary-value">{{ trendSummary.currentTotal }}</div>
-          <div class="trend-summary-label">本期合计</div>
-          <div class="trend-summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
-        </div>
-        <div class="trend-summary-item">
-          <div class="trend-summary-value secondary">{{ trendSummary.prevTotal }}</div>
-          <div class="trend-summary-label">上期合计</div>
-          <div class="trend-summary-label" style="margin-top:0">—</div>
-        </div>
-        <div class="trend-summary-item">
-          <div class="trend-summary-value">{{ trendSummary.todayCount }}</div>
-          <div class="trend-summary-label">今日新增</div>
-          <div class="trend-summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PC 端内嵌导入区域（仅桌面端显示） -->
-    <div class="home-import" v-if="isDesktop && loggedIn && !isAdmin">
+    <!-- 快速导入（移动端 + PC 端都内嵌显示，不再跳转新页面） -->
+    <div ref="homeImportRef" class="home-import" v-if="loggedIn && !isAdmin">
       <div class="section-header">
         <div class="section-title">
           <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -176,7 +131,10 @@
         <div class="dropzone-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         </div>
-        <div class="dropzone-text">粘贴截图 · 点击选择 · 拖拽到此处</div>
+        <div class="dropzone-text">
+          <span class="dropzone-text-pc">粘贴截图 · 点击选择 · 拖拽到此处</span>
+          <span class="dropzone-text-mobile">点击选择 / 拍照</span>
+        </div>
         <div class="dropzone-hint">支持 JPG / PNG，最多 {{ IMPORT_MAX }} 张，可分多次添加</div>
       </div>
 
@@ -242,7 +200,49 @@
         </details>
       </div>
     </div>
-    </div><!-- /.home-col-left -->
+
+    <!-- 趋势 + 日历 -->
+    <div class="home-grid-2col">
+    <div class="section-block trend-block">
+      <div class="section-header">
+        <div class="section-title">
+          <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          客户趋势
+        </div>
+        <div class="trend-pills">
+          <div class="trend-pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
+          <div class="trend-pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
+          <div class="trend-pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">30天</div>
+        </div>
+      </div>
+      <div class="trend-legend">
+        <div class="trend-legend-item"><div class="trend-legend-dot current"></div>本期</div>
+        <div class="trend-legend-item"><div class="trend-legend-dot previous"></div>上期</div>
+      </div>
+      <div class="trend-chart-wrapper">
+        <canvas ref="trendCanvas" class="trend-canvas"></canvas>
+      </div>
+      <div class="trend-x-labels" v-if="trendDateLabels.length > 0">
+        <span class="trend-x-label" v-for="(label, index) in trendDateLabels" :key="index">{{ label }}</span>
+      </div>
+      <div class="trend-summary" v-if="trendSummary">
+        <div class="trend-summary-item">
+          <div class="trend-summary-value">{{ trendSummary.currentTotal }}</div>
+          <div class="trend-summary-label">本期合计</div>
+          <div class="trend-summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
+        </div>
+        <div class="trend-summary-item">
+          <div class="trend-summary-value secondary">{{ trendSummary.prevTotal }}</div>
+          <div class="trend-summary-label">上期合计</div>
+          <div class="trend-summary-label" style="margin-top:0">—</div>
+        </div>
+        <div class="trend-summary-item">
+          <div class="trend-summary-value">{{ trendSummary.todayCount }}</div>
+          <div class="trend-summary-label">今日新增</div>
+          <div class="trend-summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
+        </div>
+      </div>
+    </div>
 
     <!-- 更新日集 -->
     <div class="section-block calendar-block">
@@ -321,6 +321,7 @@ const { isDesktop } = useDevice()
 
 // PC 端内嵌导入区域
 const IMPORT_MAX = 20
+const homeImportRef = ref(null)
 const importQueue = ref([])
 const importContacts = ref([])
 const importing = ref(false)
@@ -865,7 +866,32 @@ function goToAiImport() {
     showToast('管理员禁止此操作')
     return
   }
-  router.push('/ai-import')
+  scrollToHomeImport()
+}
+
+// 移动端 / PC 端共用：滚动到内嵌的快速导入区域，不再跳转新页面
+function scrollToHomeImport() {
+  if (!loggedIn.value) {
+    showToast('请先登录')
+    return
+  }
+  if (isAdmin.value) {
+    showToast('管理员禁止此操作')
+    return
+  }
+  // 等下一帧 DOM 更新（v-if 可能刚切到显示）
+  nextTick(() => {
+    const el = homeImportRef.value
+    if (!el) return
+    // 移动端用 smooth 滚动；PC 端也用 smooth，体验一致
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // 选中 dropzone 聚焦一下，PC 端提示可粘贴
+    const dropzone = el.querySelector('.import-dropzone')
+    if (dropzone) {
+      dropzone.classList.add('flash')
+      setTimeout(() => dropzone.classList.remove('flash'), 800)
+    }
+  })
 }
 
 // ── PC 端内嵌导入（复用 aiRecognize 的 SSE 识别 + batch-import 入库） ──
@@ -915,8 +941,9 @@ function onImportDrop(e) {
 }
 
 function onImportPaste(e) {
-  // 仅 PC 端已登录非管理员、仅当剪贴板含图片时拦截；纯文本粘贴放行，不干扰输入框
-  if (!isDesktop.value || !loggedIn.value || isAdmin.value) return
+  // 端已登录非管理员、仅当剪贴板含图片时拦截；纯文本粘贴放行，不干扰输入框
+  // 移动端 / PC 端都支持（部分 Android 浏览器在系统剪贴板有图片时也能捕获）
+  if (!loggedIn.value || isAdmin.value) return
   const items = e.clipboardData?.items
   if (!items) return
   const files = []
@@ -1881,15 +1908,7 @@ onUnmounted(() => {
     margin-bottom: 0;
   }
 
-  /* 左列：客户趋势 + 快速导入 上下叠放 */
-  .home-col-left {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    min-width: 0;
-  }
-
-  /* 右列日集随左列等高，摘要沉底，视觉对齐 */
+  /* 左列日集随右列等高，摘要沉底，视觉对齐（trend + import 已在 grid 之外） */
   .calendar-block {
     display: flex;
     flex-direction: column;
@@ -1985,354 +2004,420 @@ onUnmounted(() => {
   }
 }
 
-/* ============ PC 端内嵌导入区域（客户趋势下方） ============ */
+/* ============ 内嵌导入区域（移动端 + PC 端通用，按屏宽调整密度） ============ */
 .home-import {
-  display: none;
+  display: block;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
 }
 
-@media (min-width: 1024px) {
-  .home-import {
-    display: block;
-    background: var(--bg-card);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-glass);
-    border-radius: 14px;
-    padding: 18px 22px;
-  }
+.import-progress {
+  font-size: 11px;
+  color: var(--primary);
+  font-weight: 600;
+}
 
-  .import-progress {
-    font-size: 12px;
-    color: var(--primary);
-    font-weight: 600;
-  }
+/* dropzone：移动端紧凑、点击明显 */
+.import-dropzone {
+  border: 2px dashed var(--border-glass);
+  border-radius: 12px;
+  padding: 18px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(0, 122, 255, 0.02);
+  margin-top: 10px;
+}
 
-  .import-dropzone {
-    border: 2px dashed var(--border-glass);
-    border-radius: 14px;
-    padding: 26px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: rgba(0, 122, 255, 0.02);
-    margin-top: 12px;
-  }
+.import-dropzone:hover,
+.import-dropzone.dragging {
+  border-color: var(--primary);
+  background: rgba(0, 122, 255, 0.06);
+}
 
-  .import-dropzone:hover,
-  .import-dropzone.dragging {
-    border-color: var(--primary);
-    background: rgba(0, 122, 255, 0.06);
-    transform: translateY(-1px);
-  }
+.import-dropzone.flash {
+  animation: dropzone-flash 0.8s ease;
+}
 
-  .dropzone-icon {
-    color: var(--primary);
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: center;
-  }
+@keyframes dropzone-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }
+  60%  { box-shadow: 0 0 0 12px rgba(0, 122, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+}
 
-  .dropzone-icon svg {
-    width: 36px;
-    height: 36px;
-  }
+.dropzone-icon {
+  color: var(--primary);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: center;
+}
 
-  .dropzone-text {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-  }
+.dropzone-icon svg {
+  width: 32px;
+  height: 32px;
+}
 
-  .dropzone-hint {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
+.dropzone-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
 
-  .import-thumbs {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-    gap: 10px;
-    margin-top: 14px;
-  }
+/* dropzone 文案：移动端显示拍照版，PC 端显示粘贴版 */
+.dropzone-text-mobile { display: inline; }
+.dropzone-text-pc { display: none; }
 
-  .import-thumb {
-    position: relative;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 2px solid var(--border-glass);
-    aspect-ratio: 1;
-    background: var(--bg-primary);
-    transition: border-color 0.2s;
-  }
+.dropzone-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
 
-  .import-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+/* 缩略图队列：移动端一行 3 张 */
+.import-thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
 
-  .import-thumb-status {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 14px 6px 5px;
-    text-align: center;
-  }
+.import-thumb {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border-glass);
+  aspect-ratio: 1;
+  background: var(--bg-primary);
+  transition: border-color 0.2s;
+}
 
-  .import-thumb.processing {
-    border-color: var(--primary);
-    animation: pulse-border 1.4s ease-in-out infinite;
-  }
+.import-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-  .import-thumb.done {
-    border-color: var(--success);
-  }
+.import-thumb-status {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 12px 4px 4px;
+  text-align: center;
+}
 
-  .import-thumb.error {
-    border-color: var(--danger);
-  }
+.import-thumb.processing {
+  border-color: var(--primary);
+  animation: pulse-border 1.4s ease-in-out infinite;
+}
 
-  .import-thumb-status .processing {
-    color: #5AC8FA;
-  }
+.import-thumb.done {
+  border-color: var(--success);
+}
 
-  .import-thumb-status .done {
-    color: #34C759;
-  }
+.import-thumb.error {
+  border-color: var(--danger);
+}
 
-  .import-thumb-status .error {
-    color: #FF9500;
-  }
+.import-thumb-status .processing { color: #5AC8FA; }
+.import-thumb-status .done       { color: #34C759; }
+.import-thumb-status .error      { color: #FF9500; }
 
-  .import-thumb-remove,
-  .import-thumb-retry {
-    position: absolute;
-    top: 5px;
-    border: none;
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+.import-thumb-remove,
+.import-thumb-retry {
+  position: absolute;
+  top: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  .import-thumb-remove {
-    right: 5px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-  }
+.import-thumb-remove {
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+}
 
-  .import-thumb-retry {
-    right: 30px;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.92);
-    color: var(--primary);
-  }
+.import-thumb-retry {
+  right: 26px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--primary);
+}
 
-  .import-contacts {
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px dashed var(--border-glass);
-  }
+/* 联系人列表：移动端单列 */
+.import-contacts {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-glass);
+}
 
-  .import-contacts-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 10px;
-  }
+.import-contacts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
 
-  .import-valid-count {
-    color: var(--primary);
-    font-weight: 600;
-  }
+.import-valid-count {
+  color: var(--primary);
+  font-weight: 600;
+}
 
-  .import-contact-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 8px;
-  }
+.import-contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
 
-  .import-contact {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid var(--border-glass);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
+.import-contact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
 
-  .import-contact:hover {
-    border-color: var(--primary);
-    background: rgba(0, 122, 255, 0.04);
-  }
+.import-contact.invalid {
+  opacity: 0.5;
+}
 
-  .import-contact.invalid {
-    opacity: 0.5;
-  }
+.import-contact input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
 
-  .import-contact input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary);
-  }
+.import-contact-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
 
-  .import-contact-name {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+.import-contact-date {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
 
-  .import-contact-date {
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
+.import-contact-date.invalid {
+  color: var(--danger);
+}
 
-  .import-contact-date.invalid {
-    color: var(--danger);
-  }
+/* 操作区：移动端吸底，按钮加大方便点 */
+.import-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
 
-  .import-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-  }
+.btn-import-secondary {
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: white;
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
 
-  .btn-import-secondary {
-    padding: 10px 20px;
-    border-radius: 10px;
-    background: white;
-    color: var(--text-primary);
-    border: 1px solid var(--border-glass);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-  }
+.btn-import-primary {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.18);
+  cursor: pointer;
+  border: none;
+  min-height: 44px; /* iOS 推荐触摸目标 */
+}
 
-  .btn-import-primary {
-    flex: 1;
-    padding: 10px 18px;
-    border-radius: 10px;
-    background: var(--primary);
-    color: white;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.18);
-    cursor: pointer;
-    transition: transform 0.15s;
-  }
+.btn-import-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
-  .btn-import-primary:hover:not(:disabled) {
-    transform: translateY(-1px);
-  }
+.import-result {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
 
-  .btn-import-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+.import-result.success { background: rgba(52, 199, 89, 0.1); color: var(--success); }
+.import-result.error   { background: rgba(255, 59, 48, 0.1); color: var(--danger); }
+.import-result.warn    { background: rgba(255, 149, 0, 0.1); color: #FF9500; }
 
-  .import-result {
-    margin-top: 14px;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 600;
-  }
+.import-result-summary { font-size: 12px; font-weight: 600; }
 
-  .import-result.success {
-    background: rgba(52, 199, 89, 0.1);
-    color: var(--success);
-  }
+.import-result-detail { margin-top: 6px; font-size: 11px; font-weight: 500; }
+.import-result-detail summary {
+  cursor: pointer;
+  outline: none;
+  list-style: none;
+  opacity: 0.85;
+}
+.import-result-detail summary::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.2s;
+}
+.import-result-detail[open] summary::before { content: '▾ '; }
+.import-result-detail .skip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  color: var(--text-primary);
+}
+.import-result-detail .skip-reason {
+  font-size: 10px;
+  font-weight: 600;
+  color: #FF9500;
+  background: rgba(255, 149, 0, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
 
-  .import-result.error {
-    background: rgba(255, 59, 48, 0.1);
-    color: var(--danger);
-  }
-
-  .import-result.warn {
-    background: rgba(255, 149, 0, 0.1);
-    color: #FF9500;
-  }
-
-  .import-result-summary {
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .import-result-detail {
-    margin-top: 8px;
-    font-size: 12px;
-    font-weight: 500;
-  }
-  .import-result-detail summary {
-    cursor: pointer;
-    outline: none;
-    list-style: none;
-    opacity: 0.85;
-  }
-  .import-result-detail summary::before {
-    content: '▸ ';
-    display: inline-block;
-    transition: transform 0.2s;
-  }
-  .import-result-detail[open] summary::before {
-    content: '▾ ';
-  }
-  .import-result-detail .skip-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0;
-    color: var(--text-primary);
-  }
-  .import-result-detail .skip-reason {
-    font-size: 11px;
-    font-weight: 600;
-    color: #FF9500;
-    background: rgba(255, 149, 0, 0.12);
-    padding: 1px 6px;
-    border-radius: 4px;
-  }
-
-  /* 内嵌导入查重徽章 */
-  .dup-tag {
-    margin-left: 4px;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-  .dup-badge {
-    display: inline-block;
-    margin-left: 4px;
-    padding: 1px 6px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #FF9500;
-    background: rgba(255, 149, 0, 0.12);
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
+/* 内嵌导入查重徽章 */
+.dup-tag {
+  margin-left: 4px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.dup-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #FF9500;
+  background: rgba(255, 149, 0, 0.12);
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 @keyframes pulse-border {
   0%, 100% { border-color: var(--primary); }
   50% { border-color: rgba(0, 122, 255, 0.35); }
+}
+
+/* ============ PC 端内嵌导入区域：密度加大、文案切换为粘贴版 ============ */
+@media (min-width: 1024px) {
+  .home-import {
+    padding: 18px 22px;
+    margin-bottom: 14px;
+  }
+
+  .import-progress { font-size: 12px; }
+
+  .import-dropzone {
+    border-radius: 14px;
+    padding: 26px 20px;
+    margin-top: 12px;
+  }
+  .import-dropzone:hover,
+  .import-dropzone.dragging {
+    transform: translateY(-1px);
+  }
+
+  .dropzone-icon { margin-bottom: 8px; }
+  .dropzone-icon svg { width: 36px; height: 36px; }
+
+  .dropzone-text { font-size: 14px; margin-bottom: 4px; }
+  /* PC 端显示粘贴版文案 */
+  .dropzone-text-mobile { display: none; }
+  .dropzone-text-pc { display: inline; }
+
+  .dropzone-hint { font-size: 12px; }
+
+  .import-thumbs {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .import-thumb { border-radius: 10px; }
+  .import-thumb-status {
+    font-size: 11px;
+    padding: 14px 6px 5px;
+  }
+  .import-thumb-remove,
+  .import-thumb-retry { font-size: 11px; top: 5px; }
+  .import-thumb-remove { width: 20px; height: 20px; right: 5px; }
+  .import-thumb-retry { right: 30px; padding: 2px 8px; }
+
+  .import-contacts { margin-top: 16px; padding-top: 14px; }
+  .import-contacts-header { font-size: 13px; margin-bottom: 10px; }
+
+  .import-contact-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .import-contact {
+    padding: 10px 12px;
+  }
+  .import-contact:hover {
+    border-color: var(--primary);
+    background: rgba(0, 122, 255, 0.04);
+  }
+  .import-contact-name { font-size: 14px; }
+  .import-contact-date { font-size: 12px; }
+
+  .import-actions {
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .btn-import-secondary { padding: 10px 20px; font-size: 14px; }
+  .btn-import-primary { padding: 10px 18px; font-size: 14px; min-height: 0; }
+  .btn-import-primary:hover:not(:disabled) { transform: translateY(-1px); }
+
+  .import-result { margin-top: 14px; padding: 12px 16px; font-size: 13px; }
+  .import-result-summary { font-size: 13px; }
+  .import-result-detail { margin-top: 8px; font-size: 12px; }
+  .import-result-detail .skip-row { padding: 4px 0; }
+  .import-result-detail .skip-reason { font-size: 11px; padding: 1px 6px; }
+  .dup-badge { font-size: 11px; padding: 1px 6px; }
 }
 </style>
