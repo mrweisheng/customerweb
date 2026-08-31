@@ -686,7 +686,7 @@ onMounted(() => {
 .p-kpi-hero {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 14px;
 }
 .kpi-hero-main { display: none; }
@@ -695,23 +695,23 @@ onMounted(() => {
 }
 .kpi-hero-tile {
   border-radius: 14px;
-  padding: 14px 12px;
+  padding: 11px 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid transparent;
   min-width: 0;
 }
 .tile-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.tile-icon svg { width: 20px; height: 20px; }
+.tile-icon svg { width: 16px; height: 16px; }
 .tile-body {
   flex: 1;
   min-width: 0;
@@ -721,20 +721,21 @@ onMounted(() => {
 }
 .tile-num {
   font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   line-height: 1;
 }
 .tile-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-primary);
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  gap: 3px;
+  /* 去掉 nowrap：窄屏让 "3 成交" 等 sub 自然换行到第二行，不被 ellipsis 截断 */
+  flex-wrap: wrap;
+  row-gap: 1px;
+  min-width: 0;
 }
 .tile-sub {
   font-size: 10px;
