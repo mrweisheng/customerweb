@@ -38,11 +38,12 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import api from '../utils/api'
 import { setToken, setUserInfo } from '../utils/auth'
 
 const router = useRouter()
+const route = useRoute()
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -57,6 +58,13 @@ function showToast(message, duration = 2000) {
 }
 
 function navigateBack() {
+  // 优先使用 redirect 参数（401 拦截器跳转时会带上），让用户登录后回到原页面
+  const redirect = route.query.redirect
+  // 只接受内部路径（避免 open redirect：//evil.com 这种 protocol-relative 也会被排除）
+  if (redirect && typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    router.replace(redirect)
+    return
+  }
   if (window.history.length > 1) {
     router.back()
   } else {

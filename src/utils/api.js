@@ -30,7 +30,9 @@ api.interceptors.response.use(
     if (error.response) {
       if (error.response.status === 401) {
         clearAuth()
-        router.push('/mine')
+        // 带上当前路径作为 redirect，登录成功后跳回原页面，避免「跳 /mine 再点一次登录按钮」的体验
+        const redirect = router.currentRoute.value.fullPath
+        router.push({ path: '/login', query: { redirect } })
         return Promise.reject(new Error('登錄已過期，請重新登錄'))
       }
       if (error.response.status >= 400) {
