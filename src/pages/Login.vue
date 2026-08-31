@@ -65,11 +65,8 @@ function navigateBack() {
     router.replace(redirect)
     return
   }
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    router.push('/index')
-  }
+  // 无 redirect 时默认跳首页
+  router.replace('/index')
 }
 
 async function onLogin() {
