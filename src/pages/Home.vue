@@ -385,7 +385,8 @@ function setGreeting() {
   if (hour >= 12 && hour < 18) g = '下午好'
   else if (hour >= 18) g = '晚上好'
 
-  const quotes = [
+  // 兜底列表：LLM 调用失败时使用
+  const fallbackQuotes = [
     '每一步，都算数',
     '相信过程，静待花开',
     '笃行者，至千里',
@@ -394,10 +395,19 @@ function setGreeting() {
     '客户至上，用心服务',
     '日积一卒，功不唐捐',
   ]
-  const dayQuote = quotes[new Date().getDay()]
+  const fallback = fallbackQuotes[new Date().getDay()]
 
   greetingTime.value = g
-  greetingQuote.value = dayQuote
+  greetingQuote.value = fallback
+
+  // 异步尝试拉取 LLM 每日生成的一句激励语；失败/超时则保留兜底
+  api.get('/customers/daily-quote')
+    .then((res) => {
+      if (res && res.quote) greetingQuote.value = res.quote
+    })
+    .catch(() => {
+      // 静默失败，保持兜底
+    })
 }
 
 function loadMockData() {
