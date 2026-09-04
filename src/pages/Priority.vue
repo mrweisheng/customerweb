@@ -112,20 +112,25 @@
       </div>
     </div>
 
-    <!-- 月份切换（成交/到店列表） -->
-    <div v-if="!searchQuery" class="month-switch">
-      <button class="ms-btn" @click="shiftMonth(-1)">‹</button>
-      <div class="ms-label">
-        {{ viewMonthText }}
-        <span v-if="isCurrentMonth" class="ms-badge">本月</span>
-      </div>
-      <button class="ms-btn" :disabled="isCurrentMonth" @click="shiftMonth(1)">›</button>
-    </div>
-
-    <!-- Row 3: Bento — 成交/到店横向并排（等宽）+ 重点客户独占下方 -->
+    <!-- Row 3: Bento — 月度面板(月份切换+成交/到店) + 重点客户独占下方 -->
     <div v-if="!searchQuery" class="p-bento">
-      <!-- 横向并排：本月成交 + 本月到店（等宽双卡） -->
-      <div class="p-bento-pair">
+      <!-- 月度面板：头部月份切换 + 成交/到店并排 -->
+      <div class="month-panel">
+        <div class="mp-head">
+          <div class="mp-switch">
+            <button class="ms-btn" @click="shiftMonth(-1)">‹</button>
+            <span class="mp-month">
+              {{ viewMonthText }}
+              <span v-if="isCurrentMonth" class="ms-badge">本月</span>
+            </span>
+            <button class="ms-btn" :disabled="isCurrentMonth" @click="shiftMonth(1)">›</button>
+          </div>
+          <div class="mp-chips">
+            <span class="mp-chip">成交 {{ monthDeals.length }}</span>
+            <span class="mp-chip">到店 {{ visitStats.total }}</span>
+          </div>
+        </div>
+        <div class="p-bento-pair">
         <section v-if="monthDeals.length || !isCurrentMonth" class="grid-section month-deal-section">
           <div class="section-title">
             <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -193,6 +198,10 @@
             </div>
           </div>
         </section>
+          <div v-if="!monthDeals.length && !monthVisits.length" class="mp-empty">
+            {{ isCurrentMonth ? '本月' : viewMonthText }}暂无成交与到店记录
+          </div>
+        </div>
       </div>
 
       <!-- 下方独占一行：重点客户卡片网格 -->
@@ -963,18 +972,26 @@ onMounted(() => {
 .priority-card.danger .visit-text { color: #FF3B30; }
 
 /* ==========================================================================
-   月份切换器
+   月度面板（月份切换 + 成交/到店）：移动端轻量工具行，PC 端整体成卡
    ========================================================================== */
-.month-switch { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.month-panel { min-width: 0; }
+.mp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.mp-switch { display: flex; align-items: center; gap: 8px; }
+.mp-month { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-primary); min-width: 84px; justify-content: center; }
+.mp-chips { display: flex; gap: 6px; flex-shrink: 0; }
+.mp-chip { font-size: 11px; font-weight: 600; color: var(--text-secondary); background: rgba(0,0,0,0.04); padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+.mp-empty { grid-column: 1 / -1; font-size: 13px; color: var(--text-tertiary); text-align: center; padding: 18px 0; }
+/* 只剩一个板块时（另一板块无数据且为本月被隐藏），占满整行 */
+.p-bento-pair > .grid-section:only-child { grid-column: 1 / -1; }
+
 .ms-btn {
-  width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--border-glass);
+  width: 30px; height: 30px; border-radius: 10px; border: 1px solid var(--border-glass);
   background: #fff; color: var(--text-secondary); font-size: 18px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; line-height: 1;
   transition: all 0.15s;
 }
 .ms-btn:not(:disabled):active { background: var(--bg-primary); transform: scale(0.94); }
 .ms-btn:disabled { opacity: 0.3; cursor: default; }
-.ms-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-primary); min-width: 96px; justify-content: center; }
 .ms-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: rgba(255,149,0,0.12); color: #FF9500; }
 .ms-empty { font-size: 13px; color: var(--text-tertiary); padding: 16px 0; text-align: center; }
 
@@ -1273,6 +1290,32 @@ onMounted(() => {
   .p-bento-pair .section-title { margin-bottom: 12px; }
   .p-bento-pair .month-deal-grid,
   .p-bento-pair .month-visit-grid { column-count: 2; column-gap: 12px; }
+
+  /* 月度面板：PC 下整体一张玻璃卡，内部两栏以分隔线分开（取代两张独立卡） */
+  .month-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    padding: 18px 22px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 10px 24px rgba(0,0,0,0.03);
+    margin-bottom: 0;
+  }
+  .month-panel .mp-head { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border-glass); }
+  .month-panel .mp-month { font-size: 15px; }
+  .month-panel .mp-chip { background: rgba(0,0,0,0.04); }
+  .month-panel .p-bento-pair { margin-bottom: 0; }
+  .month-panel .p-bento-pair > .grid-section {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
+  }
+  .month-panel .p-bento-pair > .grid-section + .grid-section {
+    border-left: 1px solid var(--border-glass);
+    padding-left: 22px;
+  }
 
   /* 搜索结果在 PC 下两列网格 */
   .results-section {
