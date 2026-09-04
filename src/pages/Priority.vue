@@ -86,7 +86,7 @@
           </div>
           <div class="tile-body">
             <div class="tile-num">{{ visitStats.total }}</div>
-            <div class="tile-label">本月到店<span class="tile-sub">{{ visitStats.dealt }} 成交</span></div>
+            <div class="tile-label">{{ monthLabel }}到店<span class="tile-sub">{{ visitStats.dealt }} 成交</span></div>
           </div>
         </div>
 
@@ -96,7 +96,7 @@
           </div>
           <div class="tile-body">
             <div class="tile-num">{{ monthDeals.length }}</div>
-            <div class="tile-label">本月成交<span class="tile-sub">单数</span></div>
+            <div class="tile-label">{{ monthLabel }}成交<span class="tile-sub">单数</span></div>
           </div>
         </div>
 
@@ -112,17 +112,28 @@
       </div>
     </div>
 
+    <!-- 月份切换（成交/到店列表） -->
+    <div v-if="!searchQuery" class="month-switch">
+      <button class="ms-btn" @click="shiftMonth(-1)">‹</button>
+      <div class="ms-label">
+        {{ viewMonthText }}
+        <span v-if="isCurrentMonth" class="ms-badge">本月</span>
+      </div>
+      <button class="ms-btn" :disabled="isCurrentMonth" @click="shiftMonth(1)">›</button>
+    </div>
+
     <!-- Row 3: Bento — 成交/到店横向并排（等宽）+ 重点客户独占下方 -->
     <div v-if="!searchQuery" class="p-bento">
       <!-- 横向并排：本月成交 + 本月到店（等宽双卡） -->
       <div class="p-bento-pair">
-        <section v-if="monthDeals.length" class="grid-section month-deal-section">
+        <section v-if="monthDeals.length || !isCurrentMonth" class="grid-section month-deal-section">
           <div class="section-title">
             <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            本月成交
+            {{ monthLabel }}成交
             <span class="section-count">{{ monthDeals.length }} 单</span>
           </div>
-          <div class="month-deal-grid">
+          <div v-if="!monthDeals.length" class="ms-empty">该月无成交记录</div>
+          <div v-else class="month-deal-grid">
             <div
               v-for="d in monthDeals"
               :key="d.id"
@@ -151,14 +162,15 @@
           </div>
         </section>
 
-        <section v-if="monthVisits.length" class="grid-section month-visit-section">
+        <section v-if="monthVisits.length || !isCurrentMonth" class="grid-section month-visit-section">
           <div class="section-title">
             <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            本月到店
+            {{ monthLabel }}到店
             <span class="section-count">{{ visitStats.total }} 次</span>
             <span class="section-sub">{{ visitStats.dealt }} 成交 / {{ visitStats.notDealt }} 未成交</span>
           </div>
-          <div class="month-visit-grid">
+          <div v-if="!monthVisits.length" class="ms-empty">该月无到店记录</div>
+          <div v-else class="month-visit-grid">
             <div
               v-for="v in monthVisits"
               :key="v.id"
@@ -393,14 +405,54 @@ function targetUserIdParams() {
   return params
 }
 
+// ---------- 月份切换（成交/到店列表）----------
+function currentYM() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+const viewMonth = ref(currentYM()) // 'YYYY-MM'，默认本月
+const isCurrentMonth = computed(() => viewMonth.value === currentYM())
+const viewMonthText = computed(() => {
+  const [y, m] = viewMonth.value.split('-').map(Number)
+  return `${y}年${m}月`
+})
+// 区块标题用：本月 / 2025年12月
+const monthLabel = computed(() => (isCurrentMonth.value ? '本月' : viewMonthText.value))
+
+function shiftMonth(delta) {
+  const [y, m] = viewMonth.value.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  viewMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  loadMonthData()
+}
+
+async function loadMonthData() {
+  if (!loggedIn.value) return // 示例模式不发请求
+  try {
+    const params = { ...targetUserIdParams(), month: viewMonth.value }
+    const [dealsRes, visitsRes] = await Promise.all([
+      api.get('/customers/deal-list', { params }),
+      api.get('/customers/visit-list', { params }),
+    ])
+    monthDeals.value = (dealsRes || []).map((d) => ({
+      ...d,
+      lead_date_short: d.lead_date ? d.lead_date.slice(3).replace(/-/g, '') : '',
+    }))
+    monthVisits.value = (visitsRes || []).map((v) => ({
+      ...v,
+      lead_date_short: v.lead_date ? v.lead_date.slice(3).replace(/-/g, '') : '',
+    }))
+  } catch (e) {
+    showToast('加载失败')
+  }
+}
+
 // ---------- 数据加载 ----------
 async function loadAllData() {
   try {
-    const [statsRes, listRes, dealsRes, visitsRes] = await Promise.all([
+    const [statsRes, listRes] = await Promise.all([
       api.get('/customers/stats', { params: targetUserIdParams() }),
       api.get('/customers/priority', { params: targetUserIdParams() }),
-      api.get('/customers/deal-list', { params: targetUserIdParams() }),
-      api.get('/customers/visit-list', { params: targetUserIdParams() }),
     ])
     priorityCount.value = statsRes.priority_count || 0
     totalCount.value = statsRes.total_count || 0
@@ -410,14 +462,7 @@ async function loadAllData() {
       avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
       visitStatus: calcVisitStatus(c.last_visit_at),
     }))
-    monthDeals.value = (dealsRes || []).map((d) => ({
-      ...d,
-      lead_date_short: d.lead_date ? d.lead_date.slice(3).replace(/-/g, '') : '',
-    }))
-    monthVisits.value = (visitsRes || []).map((v) => ({
-      ...v,
-      lead_date_short: v.lead_date ? v.lead_date.slice(3).replace(/-/g, '') : '',
-    }))
+    await loadMonthData()
   } catch (e) {
     showToast('加载失败')
   }
@@ -918,6 +963,22 @@ onMounted(() => {
 .priority-card.danger .visit-text { color: #FF3B30; }
 
 /* ==========================================================================
+   月份切换器
+   ========================================================================== */
+.month-switch { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.ms-btn {
+  width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--border-glass);
+  background: #fff; color: var(--text-secondary); font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+  transition: all 0.15s;
+}
+.ms-btn:not(:disabled):active { background: var(--bg-primary); transform: scale(0.94); }
+.ms-btn:disabled { opacity: 0.3; cursor: default; }
+.ms-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--text-primary); min-width: 96px; justify-content: center; }
+.ms-badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: rgba(255,149,0,0.12); color: #FF9500; }
+.ms-empty { font-size: 13px; color: var(--text-tertiary); padding: 16px 0; text-align: center; }
+
+/* ==========================================================================
    本月成交 / 本月到店卡片（保留原 md-* 子样式）
    ========================================================================== */
 .month-deal-section { margin-bottom: 14px; }
@@ -934,6 +995,7 @@ onMounted(() => {
 .md-head { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
 .md-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--text-primary); word-break: break-all; letter-spacing: 0.2px; }
 .md-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; }
+.md-tag.vehicle { background: rgba(0,122,255,0.1); color: #007AFF; }
 .md-tag.plate { background: rgba(175,82,222,0.1); color: #AF52DE; }
 .md-detail { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
 .md-desc { font-size: 13px; font-weight: 700; color: var(--text-primary); }
