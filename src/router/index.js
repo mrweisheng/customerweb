@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isLoggedIn, getUserInfo } from '../utils/auth'
 
 const routes = [
   {
@@ -7,21 +8,15 @@ const routes = [
   },
   {
     path: '/index',
-    name: 'Home',
-    component: () => import('../pages/Home.vue'),
-    meta: { title: '首頁', showTabbar: true },
-  },
-  {
-    path: '/priority',
-    name: 'Priority',
-    component: () => import('../pages/Priority.vue'),
-    meta: { title: '重點', showTabbar: true },
+    name: 'Workbench',
+    component: () => import('../pages/Workbench.vue'),
+    meta: { title: '工作台', showTabbar: true },
   },
   {
     path: '/statistics',
     name: 'Statistics',
     component: () => import('../pages/Statistics.vue'),
-    meta: { title: '統計', showTabbar: true },
+    meta: { title: '统计', showTabbar: true },
   },
   {
     path: '/mine',
@@ -33,19 +28,17 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: () => import('../pages/Login.vue'),
-    meta: { title: '登錄' },
+    meta: { title: '登录' },
   },
   {
-    path: '/search',
-    name: 'Search',
-    component: () => import('../pages/Search.vue'),
-    meta: { title: '搜索' },
+    path: '/import',
+    name: 'Import',
+    component: () => import('../pages/Import.vue'),
+    meta: { title: '录入客户' },
   },
   {
-    path: '/ai-import',
-    name: 'AiImport',
-    component: () => import('../pages/AiImport.vue'),
-    meta: { title: 'AI導入' },
+    path: '/:pathMatch(.*)*',
+    redirect: '/index',
   },
 ]
 
@@ -54,9 +47,21 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
-  document.title = to.meta.title ? `${to.meta.title} - 客資管理` : '客資管理'
-  next()
+router.beforeEach((to) => {
+  document.title = to.meta.title ? `${to.meta.title} - 客资管理` : '客资管理'
+
+  // 未登录一律跳登录页（带 redirect 回跳），删除各页假数据模式
+  if (to.name !== 'Login' && !isLoggedIn()) {
+    return { path: '/login', query: { redirect: to.fullPath } }
+  }
+  // 已登录不再进登录页
+  if (to.name === 'Login' && isLoggedIn()) {
+    return { path: '/index' }
+  }
+  // 录入客户仅限普通用户（管理员数据只读）
+  if (to.name === 'Import' && getUserInfo()?.role === 'admin') {
+    return { path: '/index' }
+  }
 })
 
 export default router

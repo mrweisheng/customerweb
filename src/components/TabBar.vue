@@ -8,12 +8,11 @@
       @click="switchTab(tab.path)"
     >
       <div class="tabbar-icon">
-        <svg v-if="tab.name === 'Home'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-        <svg v-else-if="tab.name === 'Priority'" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        <svg v-if="tab.name === 'Workbench'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
         </svg>
         <svg v-else-if="tab.name === 'Statistics'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -38,9 +37,8 @@ const router = useRouter()
 const route = useRoute()
 
 const tabs = [
-  { name: 'Home', path: '/index', text: '首頁' },
-  { name: 'Priority', path: '/priority', text: '重點' },
-  { name: 'Statistics', path: '/statistics', text: '統計' },
+  { name: 'Workbench', path: '/index', text: '工作台' },
+  { name: 'Statistics', path: '/statistics', text: '统计' },
   { name: 'Mine', path: '/mine', text: '我的' },
 ]
 
@@ -48,6 +46,7 @@ const currentRoute = computed(() => route.path)
 const showTabbar = computed(() => route.meta.showTabbar)
 
 function switchTab(path) {
+  if (route.path === path) return
   router.push(path)
 }
 </script>

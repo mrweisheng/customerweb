@@ -1,7 +1,0 @@
-import{r as e}from"./api-FeX6iEcm.js";var t=`https://kehu.eazycar.top/customerapi`;function n(e){return new Promise((t,n)=>{let r=new FileReader;r.onerror=()=>n(Error(`文件讀取失敗`)),r.onload=()=>{let e=r.result,n=typeof e==`string`?e.indexOf(`,`):-1;t(n>=0?e.slice(n+1):``)},r.readAsDataURL(e)})}async function r(r,i){let a=await n(r);if(i?.aborted)throw Error(`aborted`);let o=await fetch(`${t}/customers/analyze-image`,{method:`POST`,headers:{"Content-Type":`application/json`,Authorization:`Bearer ${e()||``}`},body:JSON.stringify({image_base64:a}),signal:i});if(!o.ok){let e=`請求失敗 (${o.status})`;try{let t=await o.json();t?.detail&&(e=t.detail)}catch{}throw Error(e)}if(!o.body)throw Error(`無法讀取識別結果流`);let s=o.body.getReader(),c=new TextDecoder(`utf-8`),l=``,u=[],d=e=>{let t=e.split(`
-
-`);for(let e of t){let t=e.trim();if(!t.startsWith(`data:`))continue;let n=t.slice(5).trim();if(n)try{let e=JSON.parse(n);if(e.step===`complete`&&Array.isArray(e.contacts))u=e.contacts;else if(e.step===`empty`)u=[];else if(e.step===`error`)throw Error(e.message||`識別失敗`)}catch(e){if(e instanceof Error&&/識別失敗|失敗/.test(e.message))throw e}}};for(;;){let{done:e,value:t}=await s.read();if(e)break;l+=c.decode(t,{stream:!0});let n=l.split(`
-
-`);l=n.pop()||``,n.length>0&&d(n.join(`
-
-`))}return l+=c.decode(),l.trim()&&d(l),u}var i=`customerweb:contacts-imported`;function a(e={}){window.dispatchEvent(new CustomEvent(i,{detail:e}))}function o(e){let t=t=>e(t.detail);return window.addEventListener(i,t),()=>window.removeEventListener(i,t)}export{o as n,r,a as t};

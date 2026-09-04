@@ -1,23 +1,64 @@
-﻿﻿<template>
-  <!-- 客户详情/操作面板：跟进记录(追加式) + 成交记录(车辆/两地牌) + 重点开关 -->
+<template>
+  <!-- 客户编辑面板（全系统唯一编辑入口）：
+       五区块自上而下即跟进动线：当前需求 → 跟进记录 → 到店登记 → 成交 → 重点开关 -->
   <div class="cdp-mask" v-if="show" @click="close">
     <div class="cdp-sheet" @click.stop>
       <div class="cdp-handle"></div>
 
-      <!-- 头部：客户名 + 健康度 -->
+      <!-- 头部：客户名 + 健康度 + 关闭 -->
       <div class="cdp-header">
         <div class="cdp-title">{{ customerName }}</div>
+        <div class="cdp-health" v-if="customer.last_visit_at !== undefined">
+          <span class="health-dot" :class="visit.class"></span>
+          <span :class="visit.class">{{ visit.text }}</span>
+        </div>
         <button class="cdp-close" @click="close">×</button>
       </div>
-      <div class="cdp-health" v-if="customer.last_visit_at !== undefined">
-        <span class="health-dot" :class="visit.class"></span>
-        <span :class="visit.class">{{ visit.text }}</span>
-      </div>
 
-      <!-- 跟进记录（时间线，追加不覆盖） -->
+      <div class="cdp-loading" v-if="panelLoading"><span class="cdp-loading-dot"></span>加载客户数据中…</div>
+
+      <!-- ① 当前需求（客户级字段，重点跟进时一键更新） -->
       <div class="cdp-section">
         <div class="sec-head">
-          <span class="sec-icon">📋</span>跟进记录
+          <span class="sec-icon">🚩</span>当前需求
+        </div>
+
+        <!-- 查看 -->
+        <div class="need-card" v-if="!editingNeeds">
+          <div class="need-text" v-if="currentNeeds">{{ currentNeeds }}</div>
+          <div class="need-text empty" v-else>尚未记录客户需求</div>
+          <div class="need-foot">
+            <span class="need-hint">{{ currentNeeds ? '重点跟进时随时更新' : '标注重点前建议先写清需求' }}</span>
+            <button class="need-btn" @click="openNeedsEdit">{{ currentNeeds ? '更新需求' : '补充需求' }}</button>
+          </div>
+        </div>
+
+        <!-- 编辑 -->
+        <div class="need-card editing" v-else>
+          <textarea
+            class="need-input"
+            v-model="needsDraft"
+            rows="3"
+            placeholder="写清客户当前关注点，如：黑色SUV，预算40万，GLC/X3 对比中"
+            maxlength="2000"
+          ></textarea>
+          <label class="need-followup-toggle">
+            <input type="checkbox" v-model="needsAlsoFollowup" />
+            同步记入跟进时间线
+          </label>
+          <div class="need-btns">
+            <button class="btn-cancel" @click="editingNeeds = false">取消</button>
+            <button class="btn-primary" @click="submitNeeds" :disabled="loading">
+              {{ loading ? '保存中' : '保存需求' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 跟进记录（时间线，追加不覆盖；输入框只做一件事：记录跟进，始终可提交） -->
+      <div class="cdp-section" v-if="!panelLoading">
+        <div class="sec-head">
+          <span class="sec-icon">💬</span>跟进记录
           <span class="sec-count">{{ followups.length }}</span>
         </div>
         <div class="fu-list" v-if="followups.length">
@@ -26,22 +67,22 @@
             <div class="fu-content">{{ f.content }}</div>
           </div>
         </div>
-        <!-- 无任何记录时输入框充当"客户需求"；有记录时才显示「提交」按钮追加跟进 -->
+        <div v-else class="sec-empty">暂无跟进记录</div>
         <div class="fu-input-wrap">
           <textarea
             class="fu-input"
             v-model="newFollowup"
-            :placeholder="hasAnyRecord ? '输入本次跟进内容...' : '请写明客户需求（标记重点时作为备注）'"
+            placeholder="记录本次跟进内容…"
             rows="2"
           ></textarea>
-          <button v-if="hasAnyRecord" class="btn-submit" @click="submitFollowup" :disabled="loading">
+          <button class="btn-submit" @click="submitFollowup" :disabled="loading">
             {{ loading ? '提交中' : '提交' }}
           </button>
         </div>
       </div>
 
-      <!-- 到店记录（到店时间 / 需求 / 是否成交） -->
-      <div class="cdp-section">
+      <!-- ③ 到店记录（登记未成交到店会自动标为重点） -->
+      <div class="cdp-section" v-if="!panelLoading">
         <div class="sec-head">
           <span class="sec-icon">📍</span>到店记录
           <span class="sec-count">{{ visits.length }}</span>
@@ -67,11 +108,11 @@
             </div>
           </div>
         </div>
-        <div v-else class="sec-empty">暂无到店记录，点击「+ 登记」记录客户到店时间、需求与成交情况</div>
+        <div v-else class="sec-empty">暂无到店记录，点击「+ 登记」记录到店时间与需求</div>
       </div>
 
-      <!-- 成交记录（车辆 / 两地牌） -->
-      <div class="cdp-section">
+      <!-- ④ 成交记录（车辆 / 两地牌；新增成交自动移出重点） -->
+      <div class="cdp-section" v-if="!panelLoading">
         <div class="sec-head">
           <span class="sec-icon">💰</span>成交记录
           <span class="sec-count">{{ deals.length }}</span>
@@ -107,17 +148,17 @@
         <div v-else class="sec-empty">暂无成交记录，点击「+ 添加」记录车辆或两地牌成交</div>
       </div>
 
-      <!-- 底部操作：重点开关 -->
+      <!-- ⑤ 重点开关 -->
       <div class="cdp-actions">
         <button v-if="customer.is_priority" class="btn-danger" @click="confirmRemovePriority">
-          取消重点
+          ★ 取消重点
         </button>
-        <button v-else class="btn-primary" @click="addPriority">
-          标注为重点
+        <button v-else class="btn-primary" :disabled="loading" @click="addPriority">
+          {{ loading ? '处理中…' : '☆ 标注为重点' }}
         </button>
       </div>
 
-      <!-- 成交表单（全屏覆盖层）：车辆区与两地牌区同时显示、互不干扰 -->
+      <!-- 成交表单（覆盖层）：车辆区与两地牌区同时显示、互不干扰 -->
       <div class="df-mask" v-if="showDealForm" @click="showDealForm = false">
         <div class="df-sheet" @click.stop>
           <div class="df-handle"></div>
@@ -134,7 +175,7 @@
           </div>
           <div class="df-tab-hint" v-if="!editingDeal">两个 Tab 都填，会同时记录两条成交</div>
 
-          <!-- 🚗 车辆字段（当前 Tab=车辆 或 编辑车辆类型时显示） -->
+          <!-- 🚗 车辆字段 -->
           <div class="df-block" v-if="activeTab === 'vehicle'" :key="'vehicle'">
             <div class="df-field">
               <label>车架号</label>
@@ -158,7 +199,7 @@
             </div>
           </div>
 
-          <!-- 🚦 两地牌字段（当前 Tab=两地牌 或 编辑两地牌类型时显示） -->
+          <!-- 🚦 两地牌字段 -->
           <div class="df-block" v-else :key="'plate'">
             <div class="df-field">
               <label>口岸</label>
@@ -194,12 +235,12 @@
 
           <div class="df-btns">
             <button class="btn-cancel" @click="showDealForm = false">取消</button>
-            <button class="btn-primary" @click="submitDeal">保存</button>
+            <button class="btn-primary" :disabled="loading" @click="submitDeal">{{ loading ? '保存中…' : '保存' }}</button>
           </div>
         </div>
       </div>
 
-      <!-- 到店登记表单（全屏覆盖层）：仅录入「未成交到店」，成交到店由成交记录自动生成 -->
+      <!-- 到店登记表单（覆盖层）：仅录「未成交到店」，成交到店由成交记录自动生成 -->
       <div class="df-mask" v-if="showVisitForm" @click="showVisitForm = false">
         <div class="df-sheet" @click.stop>
           <div class="df-handle"></div>
@@ -211,12 +252,12 @@
               <input class="df-input" type="date" v-model="formVisit.visit_time" />
             </div>
             <div class="df-field">
-              <label>需求{{ editingVisit && editingVisit.is_deal ? '（选填）' : '（必填，将作为重点客户备注）' }}</label>
+              <label>需求{{ editingVisit && editingVisit.is_deal ? '（选填）' : '（必填）' }}</label>
               <textarea
                 class="df-input"
                 v-model.trim="formVisit.needs"
                 rows="2"
-                placeholder="请写清楚客户需求"
+                :placeholder="formVisit.needs || currentNeeds ? '默认带入当前需求，可修改' : '请写清楚客户需求'"
               ></textarea>
             </div>
             <div class="df-field">
@@ -224,16 +265,17 @@
               <input class="df-input" v-model.trim="formVisit.remark" placeholder="选填" />
             </div>
           </div>
+          <div class="df-tab-hint" v-if="!editingVisit">登记到店后将自动标注为重点客户</div>
           <div class="df-tab-hint" v-if="editingVisit && editingVisit.is_deal">该到店由成交记录自动生成，需求/备注可补充；成交详情请在「成交记录」中编辑</div>
 
           <div class="df-btns">
             <button class="btn-cancel" @click="showVisitForm = false">取消</button>
-            <button class="btn-primary" @click="submitVisit">保存</button>
+            <button class="btn-primary" :disabled="loading" @click="submitVisit">{{ loading ? '保存中…' : '保存' }}</button>
           </div>
         </div>
       </div>
 
-      <!-- 确认弹窗（取消重点 / 删除成交） -->
+      <!-- 确认弹窗（取消重点 / 删除） -->
       <ConfirmDialog
         :show="confirm.show"
         :title="confirm.title"
@@ -254,6 +296,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import api from '../utils/api'
 import { calcVisitStatus } from '../utils/constants'
+import { useToast } from '../composables/useToast'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 // 两地牌口岸（业务固定 4 个）
@@ -265,25 +308,35 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:show', 'updated'])
 
+const { toast, showToast } = useToast()
+
 const followups = ref([])
 const deals = ref([])
 const visits = ref([])
 const newFollowup = ref('')
 const loading = ref(false)
+const panelLoading = ref(false)
+// 加载竞态保护：连续切换客户时丢弃过期响应
+let loadSeq = 0
 
-// 成交表单：车辆区 / 两地牌区 各自独立，互不干扰；共用时间与备注
+// ── 当前需求（客户级字段）────────────────────────────────
+const currentNeeds = ref('')
+const editingNeeds = ref(false)
+const needsDraft = ref('')
+const needsAlsoFollowup = ref(true)
+
+// ── 成交表单：车辆区 / 两地牌区 各自独立，互不干扰 ──────────
 const showDealForm = ref(false)
 const editingDeal = ref(null)
-const activeTab = ref('vehicle')   // 'vehicle' | 'plate'，控制成交表单 Tab 切换
+const activeTab = ref('vehicle')   // 'vehicle' | 'plate'
 const formVehicle = reactive({ vin: '', vehicle_desc: '', amount: '', deal_time: today(), remark: '' })
 const formPlate = reactive({ port: '', plate_kind: '期牌', plate_number: '', amount: '', deal_time: today(), remark: '' })
 
-// 到店登记表单：仅录「未成交到店」（到店时间 / 需求 / 备注）；成交到店由成交记录自动生成
+// ── 到店登记表单：仅录「未成交到店」───────────────────────
 const showVisitForm = ref(false)
 const editingVisit = ref(null)
 const formVisit = reactive({ visit_time: today(), needs: '', remark: '' })
 
-const toast = reactive({ show: false, message: '' })
 const confirm = reactive({
   show: false, title: '', desc: '', danger: false, confirmText: '确认', action: () => {},
 })
@@ -305,16 +358,6 @@ const totalAmount = computed(() => {
   return sum > 0 ? sum.toLocaleString() : null
 })
 
-// 客户是否已有任何记录（跟进/到店/成交）：决定跟进输入框的语义与是否显示「提交」按钮
-const hasAnyRecord = computed(() =>
-  followups.value.length > 0 || visits.value.length > 0 || deals.value.length > 0
-)
-
-function showToast(message, duration = 2000) {
-  toast.message = message
-  toast.show = true
-  setTimeout(() => { toast.show = false }, duration)
-}
 function close() {
   emit('update:show', false)
 }
@@ -329,17 +372,22 @@ function formatAmount(n) {
 async function loadData() {
   const id = props.customer?.id
   if (!id) return
+  const seq = ++loadSeq
+  panelLoading.value = true
   try {
     const [f, d, v] = await Promise.all([
       api.get(`/customers/${id}/followups`),
       api.get(`/customers/${id}/deals`),
       api.get(`/customers/${id}/visits`),
     ])
+    if (seq !== loadSeq) return // 已切换到其他客户，丢弃过期响应
     followups.value = f || []
     deals.value = d || []
     visits.value = v || []
   } catch (e) {
-    showToast(e.message || '加载失败')
+    if (seq === loadSeq) showToast(e.message || '加载失败')
+  } finally {
+    if (seq === loadSeq) panelLoading.value = false
   }
 }
 
@@ -348,13 +396,50 @@ watch(
   ([isShow]) => {
     if (isShow) {
       newFollowup.value = ''
+      editingNeeds.value = false
       showDealForm.value = false
       showVisitForm.value = false
+      currentNeeds.value = props.customer?.current_needs || ''
+      // 先清空旧客户数据，避免加载期间显示上一位客户的记录
+      followups.value = []
+      deals.value = []
+      visits.value = []
       loadData()
     }
   }
 )
 
+// ── ① 当前需求：更新 ────────────────────────────────────
+function openNeedsEdit() {
+  needsDraft.value = currentNeeds.value
+  needsAlsoFollowup.value = true
+  editingNeeds.value = true
+}
+
+async function submitNeeds() {
+  const needs = needsDraft.value.trim()
+  if (!needs) { showToast('请填写需求内容'); return }
+  loading.value = true
+  try {
+    await api.put(`/customers/${props.customer.id}/needs`, {
+      needs,
+      followup: needsAlsoFollowup.value,
+    })
+    currentNeeds.value = needs
+    editingNeeds.value = false
+    // 同步父组件客户对象，卡片/搜索结果即时反映最新需求
+    if (props.customer) props.customer.current_needs = needs
+    await loadData()
+    emit('updated')
+    showToast('需求已更新')
+  } catch (e) {
+    showToast(e.message || '保存失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// ── ② 跟进记录：提交（单一语义，始终可用）────────────────
 async function submitFollowup() {
   const content = newFollowup.value.trim()
   if (!content) { showToast('请填写跟进内容'); return }
@@ -372,6 +457,7 @@ async function submitFollowup() {
   }
 }
 
+// ── ④ 成交记录 ──────────────────────────────────────────
 function resetForm() {
   Object.assign(formVehicle, { vin: '', vehicle_desc: '', amount: '', deal_time: today(), remark: '' })
   Object.assign(formPlate, { port: '', plate_kind: '期牌', plate_number: '', amount: '', deal_time: today(), remark: '' })
@@ -404,7 +490,9 @@ function openDealForm(deal) {
 }
 
 async function submitDeal() {
+  if (loading.value) return
   const cid = props.customer.id
+  loading.value = true
   try {
     if (editingDeal.value) {
       // 编辑：单条，按原类型提交
@@ -447,10 +535,14 @@ async function submitDeal() {
       showToast(`已记录 ${items.length} 条成交，已自动移出重点列表`)
     }
     showDealForm.value = false
+    // 新增成交后端会自动移出重点，同步面板开关状态
+    if (!editingDeal.value && props.customer) props.customer.is_priority = false
     await loadData()
     emit('updated')
   } catch (e) {
     showToast(e.message || '保存失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -475,9 +567,14 @@ function confirmDeleteDeal(deal) {
   })
 }
 
-// ── 到店记录（手工录入仅「未成交」；成交到店由成交记录自动生成）──
+// ── ③ 到店记录（手工录入仅「未成交」；成交到店由成交自动生成）──
 function resetVisitForm() {
-  Object.assign(formVisit, { visit_time: today(), needs: '', remark: '' })
+  Object.assign(formVisit, {
+    visit_time: today(),
+    // 需求默认带入当前需求，减少重复输入
+    needs: currentNeeds.value || '',
+    remark: '',
+  })
 }
 
 // 到店记录若关联了成交，展示成交摘要
@@ -505,11 +602,13 @@ function openVisitForm(visit) {
 }
 
 async function submitVisit() {
+  if (loading.value) return
   const cid = props.customer.id
   const needs = formVisit.needs.trim()
   // 新增（未成交）需求必填；编辑已成交到店时需求可不填
   const editingDealt = editingVisit.value && editingVisit.value.is_deal
   if (!editingDealt && !needs) return showToast('请填写需求')
+  loading.value = true
   try {
     if (editingVisit.value) {
       await api.put(`/customers/${cid}/visits/${editingVisit.value.id}`, {
@@ -527,10 +626,14 @@ async function submitVisit() {
       showToast('到店已记录，已自动标为重点')
     }
     showVisitForm.value = false
+    // 新增到店后端会自动标为重点，同步面板开关状态
+    if (!editingVisit.value && props.customer) props.customer.is_priority = true
     await loadData()
     emit('updated')
   } catch (e) {
     showToast(e.message || '保存失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -555,6 +658,7 @@ function confirmDeleteVisit(visit) {
   })
 }
 
+// ── ⑤ 重点开关 ──────────────────────────────────────────
 function confirmRemovePriority() {
   Object.assign(confirm, {
     show: true,
@@ -577,35 +681,19 @@ function confirmRemovePriority() {
 }
 
 async function addPriority() {
-  // 无任何记录时：必须先在输入框写明客户需求，输入框内容会作为重点备注（后端自动追加一条跟进历史）
-  if (!hasAnyRecord.value) {
-    const reason = newFollowup.value.trim()
-    if (!reason) {
-      showToast('请先填写客户需求')
-      return
-    }
-    try {
-      await api.put(`/customers/${props.customer.id}/priority`, {
-        is_priority: true,
-        remark: reason,
-      })
-      newFollowup.value = ''
-      showToast('已标注为重点')
-      emit('update:show', false)
-      emit('updated')
-    } catch (e) {
-      showToast(e.message || '操作失败')
-    }
-    return
-  }
-  // 有记录：保持原逻辑（直接标记重点）
+  if (loading.value) return
+  loading.value = true
   try {
-    await api.put(`/customers/${props.customer.id}/priority`, { is_priority: true })
+    // 已有当前需求时随重点一起提交作为备注（后端自动追加跟进留痕）
+    const remark = currentNeeds.value || undefined
+    await api.put(`/customers/${props.customer.id}/priority`, { is_priority: true, remark })
     showToast('已标注为重点')
     emit('update:show', false)
     emit('updated')
   } catch (e) {
     showToast(e.message || '操作失败')
+  } finally {
+    loading.value = false
   }
 }
 </script>
@@ -622,15 +710,18 @@ async function addPriority() {
 }
 .cdp-handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); margin: 0 auto 14px; }
 
-.cdp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); }
-.cdp-close { width: 30px; height: 30px; border: none; background: rgba(0,0,0,0.06); border-radius: 50%; font-size: 20px; color: var(--text-secondary); cursor: pointer; line-height: 1; }
-.cdp-health { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+.cdp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cdp-loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 22px 0 8px; font-size: 13px; color: var(--text-tertiary); }
+.cdp-loading-dot { width: 16px; height: 16px; border: 2px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: cdp-spin 0.8s linear infinite; }
+@keyframes cdp-spin { to { transform: rotate(360deg); } }
+.cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); flex: 1; min-width: 0; }
+.cdp-health { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 .health-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .cdp-health .success, .health-dot.success { color: #34C759; background: #34C759; }
 .cdp-health .warning, .health-dot.warning { color: #FF9500; background: #FF9500; }
 .cdp-health .danger, .health-dot.danger { color: #FF3B30; background: #FF3B30; }
 .cdp-health .success, .cdp-health .warning, .cdp-health .danger { background: none; }
+.cdp-close { width: 30px; height: 30px; border: none; background: rgba(0,0,0,0.06); border-radius: 50%; font-size: 20px; color: var(--text-secondary); cursor: pointer; line-height: 1; flex-shrink: 0; }
 
 .cdp-section { border-top: 1px solid var(--border-glass); padding: 14px 0; }
 .sec-head { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
@@ -640,7 +731,39 @@ async function addPriority() {
 .btn-add { margin-left: 8px; padding: 5px 12px; border-radius: 16px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
 .sec-empty { font-size: 14px; color: var(--text-tertiary); padding: 8px 0; line-height: 1.6; }
 
-/* 跟进时间线 */
+/* ── ① 当前需求 ── */
+.need-card {
+  background: linear-gradient(135deg, rgba(0,122,255,0.06), rgba(90,200,250,0.09));
+  border: 1px solid rgba(0, 122, 255, 0.16);
+  border-radius: 14px; padding: 13px 14px;
+}
+.need-card.editing { background: #fff; }
+.need-text { font-size: 14px; line-height: 1.65; color: var(--text-primary); word-break: break-all; }
+.need-text.empty { color: var(--text-tertiary); }
+.need-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.need-hint { font-size: 11px; color: var(--text-tertiary); }
+.need-btn {
+  font-size: 12px; font-weight: 700; color: var(--primary);
+  background: #fff; border-radius: 99px; padding: 6px 15px;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.15); cursor: pointer; border: none;
+  font-family: inherit;
+}
+.need-input {
+  width: 100%; padding: 11px 13px; border: 1.5px solid rgba(0,122,255,0.4);
+  border-radius: 12px; font-size: 14px; color: var(--text-primary);
+  resize: none; font-family: inherit; box-sizing: border-box;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.08);
+}
+.need-input:focus { outline: none; }
+.need-followup-toggle {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--text-secondary); margin-top: 9px; cursor: pointer;
+}
+.need-followup-toggle input { accent-color: var(--primary); width: 15px; height: 15px; }
+.need-btns { display: flex; gap: 9px; margin-top: 11px; }
+.need-btns button { flex: 1; padding: 10px; border-radius: 11px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; }
+
+/* ── ② 跟进时间线 ── */
 .fu-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
 .fu-item { background: var(--bg-primary); border-radius: 12px; padding: 10px 12px; }
 .fu-time { font-size: 12px; font-weight: 600; color: var(--text-tertiary); margin-bottom: 3px; }
@@ -648,45 +771,40 @@ async function addPriority() {
 .fu-input-wrap { display: flex; gap: 8px; align-items: flex-end; }
 .fu-input { flex: 1; padding: 11px; border: 1px solid var(--border-glass); border-radius: 12px; font-size: 14px; color: var(--text-primary); resize: none; font-family: inherit; }
 .fu-input:focus { border-color: var(--primary); outline: none; }
-.btn-submit { padding: 11px 18px; border-radius: 12px; background: var(--primary); color: #fff; font-size: 14px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
-.btn-submit:disabled { opacity: 0.5; }
+.btn-submit { padding: 11px 18px; border-radius: 12px; background: var(--primary); color: #fff; font-size: 14px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; font-family: inherit; }
+.btn-submit:disabled, .need-btns button:disabled { opacity: 0.5; }
 
-/* 成交列表 */
-.deal-list { display: flex; flex-direction: column; gap: 10px; }
-.deal-item { display: flex; gap: 10px; background: var(--bg-primary); border-radius: 12px; padding: 11px; }
-.deal-tag { flex-shrink: 0; align-self: flex-start; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 7px; }
+/* ── ③④ 记录列表 ── */
+.visit-list, .deal-list { display: flex; flex-direction: column; gap: 10px; }
+.visit-item, .deal-item { display: flex; gap: 10px; background: var(--bg-primary); border-radius: 12px; padding: 11px; }
+.visit-tag, .deal-tag { flex-shrink: 0; align-self: flex-start; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 7px; white-space: nowrap; }
+.visit-tag.dealt { background: rgba(52,199,89,0.12); color: #34C759; }
+.visit-tag.not-dealt { background: rgba(255,149,0,0.12); color: #FF9500; }
 .deal-tag.vehicle { background: rgba(0,122,255,0.1); color: #007AFF; }
 .deal-tag.plate { background: rgba(175,82,222,0.1); color: #AF52DE; }
-.deal-body { flex: 1; min-width: 0; }
+.visit-body, .deal-body { flex: 1; min-width: 0; }
 .deal-main { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .deal-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; word-break: break-all; }
 .deal-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 12px; color: var(--text-tertiary); }
 .deal-amount { color: #EA580C; font-weight: 700; }
 .deal-remark { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+.visit-needs { font-size: 14px; color: var(--text-primary); line-height: 1.5; word-break: break-all; margin-top: 2px; }
+.visit-needs.empty { color: var(--text-tertiary); font-size: 13px; }
+.visit-deal-sum { color: #EA580C; font-weight: 700; }
 .deal-ops { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
 .deal-ops span { cursor: pointer; }
 .deal-ops span:active { opacity: 0.5; }
 .deal-ops .danger { color: var(--danger); }
 
-/* 到店列表 */
-.visit-list { display: flex; flex-direction: column; gap: 10px; }
-.visit-item { display: flex; gap: 10px; background: var(--bg-primary); border-radius: 12px; padding: 11px; }
-.visit-tag { flex-shrink: 0; align-self: flex-start; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 7px; white-space: nowrap; }
-.visit-tag.dealt { background: rgba(52,199,89,0.12); color: #34C759; }
-.visit-tag.not-dealt { background: rgba(255,149,0,0.12); color: #FF9500; }
-.visit-body { flex: 1; min-width: 0; }
-.visit-needs { font-size: 14px; color: var(--text-primary); line-height: 1.5; word-break: break-all; margin-top: 2px; }
-.visit-needs.empty { color: var(--text-tertiary); font-size: 13px; }
-.visit-deal-sum { color: #EA580C; font-weight: 700; }
-
-/* 底部操作 */
+/* ── ⑤ 底部操作 ── */
 .cdp-actions { padding-top: 14px; }
-.cdp-actions button { width: 100%; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.cdp-actions button { width: 100%; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.cdp-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger { background: #fff; color: var(--danger); border: 1px solid rgba(255,59,48,0.3); }
 .btn-primary { background: var(--primary); color: #fff; border: none; }
 .btn-cancel { background: #fff; color: var(--text-secondary); border: 1px solid var(--border-glass); }
 
-/* 成交表单：全屏覆盖，宽敞 */
+/* ── 表单覆盖层 ── */
 .df-mask {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
   display: flex; align-items: flex-end; justify-content: center; z-index: 2000;
@@ -700,18 +818,13 @@ async function addPriority() {
 .df-title { font-size: 19px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
 .df-title-sub { font-size: 15px; font-weight: 500; color: var(--text-secondary); }
 
-/* Tab 切换（车辆 / 两地牌） */
 .df-tabs { display: flex; gap: 4px; background: var(--bg-primary); border-radius: 13px; padding: 4px; margin-bottom: 8px; }
-.df-tab { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.df-tab { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; font-family: inherit; }
 .df-tab span { font-size: 17px; }
 .df-tab.active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .df-tab-hint { font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; }
 
 .df-block { background: var(--bg-primary); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
-.df-block.common { background: rgba(255,149,0,0.06); }
-.df-block-head { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
-.df-block-emoji { font-size: 17px; }
-
 .df-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .df-field:last-child { margin-bottom: 0; }
 .df-field > label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
@@ -721,23 +834,28 @@ async function addPriority() {
 }
 .df-input:focus { border-color: var(--primary); outline: none; }
 
-/* 期牌/现牌 分段选择 */
 .df-seg { display: flex; gap: 8px; }
 .df-seg button {
   flex: 1; padding: 11px; border-radius: 11px; background: #fff; color: var(--text-secondary);
-  font-size: 14px; font-weight: 600; border: 1px solid var(--border-glass); cursor: pointer;
+  font-size: 14px; font-weight: 600; border: 1px solid var(--border-glass); cursor: pointer; font-family: inherit;
 }
 .df-seg button.active { background: rgba(255,149,0,0.12); color: var(--primary); border-color: var(--primary); }
 
 .df-btns { display: flex; gap: 10px; margin-top: 6px; }
-.df-btns button { flex: 1; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.df-btns button { flex: 1; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
 .cdp-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.78); color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 14px; z-index: 9999; }
 
-/* PC：面板与表单都居中放大 */
+/* PC：面板改为右侧抽屉（保留列表上下文），表单仍居中 */
 @media (min-width: 1024px) {
-  .cdp-mask { align-items: center; background: rgba(0,0,0,0.4); }
-  .cdp-sheet { width: 760px; max-width: calc(100vw - 48px); border-radius: 18px; padding: 34px; max-height: calc(100vh - 80px); box-shadow: 0 24px 60px rgba(0,0,0,0.25); }
+  .cdp-mask { align-items: stretch; justify-content: flex-end; background: rgba(0,0,0,0.35); }
+  .cdp-sheet {
+    width: 520px; max-width: calc(100vw - 48px);
+    border-radius: 20px 0 0 20px;
+    padding: 30px 28px;
+    max-height: none; height: 100vh;
+    box-shadow: -18px 0 50px rgba(0, 0, 0, 0.2);
+  }
   .cdp-handle { display: none; }
 
   .df-mask { align-items: center; }

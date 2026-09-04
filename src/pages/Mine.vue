@@ -1,108 +1,78 @@
 <template>
   <div class="mine-page">
-    <!-- 未登录 -->
-    <div v-if="!loggedIn" class="login-prompt">
-      <div class="prompt-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" width="48" height="48">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
+    <!-- 账号卡 -->
+    <div class="profile-card">
+      <div class="avatar-wrapper" @click="triggerAvatarUpload">
+        <div class="avatar" :style="{ background: avatarColor.bg, color: avatarColor.color }">
+          <img v-if="displayAvatar" :src="displayAvatar" class="avatar-img" />
+          <span v-else>{{ avatarText }}</span>
+        </div>
+        <div v-if="avatarUploading" class="avatar-loading" aria-label="上传中">
+          <div class="spinner"></div>
+        </div>
+        <div v-if="!isAdmin" class="avatar-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
       </div>
-      <div class="prompt-title">欢迎使用客户管理</div>
-      <div class="prompt-desc">登录后即可管理您的客户资源</div>
-      <button class="btn-login" @click="goToLogin">立即登录</button>
+      <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarChange" />
+      <div class="profile-info">
+        <div v-if="isAdmin" class="profile-name">{{ userInfo?.nickname || '管理员' }}</div>
+        <div v-else class="name-edit-wrapper">
+          <input
+            class="profile-name-input"
+            v-model="editNickname"
+            placeholder="点击设置昵称"
+            @blur="onNicknameBlur"
+            @keyup.enter="onNicknameBlur"
+          />
+        </div>
+        <div class="profile-id">ID: {{ userInfo?.user_id }} · {{ isAdmin ? '管理员' : '已登录' }}</div>
+      </div>
     </div>
 
-    <!-- 已登录 -->
-    <div v-else class="user-section">
-      <div class="profile-card">
-        <div class="avatar-wrapper" @click="triggerAvatarUpload">
-          <div class="avatar" :style="{ background: avatarColor.bg, color: avatarColor.color }">
-            <img v-if="displayAvatar" :src="displayAvatar" class="avatar-img" />
-            <span v-else>{{ avatarText }}</span>
-          </div>
-          <div v-if="avatarUploading" class="avatar-loading" aria-label="上传中">
-            <div class="spinner"></div>
-          </div>
-          <div class="avatar-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
-        </div>
-        <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="onAvatarChange" />
-        <div class="profile-info">
-          <div v-if="isAdmin" class="profile-name">{{ userInfo?.nickname || '管理员' }}</div>
-          <div v-else class="name-edit-wrapper">
-            <input
-              class="profile-name-input"
-              v-model="editNickname"
-              placeholder="点击设置昵称"
-              @blur="onNicknameBlur"
-              @keyup.enter="onNicknameBlur"
-            />
-          </div>
-          <div class="profile-id">ID: {{ userInfo?.user_id }} · {{ isAdmin ? '管理员' : '已登录' }}</div>
-        </div>
+    <!-- 设置列表 -->
+    <div class="menu-list">
+      <!-- 管理员数据范围（移动端唯一切换入口，PC 端在侧边栏，两处共享同一状态） -->
+      <div class="menu-item scope-item" v-if="isAdmin">
+        <div class="menu-icon" style="background:rgba(0,122,255,0.12);color:#007AFF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+        <div class="menu-text">数据范围</div>
+        <select class="scope-select" :value="scopeValue" @change="onScopeChange">
+          <option value="all">全部用户</option>
+          <option v-for="u in users" :key="u.id" :value="u.id">{{ u.nickname }}</option>
+        </select>
       </div>
-
-      <div class="menu-list">
-        <div class="menu-item" @click="onComingSoon">
-          <div class="menu-icon" style="background:rgba(0,122,255,0.12);color:#007AFF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>
-          <div class="menu-text">我的数据</div>
-          <div class="menu-arrow">›</div>
-        </div>
-        <div class="menu-item" @click="onComingSoon">
-          <div class="menu-icon" style="background:rgba(52,199,89,0.12);color:#34C759"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
-          <div class="menu-text">提醒设置</div>
-          <div class="menu-arrow">›</div>
-        </div>
-        <div class="menu-item" @click="onComingSoon">
-          <div class="menu-icon" style="background:rgba(175,82,222,0.12);color:#AF52DE"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-          <div class="menu-text">意见反馈</div>
-          <div class="menu-arrow">›</div>
-        </div>
-        <div class="menu-item">
-          <div class="menu-icon" style="background:rgba(255,149,0,0.12);color:#FF9500"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
-          <div class="menu-text">关于系统</div>
-          <div class="menu-arrow">v1.0.0</div>
-        </div>
+      <div class="menu-item">
+        <div class="menu-icon" style="background:rgba(255,149,0,0.12);color:#FF9500"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+        <div class="menu-text">关于系统</div>
+        <div class="menu-value">v2.0.0</div>
       </div>
-
-      <button class="btn-logout" @click="onLogout">退出登录</button>
     </div>
 
-    <ConfirmDialog
-      :show="showConfirmLogout"
-      title="退出登录"
-      desc="确定要退出登录吗？"
-      cancel-text="取消"
-      confirm-text="退出"
-      danger
-      @cancel="showConfirmLogout = false"
-      @confirm="doLogout"
-    />
+    <!-- 退出登录（低风险操作，无二次确认） -->
+    <button class="btn-logout" @click="doLogout">退出登录</button>
 
     <div class="toast" v-if="toast.show">{{ toast.message }}</div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../utils/api'
-import { isLoggedIn as checkLoggedIn, getUserInfo, setUserInfo, clearAuth, getToken } from '../utils/auth'
+import { getUserInfo, setUserInfo, clearAuth } from '../utils/auth'
 import { getAvatarColor } from '../utils/constants'
-import ConfirmDialog from '../components/ConfirmDialog.vue'
+import { useToast } from '../composables/useToast'
+import { useScope } from '../composables/useScope'
 import { compressImage } from '../utils/imageCompress'
 
 const router = useRouter()
+const { toast, showToast } = useToast()
+const { scopeUserId, users, isAdmin, setScope, loadUsers, resetScope } = useScope()
+
 const userInfo = ref(null)
-const loggedIn = ref(false)
 const editNickname = ref('')
 const avatarInput = ref(null)
-const toast = reactive({ show: false, message: '' })
-const showConfirmLogout = ref(false)
 const avatarUploading = ref(false)
 const localPreviewUrl = ref('')
 
-const isAdmin = computed(() => userInfo.value?.role === 'admin')
 const avatarText = computed(() => {
   const name = userInfo.value?.nickname || userInfo.value?.username || 'U'
   return name.charAt(0).toUpperCase()
@@ -117,19 +87,12 @@ const avatarUrl = computed(() => {
 })
 // 上传期间用本地 objectURL 预览，服务器返回 URL 后再切换
 const displayAvatar = computed(() => localPreviewUrl.value || avatarUrl.value)
+const scopeValue = computed(() => (scopeUserId.value === null ? 'all' : scopeUserId.value))
 
-function showToast(message, duration = 2000) {
-  toast.message = message
-  toast.show = true
-  setTimeout(() => { toast.show = false }, duration)
-}
-
-function goToLogin() {
-  router.push('/login')
-}
-
-function onComingSoon() {
-  showToast('敬请期待')
+function onScopeChange(e) {
+  const v = e.target.value
+  setScope(v === 'all' ? null : Number(v))
+  showToast('数据范围已切换')
 }
 
 function triggerAvatarUpload() {
@@ -172,7 +135,6 @@ async function onAvatarChange(e) {
     userInfo.value = updated
     showToast('头像更新成功', 1500)
   } catch (err) {
-    // 失败：回滚到原图，错误信息（api 拦截器已从 detail 提取）
     showToast(err?.message || '上传失败，请稍后重试')
   } finally {
     URL.revokeObjectURL(previewUrl)
@@ -189,69 +151,50 @@ async function onNicknameBlur() {
 
   try {
     const res = await api.put('/user/info', { nickname })
-    setUserInfo(res)
-    userInfo.value = res
-    editNickname.value = res.nickname || ''
+    // 后端只返回 { id, nickname, avatar_url }，展开保留本地其余字段（user_id/role 等）
+    const updated = { ...userInfo.value, nickname: res.nickname, avatar_url: res.avatar_url }
+    setUserInfo(updated)
+    userInfo.value = updated
+    editNickname.value = updated.nickname || ''
     showToast('昵称更新成功')
   } catch (e) {
-    showToast('更新失败')
+    showToast(e.message || '更新失败')
     editNickname.value = userInfo.value?.nickname || ''
   }
-}
-
-function onLogout() {
-  showConfirmLogout.value = true
 }
 
 function doLogout() {
-  showConfirmLogout.value = false
   clearAuth()
-  loggedIn.value = false
-  userInfo.value = null
-  showToast('已退出')
+  resetScope() // 清掉管理员数据范围，避免残留给下一个登录账号
+  router.replace('/login')
 }
 
 onMounted(() => {
-  loggedIn.value = checkLoggedIn()
-  if (loggedIn.value) {
-    userInfo.value = getUserInfo()
-    editNickname.value = userInfo.value?.nickname || ''
-  }
+  userInfo.value = getUserInfo()
+  editNickname.value = userInfo.value?.nickname || ''
+  if (isAdmin.value) loadUsers()
 })
-
 </script>
 
 <style scoped>
 .mine-page {
   min-height: 100vh;
   background: #F5F5F7;
-  padding: 0 14px 80px;
+  padding: 18px 14px 80px;
 }
-
-/* Login Prompt */
-.login-prompt {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 70vh;
-  padding: 20px;
-}
-.prompt-icon { width: 80px; height: 80px; border-radius: 50%; background: rgba(0,122,255,0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
-.prompt-title { font-size: 20px; font-weight: 700; color: #1D1D1F; margin-bottom: 8px; }
-.prompt-desc { font-size: 14px; color: rgba(29,29,31,0.55); margin-bottom: 30px; }
-.btn-login { width: 200px; padding: 14px; border-radius: 980px; background: #007AFF; color: white; font-size: 15px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,122,255,0.18); }
 
 /* Profile Card */
 .profile-card {
-  background: white;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
   border-radius: 18px;
   padding: 24px 20px;
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
-  margin-top: 14px;
+  margin-bottom: 14px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
 }
 .avatar-wrapper { position: relative; cursor: pointer; }
@@ -281,6 +224,7 @@ onMounted(() => {
   font-size: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
+.avatar-badge svg { width: 12px; height: 12px; color: var(--primary); }
 .avatar-loading {
   position: absolute;
   inset: 0;
@@ -313,13 +257,17 @@ onMounted(() => {
   outline: none;
   background: transparent;
   padding: 0;
+  font-family: inherit;
 }
 .profile-name-input::placeholder { color: rgba(29,29,31,0.4); }
 .profile-id { font-size: 12px; color: rgba(29,29,31,0.55); margin-top: 4px; }
 
 /* Menu List */
 .menu-list {
-  background: white;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
   border-radius: 18px;
   overflow: hidden;
   margin-bottom: 16px;
@@ -330,10 +278,8 @@ onMounted(() => {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid rgba(0,0,0,0.04);
-  cursor: pointer;
 }
 .menu-item:last-child { border-bottom: none; }
-.menu-item:active { background: #F5F5F7; }
 .menu-icon {
   width: 32px;
   height: 32px;
@@ -341,13 +287,23 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
   margin-right: 12px;
 }
-.menu-text { flex: 1; font-size: 15px; font-weight: 500; color: #1D1D1F; }
-.menu-arrow { font-size: 18px; color: rgba(29,29,31,0.28); }
 .menu-icon svg { width: 18px; height: 18px; }
-.avatar-badge svg { width: 12px; height: 12px; color: var(--primary); }
+.menu-text { flex: 1; font-size: 15px; font-weight: 500; color: #1D1D1F; }
+.menu-value { font-size: 13px; color: rgba(29,29,31,0.4); }
+.scope-select {
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  background: #fff;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  outline: none;
+  max-width: 150px;
+}
 
 /* Logout */
 .btn-logout {
@@ -358,163 +314,29 @@ onMounted(() => {
   color: #FF3B30;
   font-size: 15px;
   font-weight: 600;
+  font-family: inherit;
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  border: 1px solid rgba(255, 59, 48, 0.15);
+  cursor: pointer;
 }
 .btn-logout:active { background: #F5F5F7; }
 
-/* Toast */
-.toast {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.75);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  z-index: 9999;
-}
-
+/* PC 适配 */
 @media (min-width: 768px) {
   .mine-page { max-width: 414px; margin: 0 auto; }
 }
 
-/* PC 适配 */
 @media (min-width: 1024px) {
   .mine-page {
-    /* 解除 768 断点的 414px 锁宽,PC 下铺满 */
     max-width: none;
     margin: 0;
     padding: 24px 28px 40px;
   }
-
-  .login-prompt {
-    min-height: 60vh;
-  }
-
-  .prompt-icon {
-    width: 96px;
-    height: 96px;
-  }
-
-  .prompt-title {
-    font-size: 24px;
-  }
-
-  /* 已登录：左右两栏 */
-  .user-section {
-    display: grid;
-    grid-template-columns: 360px minmax(0, 1fr);
-    gap: 18px;
-    align-items: start;
-  }
-
-  .profile-card {
-    margin-top: 0;
-    padding: 28px 24px;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 16px;
-  }
-
-  .avatar {
-    width: 88px;
-    height: 88px;
-    font-size: 36px;
-  }
-
-  .avatar-badge {
-    width: 26px;
-    height: 26px;
-    font-size: 14px;
-  }
-
-  .spinner {
-    width: 28px;
-    height: 28px;
-  }
-
-  .profile-name,
-  .profile-name-input {
-    font-size: 22px;
-    text-align: center;
-  }
-
-  .profile-info {
-    width: 100%;
-  }
-
-  .profile-id {
-    font-size: 13px;
-    text-align: center;
-  }
-
-  /* 菜单改为网格 */
-  .menu-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0;
-    overflow: visible;
-  }
-
-  .menu-item {
-    padding: 18px 22px;
-  }
-
-  .menu-item:nth-child(2n) {
-    border-left: 1px solid rgba(0, 0, 0, 0.04);
-  }
-
-  .menu-item:nth-last-child(-n+2) {
-    border-bottom: none;
-  }
-
-  .menu-text {
-    font-size: 16px;
-  }
-
-  .btn-logout {
-    margin-top: 18px;
-    padding: 18px;
-    font-size: 16px;
-  }
-
-  .toast {
-    top: 80px;
-    bottom: auto;
-  }
-
-  /* ============ PC 增强:毛玻璃 + 配色图标放大 + 退出键胶囊（方案 A） ============ */
-  .profile-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-glass);
-  }
-  .menu-list {
-    background: var(--bg-card);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--border-glass);
-  }
-  .menu-icon { width: 40px; height: 40px; border-radius: 12px; }
-  .menu-icon svg { width: 22px; height: 22px; }
+  .profile-card, .menu-list, .btn-logout { max-width: 480px; }
   .menu-item { transition: background 0.2s; }
   .menu-item:hover { background: rgba(0, 0, 0, 0.03); }
-  .avatar-badge svg { width: 14px; height: 14px; }
-
-  /* 退出键:居中胶囊,不再横跨整宽 */
-  .btn-logout {
-    width: auto;
-    justify-self: center;
-    padding: 14px 56px;
-    border-radius: 980px;
-    background: white;
-    border: 1px solid rgba(255, 59, 48, 0.2);
-    box-shadow: 0 2px 12px rgba(255, 59, 48, 0.06);
-  }
+  .btn-logout { cursor: pointer; }
   .btn-logout:hover { background: rgba(255, 59, 48, 0.06); }
+  .toast { top: 80px; bottom: auto; }
 }
-
 </style>
-

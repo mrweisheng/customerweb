@@ -147,8 +147,7 @@ input, textarea {
 
   .app-main.with-sidebar > .page,
   .app-main.with-sidebar > .stats-page,
-  .app-main.with-sidebar > .mine-page,
-  .app-main.with-sidebar > .search-page {
+  .app-main.with-sidebar > .mine-page {
     width: 100%;
     max-width: 1400px;
   }
@@ -157,8 +156,7 @@ input, textarea {
 @media (min-width: 1920px) {
   .app-main.with-sidebar > .page,
   .app-main.with-sidebar > .stats-page,
-  .app-main.with-sidebar > .mine-page,
-  .app-main.with-sidebar > .search-page {
+  .app-main.with-sidebar > .mine-page {
     max-width: 1560px;
   }
 }

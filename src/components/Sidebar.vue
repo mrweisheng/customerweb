@@ -28,30 +28,52 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="sidebar-version">v1.0.0</div>
+      <div class="sidebar-user" v-if="userInfo">
+        <div class="sidebar-avatar" :style="{ background: avatarColor.bg, color: avatarColor.color }">
+          {{ avatarText }}
+        </div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">{{ userInfo.nickname || userInfo.username || '用户' }}</div>
+          <div class="sidebar-user-role">ID {{ userInfo.user_id }} · {{ isAdmin ? '管理员' : '已登录' }}</div>
+        </div>
+      </div>
+      <div class="sidebar-scope" v-if="isAdmin">
+        <label class="scope-label">数据范围</label>
+        <select class="scope-select" :value="scopeValue" @change="onScopeChange">
+          <option value="all">全部用户</option>
+          <option v-for="u in users" :key="u.id" :value="u.id">{{ u.nickname }}</option>
+        </select>
+      </div>
+      <div class="sidebar-version">v2.0.0</div>
     </div>
   </aside>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { getUserInfo } from '../utils/auth'
+import { getAvatarColor } from '../utils/constants'
+import { useScope } from '../composables/useScope'
 
 const router = useRouter()
 const route = useRoute()
+const { scopeUserId, users, isAdmin, setScope, loadUsers } = useScope()
+
+const userInfo = computed(() => getUserInfo())
+const avatarText = computed(() => {
+  const name = userInfo.value?.nickname || userInfo.value?.username || 'U'
+  return name.charAt(0).toUpperCase()
+})
+const avatarColor = computed(() => getAvatarColor(userInfo.value?.nickname || userInfo.value?.username))
+const scopeValue = computed(() => (scopeUserId.value === null ? 'all' : scopeUserId.value))
 
 const tabs = [
   {
-    name: 'Home',
+    name: 'Workbench',
     path: '/index',
-    text: '首页',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>',
-  },
-  {
-    name: 'Priority',
-    path: '/priority',
-    text: '重点',
-    icon: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
+    text: '工作台',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>',
   },
   {
     name: 'Statistics',
@@ -73,6 +95,15 @@ function switchTab(path) {
   if (route.path === path) return
   router.push(path)
 }
+
+function onScopeChange(e) {
+  const v = e.target.value
+  setScope(v === 'all' ? null : Number(v))
+}
+
+onMounted(() => {
+  if (isAdmin.value) loadUsers()
+})
 </script>
 
 <style scoped>
@@ -189,13 +220,86 @@ function switchTab(path) {
 }
 
 .sidebar-footer {
-  padding: 14px 20px;
+  padding: 14px 16px;
   border-top: 1px solid var(--border-glass);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--bg-primary);
+}
+
+.sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.sidebar-scope {
+  border: 1px dashed rgba(0, 122, 255, 0.35);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(0, 122, 255, 0.05);
+}
+
+.scope-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+
+.scope-select {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0;
 }
 
 .sidebar-version {
   font-size: 11px;
   color: var(--text-tertiary);
   letter-spacing: 0.5px;
+  padding: 0 4px;
 }
 </style>

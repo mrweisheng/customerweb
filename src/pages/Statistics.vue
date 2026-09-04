@@ -1,43 +1,9 @@
 <template>
   <div class="stats-page">
-    <!-- 示例数据提示 -->
-    <div class="demo-banner" v-if="!loggedIn">
-      <div class="demo-banner-text">
-        <div class="demo-banner-badge">示例</div>
-        <span class="demo-banner-label">当前为示例数据</span>
-      </div>
-      <div class="demo-banner-btn" @click="onAccountLogin">立即登录</div>
-    </div>
-
-    <!-- 管理员用户切换 -->
-    <div v-if="loggedIn && isAdmin" class="admin-select">
-      <div class="select-trigger" @click="showUserPicker = true">
-        <span class="select-label">查看用户:</span>
-        <div class="select-value">
-          {{ currentUserName }}
-          <span class="select-arrow">▾</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 用户选择弹窗 -->
-    <div class="modal-mask" v-if="showUserPicker" @click="showUserPicker = false">
-      <div class="modal-sheet" @click.stop>
-        <div class="modal-handle"></div>
-        <div class="modal-title">切换用户</div>
-        <div class="picker-list">
-          <div
-            v-for="(user, index) in userPickerList"
-            :key="user.id"
-            class="picker-item"
-            :class="{ active: currentUserPickerIndex === index }"
-            @click="selectUser(index)"
-          >
-            {{ user.label }}
-          </div>
-        </div>
-      </div>
-    </div>
+    <header class="st-top">
+      <h1 class="st-title">统计</h1>
+      <div class="st-sub" v-if="isAdmin">数据范围：{{ scopeUserName }}</div>
+    </header>
 
     <!-- 数据总览：Bento 大数字矩阵 -->
     <div class="card overview-card">
@@ -87,7 +53,7 @@
           <div class="bento-trend-text" :class="monthTrendDir">{{ monthTrendText }}</div>
         </div>
 
-        <!-- 重点客户：dot grid 反映数量 -->
+        <!-- 重点客户：dot grid -->
         <div class="bento-card">
           <div class="bento-head">
             <span class="bento-label">重点客户</span>
@@ -95,18 +61,92 @@
           </div>
           <div class="bento-value">{{ formatNumber(bigNumbers.priority) }}</div>
           <div class="bento-dot-grid">
-            <span
-              v-for="i in Math.min(bigNumbers.priority, 8)"
-              :key="i"
-              class="bento-dot-cell filled"
-            ></span>
-            <span
-              v-for="i in Math.max(0, 8 - Math.min(bigNumbers.priority, 8))"
-              :key="'e' + i"
-              class="bento-dot-cell empty"
-            ></span>
+            <span v-for="i in Math.min(bigNumbers.priority, 8)" :key="i" class="bento-dot-cell filled"></span>
+            <span v-for="i in Math.max(0, 8 - Math.min(bigNumbers.priority, 8))" :key="'e' + i" class="bento-dot-cell empty"></span>
           </div>
           <div class="bento-trend-text flat">待回访优先</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 客户趋势 + 更新日历 -->
+    <div class="two-col">
+      <!-- 客户趋势（自首页迁入，全系统唯一趋势图） -->
+      <div class="card chart-trend">
+        <div class="card-header">
+          <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>客户趋势</div>
+          <div class="trend-pills">
+            <div class="pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
+            <div class="pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
+            <div class="pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">30天</div>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot current"></div>本期</div>
+          <div class="legend-item"><div class="legend-dot previous"></div>上期</div>
+        </div>
+        <div class="chart-container">
+          <canvas ref="trendCanvasRef"></canvas>
+        </div>
+        <div class="x-labels" v-if="trendDateLabels.length > 0">
+          <span v-for="(label, index) in trendDateLabels" :key="index">{{ label }}</span>
+        </div>
+        <div class="summary" v-if="trendSummary">
+          <div class="summary-item">
+            <div class="summary-value">{{ trendSummary.currentTotal }}</div>
+            <div class="summary-label">本期合计</div>
+            <div class="summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value secondary">{{ trendSummary.prevTotal }}</div>
+            <div class="summary-label">上期合计</div>
+            <div class="summary-label">—</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value">{{ trendSummary.todayCount }}</div>
+            <div class="summary-label">今日新增</div>
+            <div class="summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 更新日历（自首页迁入） -->
+      <div class="card calendar-card">
+        <div class="card-header">
+          <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>更新日历</div>
+          <div class="cal-nav">
+            <div class="cal-nav-btn" @click="prevMonth">‹</div>
+            <div class="cal-month-label">{{ calendarYear }}年{{ calendarMonth }}月</div>
+            <div class="cal-nav-btn" :class="{ disabled: isCurrentMonth }" @click="nextMonth">›</div>
+          </div>
+        </div>
+        <div class="cal-grid cal-header">
+          <div class="cal-cell-header" v-for="day in calWeekdays" :key="day">{{ day }}</div>
+        </div>
+        <div class="cal-grid cal-body">
+          <div class="cal-cell" v-for="(item, index) in calendarDays" :key="index">
+            <div v-if="item !== null" class="cal-day">
+              <div class="cal-day-inner" :class="item.status === 'updated' ? 'cal-updated' : item.status === 'missed' ? 'cal-missed' : ''">
+                <span class="cal-day-num">{{ item.day }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cal-summary" v-if="calendarData">
+          <div class="cal-summary-item">
+            <div class="cal-summary-value cal-text-updated">{{ calendarData.updated_count }}</div>
+            <div class="cal-summary-label">已更新天数</div>
+          </div>
+          <div class="cal-summary-divider"></div>
+          <div class="cal-summary-item">
+            <div class="cal-summary-value cal-text-missed">{{ calendarData.missed_count }}</div>
+            <div class="cal-summary-label">未更新天数</div>
+          </div>
+          <div class="cal-summary-divider"></div>
+          <div class="cal-summary-item">
+            <div class="cal-summary-value cal-text-rate">{{ calendarData.update_rate }}%</div>
+            <div class="cal-summary-label">更新率</div>
+          </div>
         </div>
       </div>
     </div>
@@ -180,160 +220,64 @@
             </div>
           </template>
         </div>
-
-        <!-- 最近成交 -->
-        <div class="deal-section" v-if="dealStats.recent.length">
-          <div class="deal-sub-title">最近成交</div>
-          <div class="deal-recent-item" v-for="d in dealStats.recent" :key="d.id">
-            <span class="deal-tag-sm" :class="d.deal_type">{{ d.deal_type === 'vehicle' ? '🚗' : '🚦' }}</span>
-            <span class="deal-recent-name">{{ d.customer_name }}</span>
-            <span class="deal-recent-desc">{{ dealDesc(d) }}</span>
-            <span class="deal-recent-date">{{ d.deal_time }}</span>
-          </div>
-        </div>
       </template>
 
       <div v-else class="empty-box">
         <div class="empty-icon">💰</div>
         <div class="empty-text">暂无成交记录</div>
-        <div class="empty-desc">在重点客户里记录成交后，这里展示统计</div>
+        <div class="empty-desc">在客户编辑面板记录成交后，这里展示统计</div>
       </div>
     </div>
 
-    <!-- 重点优先客户 -->
-    <div class="card priority-card-block">
+    <!-- 成交 / 到店明细（吸收原重点页月度面板，可切月；点行打开编辑面板） -->
+    <div class="card detail-card">
       <div class="card-header">
-        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>重点优先客户</div>
-        <div class="expand-btn" @click="toggleKeyList">
-          {{ keyListExpanded ? '收起' : '展开' }}
+        <div class="dt-tabs">
+          <div class="dt-tab" :class="{ active: detailTab === 'deal' }" @click="detailTab = 'deal'">成交明细</div>
+          <div class="dt-tab" :class="{ active: detailTab === 'visit' }" @click="detailTab = 'visit'">到店明细</div>
+        </div>
+        <div class="dt-month">
+          <div class="dt-month-btn" @click="shiftMonth(-1)">‹</div>
+          <div class="dt-month-text">{{ viewMonthText }}</div>
+          <div class="dt-month-btn" :class="{ disabled: monthIsCurrent }" @click="shiftMonth(1)">›</div>
         </div>
       </div>
-      <div v-if="priorityCustomers.length === 0" class="empty-box">
-        <div class="empty-icon">📋</div>
-        <div class="empty-text">暂无重点客户</div>
-      </div>
-      <div v-else class="priority-list" :class="{ expanded: keyListExpanded }">
-        <div
-          v-for="customer in displayPriorityCustomers"
-          :key="customer.id"
-          class="priority-item"
-          @click="onKeyListItemTap(customer)"
-        >
-          <div class="priority-avatar" :style="{ background: customer.avatarColor.bg, color: customer.avatarColor.color }">
-            {{ customer.customer_name?.charAt(0) || '?' }}
-          </div>
-          <div class="priority-info">
-            <div class="priority-name">
-              {{ customer.customer_name }}
-              <span v-if="customer.remark" class="priority-remark">{{ customer.remark }}</span>
-            </div>
-            <div class="priority-meta">{{ customer.lead_date_short }}</div>
-          </div>
-          <div class="priority-visit" :style="{ color: customer.visitStatus.color, background: customer.visitStatus.bgColor }">
-            {{ customer.visitStatus.text }}
+
+      <!-- 成交明细 -->
+      <template v-if="detailTab === 'deal'">
+        <div v-if="monthDeals.length === 0" class="empty-box">
+          <div class="empty-icon">🚗</div>
+          <div class="empty-text">该月暂无成交</div>
+        </div>
+        <div v-else class="dt-list">
+          <div class="dt-row" v-for="d in monthDeals" :key="d.id" @click="onDealRowTap(d)">
+            <span class="dt-date">{{ d.deal_time?.slice(5) || '—' }}</span>
+            <span class="dt-name"><span class="lead" v-if="d.lead_date_short">{{ d.lead_date_short }}/</span>{{ d.customer_name || '—' }}</span>
+            <span class="dt-tag" :class="d.deal_type">{{ d.deal_type === 'vehicle' ? '🚗 车辆' : '🚦 两地牌' }}</span>
+            <span class="dt-desc">{{ dealDesc(d) }}</span>
+            <span class="dt-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
           </div>
         </div>
-      </div>
-    </div>
+      </template>
 
-    <!-- 客户趋势 -->
-    <div class="card chart-trend">
-      <div class="card-header">
-        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>客户趋势</div>
-        <div class="trend-pills">
-          <div class="pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
-          <div class="pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
-          <div class="pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">30天</div>
+      <!-- 到店明细 -->
+      <template v-else>
+        <div v-if="monthVisits.length === 0" class="empty-box">
+          <div class="empty-icon">📍</div>
+          <div class="empty-text">该月暂无到店</div>
         </div>
-      </div>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-dot current"></div>本期</div>
-        <div class="legend-item"><div class="legend-dot previous"></div>上期</div>
-      </div>
-      <div class="chart-container">
-        <canvas ref="trendCanvasRef"></canvas>
-      </div>
-      <div class="x-labels" v-if="trendDateLabels.length > 0">
-        <span v-for="(label, index) in trendDateLabels" :key="index">{{ label }}</span>
-      </div>
-      <div class="summary" v-if="trendSummary">
-        <div class="summary-item">
-          <div class="summary-value">{{ trendSummary.currentTotal }}</div>
-          <div class="summary-label">本期合计</div>
-          <div class="summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-value secondary">{{ trendSummary.prevTotal }}</div>
-          <div class="summary-label">上期合计</div>
-          <div class="summary-label">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-value">{{ trendSummary.todayCount }}</div>
-          <div class="summary-label">今日新增</div>
-          <div class="summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 月度统计 -->
-    <div class="card chart-monthly">
-      <div class="card-header">
-        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>月度统计</div>
-      </div>
-      <div class="chart-container">
-        <canvas ref="monthlyCanvasRef"></canvas>
-      </div>
-      <div class="x-labels monthly">
-        <span v-for="(label, index) in monthlyLabels" :key="index">{{ label }}</span>
-      </div>
-      <div class="summary" v-if="monthlySummary">
-        <div class="summary-item">
-          <div class="summary-value">{{ monthlySummary.currentMonth }}</div>
-          <div class="summary-label">本月</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-value secondary">{{ monthlySummary.lastMonth }}</div>
-          <div class="summary-label">上月</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-value" :class="monthlySummary.compareDir">{{ monthlySummary.diff }}</div>
-          <div class="summary-label">差数</div>
-          <div class="summary-compare" :class="monthlySummary.compareDir">{{ monthlySummary.compareText }}</div>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- 按日期查看客户 -->
-    <div class="card customer-detail-card">
-      <div class="card-header">
-        <div class="card-title"><svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>客户明细</div>
-        <input type="date" class="date-input" v-model="selectedDateFilter" @change="loadCustomersByDate" />
-      </div>
-      <div v-if="dateCustomerList.length === 0" class="empty-box">
-        <div class="empty-icon">📅</div>
-        <div class="empty-text">该日期暂无客户</div>
-      </div>
-      <div v-else class="customer-list">
-        <div
-          v-for="customer in dateCustomerList"
-          :key="customer.id"
-          class="customer-item"
-          @click="onDateCustomerTap(customer)"
-        >
-          <div class="customer-info">
-            <div class="customer-name">
-              {{ customer.customer_name }}
-              <span v-if="customer.is_priority" class="badge">重点</span>
-            </div>
-            <div class="customer-date">{{ customer.lead_date_short }}</div>
+        <div v-else class="dt-list">
+          <div class="dt-row" v-for="v in monthVisits" :key="v.id" @click="onVisitRowTap(v)">
+            <span class="dt-date">{{ v.visit_time?.slice(5) || '—' }}</span>
+            <span class="dt-name"><span class="lead" v-if="v.lead_date_short">{{ v.lead_date_short }}/</span>{{ v.customer_name || '—' }}</span>
+            <span class="dt-tag" :class="v.is_deal ? 'ok' : 'no'">{{ v.is_deal ? '✓ 已成交' : '未成交' }}</span>
+            <span class="dt-desc">{{ visitDesc(v) }}</span>
           </div>
-          <div class="customer-arrow">›</div>
         </div>
-      </div>
+      </template>
     </div>
 
-    <!-- 客户详情/操作面板（跟进记录 + 成交记录 + 重点开关） -->
+    <!-- 客户编辑面板 -->
     <CustomerDetailPanel
       v-model:show="showDetailPanel"
       :customer="activeCustomer"
@@ -345,187 +289,165 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import api from '../utils/api'
-import { isLoggedIn as checkLoggedIn, getUserInfo } from '../utils/auth'
-import { AVATAR_COLORS, calcVisitStatus } from '../utils/constants'
+import { useToast } from '../composables/useToast'
+import { useScope } from '../composables/useScope'
 import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 
-const router = useRouter()
-const loggedIn = ref(false)
+const { toast, showToast } = useToast()
+const { scopeUserId, isAdmin, scopeParams, scopeUserName, loadUsers } = useScope()
 
-// 数据总览：Bento 大数字矩阵（千分位精确显示，无 k 缩写）
-const bigNumbers = ref({
-  history: 0,
-  lastMonth: 0,
-  month: 0,
-  priority: 0,
-})
-// 本月/上月 vs 历史 的占比条（视觉化比例，不显示百分比数字）
+// ── 数据总览 ────────────────────────────────────────────
+const bigNumbers = ref({ history: 0, lastMonth: 0, month: 0, priority: 0 })
 const compareBars = ref({ lastMonth: 0, month: 0 })
-// 趋势文本与方向（保留 ↑/↓/— 这种箭头，但不写 2004% 这种失真百分比）
 const monthTrendText = ref('—')
 const monthTrendDir = ref('flat')
 const historyTrendText = ref('累计增长中')
-// 历史客户 sparkline 数据：取最近 7 天每日新增（复用 trend 接口的 counts）
 const historySparkData = ref([])
 
-// 千分位格式化：1000 → "1,000"；避免 5.1k 这种损失精度的缩写
 function formatNumber(n) {
   if (n === null || n === undefined || Number.isNaN(n)) return '0'
   return Number(n).toLocaleString('en-US')
 }
-const priorityCustomers = ref([])
-const keyListExpanded = ref(false)
+function formatAmount(n) { return Number(n).toLocaleString() }
+
+// ── 趋势 ────────────────────────────────────────────────
 const trendDays = ref(7)
 const trendDateLabels = ref([])
 const trendSummary = ref(null)
-const monthlyLabels = ref([])
-const monthlySummary = ref(null)
-// 成交统计
+const trendCanvasRef = ref(null)
+const historySparkRef = ref(null)
+
+// ── 更新日历 ────────────────────────────────────────────
+const calWeekdays = ['日', '一', '二', '三', '四', '五', '六']
+const calendarYear = ref(new Date().getFullYear())
+const calendarMonth = ref(new Date().getMonth() + 1)
+const calendarDays = ref([])
+const calendarData = ref(null)
+const isCurrentMonth = computed(() =>
+  calendarYear.value === new Date().getFullYear() && calendarMonth.value === new Date().getMonth() + 1
+)
+
+// ── 成交统计 ────────────────────────────────────────────
 const dealStats = ref({
   total_count: 0, customer_count: 0, vehicle_count: 0, plate_count: 0, month_count: 0,
   monthly: { months: [], counts: [] }, by_port: {}, by_plate_kind: {}, recent: [],
 })
-const selectedDateFilter = ref('')
-const dateCustomerList = ref([])
-const dateCustomerTotal = ref(0)
-const isAdmin = ref(false)
-const currentUserId = ref(null)
-const showUserPicker = ref(false)
-const currentUserPickerIndex = ref(0)
-const userPickerList = ref([{ id: 0, label: '全部用户', value: null }])
+const dealMonthLabels = computed(() => (dealStats.value.monthly?.months || []).map((ym) => ym.slice(5) + '月'))
+const dealMaxCount = computed(() => Math.max(...(dealStats.value.monthly?.counts || [0]), 1))
+function pct(part, total) { return total > 0 ? Math.round((part / total) * 100) : 0 }
+function dealDesc(d) {
+  if (d.deal_type === 'vehicle') return d.vehicle_desc || d.vin || '车辆'
+  return [d.port, d.plate_kind, d.plate_number].filter(Boolean).join(' · ')
+}
+function visitDesc(v) {
+  if (v.is_deal) {
+    if (v.deal_type === 'vehicle') return v.vehicle_desc ? `成交 · ${v.vehicle_desc}` : '成交 · 车辆'
+    const p = [v.port, v.plate_kind].filter(Boolean).join(' ')
+    return `成交 · ${p || '两地牌'}`
+  }
+  return v.needs || '（未填写需求）'
+}
+
+// ── 成交/到店明细（月份切换）────────────────────────────
+const detailTab = ref('deal') // 'deal' | 'visit'
+const viewMonth = ref(currentYM())
+const monthDeals = ref([])
+const monthVisits = ref([])
+
+function currentYM() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+// 不允许切到未来月份（>= 当前月即禁用右箭头）
+const monthIsCurrent = computed(() => viewMonth.value >= currentYM())
+const viewMonthText = computed(() => {
+  const [y, m] = viewMonth.value.split('-').map(Number)
+  return m === new Date().getMonth() + 1 && y === new Date().getFullYear() ? `${y}年${m}月（本月）` : `${y}年${m}月`
+})
+
+function shiftMonth(delta) {
+  const [y, m] = viewMonth.value.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  viewMonth.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  loadMonthData()
+}
+
+async function loadMonthData() {
+  try {
+    const params = scopeParams({ month: viewMonth.value })
+    const [dealsRes, visitsRes] = await Promise.all([
+      api.get('/customers/deal-list', { params }),
+      api.get('/customers/visit-list', { params }),
+    ])
+    monthDeals.value = (dealsRes || []).map((d) => ({
+      ...d,
+      lead_date_short: d.lead_date ? d.lead_date.slice(3).replace(/-/g, '') : '',
+    }))
+    monthVisits.value = (visitsRes || []).map((v) => ({
+      ...v,
+      lead_date_short: v.lead_date ? v.lead_date.slice(3).replace(/-/g, '') : '',
+    }))
+  } catch (e) {
+    showToast(e.message || '加载明细失败')
+  }
+}
+
+// ── 编辑面板（明细行点击打开；is_priority 按业务规则推定，面板内列表为准）──
 const showDetailPanel = ref(false)
 const activeCustomer = ref({})
-const toast = reactive({ show: false, message: '' })
 
-const trendCanvasRef = ref(null)
-const monthlyCanvasRef = ref(null)
-const historySparkRef = ref(null)
-
-let bigNumberAnimTimer = null
-
-const currentUserName = computed(() => {
-  return userPickerList.value[currentUserPickerIndex.value]?.label || '全部用户'
-})
-
-const displayPriorityCustomers = computed(() => {
-  return keyListExpanded.value ? priorityCustomers.value : priorityCustomers.value.slice(0, 3)
-})
-
-function showToast(message, duration = 2000) {
-  toast.message = message
-  toast.show = true
-  setTimeout(() => { toast.show = false }, duration)
-}
-
-function onAccountLogin() {
-  router.push('/login')
-}
-
-async function loadUsersList() {
-  try {
-    const res = await api.get('/customers/users/list')
-    const users = res || []
-    const pickerList = [{ id: 0, label: '全部用户', value: null }]
-    users.forEach((user) => {
-      pickerList.push({ id: user.id, label: user.nickname, value: user.id })
-    })
-    userPickerList.value = pickerList
-  } catch (e) {
-    console.error('加载用户列表失败', e)
+function tryOpenPanel(c) {
+  if (isAdmin.value) {
+    showToast('管理员仅查看，不可编辑')
+    return
   }
+  activeCustomer.value = c
+  showDetailPanel.value = true
 }
 
-function selectUser(index) {
-  currentUserPickerIndex.value = index
-  currentUserId.value = userPickerList.value[index].value
-  showUserPicker.value = false
-  loadAllData()
+function onDealRowTap(d) {
+  // 成交后自动移出重点 → is_priority 推定为 false
+  tryOpenPanel({
+    id: d.customer_id,
+    customer_name: d.customer_name,
+    lead_date: d.lead_date,
+    lead_date_short: d.lead_date_short,
+    is_priority: false,
+    last_visit_at: d.deal_time || null,
+  })
 }
 
-async function loadAllData() {
-  await Promise.all([
-    loadStats(),
-    loadTrend(),
-    loadMonthlyStats(),
-    loadPriorityCustomers(),
-    loadDealStats(),
-  ])
-  loadDefaultDate()
+function onVisitRowTap(v) {
+  // 到店登记自动标重点 → is_priority 推定为 true
+  tryOpenPanel({
+    id: v.customer_id,
+    customer_name: v.customer_name,
+    lead_date: v.lead_date,
+    lead_date_short: v.lead_date_short,
+    is_priority: true,
+    last_visit_at: v.visit_time || null,
+  })
 }
 
-function loadMockData() {
-  // 示例数据：千分位精确数字，无 k 缩写
-  bigNumbers.value = { history: 5100, lastMonth: 242, month: 105, priority: 8 }
-  compareBars.value = { lastMonth: 5, month: 2 }    // 占总量比例，移动端视觉化对比条
-  monthTrendText.value = '↑ 18%'
-  monthTrendDir.value = 'up'
-  historyTrendText.value = '近期累计增长 5,100'
-  historySparkData.value = [3, 5, 8, 6, 12, 7, 10]    // 最近 7 天每日新增（示例）
-  nextTick(() => setTimeout(() => drawHistorySpark(), 50))
-
-  priorityCustomers.value = [
-    { id: 1, lead_date_short: '0510', customer_name: '李先生', remark: '大客户', avatarColor: AVATAR_COLORS[0], visitStatus: { text: '3天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
-    { id: 2, lead_date_short: '0508', customer_name: '王女士', remark: '团购单', avatarColor: AVATAR_COLORS[1], visitStatus: { text: '12天前', color: '#FF9500', bgColor: 'rgba(255,149,0,0.1)' } },
-    { id: 3, lead_date_short: '0505', customer_name: '张总', remark: '', avatarColor: AVATAR_COLORS[2], visitStatus: { text: '20天前', color: '#FF3B30', bgColor: 'rgba(255,59,48,0.1)' } },
-    { id: 4, lead_date_short: '0501', customer_name: '陈小姐', remark: 'VIP', avatarColor: AVATAR_COLORS[3], visitStatus: { text: '5天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
-    { id: 5, lead_date_short: '0428', customer_name: '赵先生', remark: '', avatarColor: AVATAR_COLORS[4], visitStatus: { text: '8天前', color: '#34C759', bgColor: 'rgba(52,199,89,0.1)' } },
-  ]
-
-  const today = new Date()
-  const dates = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    dates.push(`${d.getMonth() + 1}/${d.getDate()}`)
-  }
-  trendDateLabels.value = dates.map((d, i) => (i === 0 || i === dates.length - 1 || i === Math.floor(dates.length / 2)) ? d : '')
-  trendSummary.value = { currentTotal: 68, prevTotal: 52, todayCount: 12, compareDir: 'up', compareText: '↑31%' }
-  nextTick(() => setTimeout(() => drawTrendCanvas([5, 8, 12, 6, 15, 10, 12], [3, 6, 9, 8, 11, 7, 8]), 50))
-
-  monthlyLabels.value = ['12月', '1月', '2月', '3月', '4月', '5月']
-  monthlySummary.value = { currentMonth: 156, lastMonth: 135, diff: '+21', compareDir: 'up', compareText: '↑16%' }
-  nextTick(() => setTimeout(() => drawMonthlyCanvas([98, 112, 125, 135, 135, 156]), 50))
-
-  // 成交统计示例
-  dealStats.value = {
-    total_count: 18, customer_count: 14, vehicle_count: 11, plate_count: 7, month_count: 4,
-    monthly: { months: ['2025-12','2026-01','2026-02','2026-03','2026-04','2026-05'], counts: [3,4,2,3,3,3] },
-    by_port: { '深圳湾': 3, '莲塘': 2, '沙头角': 1, '港珠澳': 1 },
-    by_plate_kind: { '期牌': 4, '现牌': 3 },
-    recent: [
-      { id: 1, customer_name: '李先生', deal_type: 'vehicle', deal_time: '2026-05-11', vehicle_desc: '21款霸道4000', vin: null, port: null, plate_kind: null, plate_number: null },
-      { id: 2, customer_name: '王女士', deal_type: 'plate', deal_time: '2026-05-10', vehicle_desc: null, vin: null, port: '深圳湾', plate_kind: '现牌', plate_number: 'FV-123' },
-    ],
-  }
-
-  dateCustomerList.value = [
-    { id: 1, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '钱先生', is_priority: false },
-    { id: 2, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '孙女士', is_priority: true },
-    { id: 3, lead_date: '2026-05-11', lead_date_short: '0511', customer_name: '周先生', is_priority: false },
-  ]
-  dateCustomerTotal.value = 3
-  selectedDateFilter.value = '2026-05-11'
+// ── 数据加载 ────────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([loadStats(), loadTrend(), loadDealStats(), loadCalendar(), loadMonthData()])
 }
 
 async function loadStats() {
   try {
-    const params = {}
-    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
-    const res = await api.get('/customers/stats', { params })
+    const res = await api.get('/customers/stats', { params: scopeParams() })
     const totalCount = res.total_count || 0
     const lastMonthTotal = res.last_month_total || 0
     const lastMonthCount = res.last_month_count || 0
     const monthCount = res.month_count || 0
     const priorityCount = res.priority_count || 0
 
-    // 对比条：本月/上月 占历史总量的比例（视觉化，不显示百分比文字）
     const lastMonthBar = totalCount > 0 ? Math.min(100, (lastMonthTotal / totalCount) * 100) : 0
     const monthBar = totalCount > 0 ? Math.min(100, (monthCount / totalCount) * 100) : 0
 
-    // 本月趋势（vs 上月）：箭头 + 文字，但避免 2004% 这种失真百分比
     let mTrendText = '— 持平', mTrendDir = 'flat'
     if (lastMonthCount > 0) {
       const diff = monthCount - lastMonthCount
@@ -536,7 +458,6 @@ async function loadStats() {
       mTrendDir = 'up'
     }
 
-    // 历史客户趋势文字：简洁描述累计增长
     const historyText = lastMonthTotal > 0
       ? `累计 ${formatNumber(totalCount)}，上月 ${formatNumber(lastMonthTotal)}`
       : `累计 ${formatNumber(totalCount)}`
@@ -548,9 +469,11 @@ async function loadStats() {
 
     animateBigNumbers({ history: totalCount, lastMonth: lastMonthTotal, month: monthCount, priority: priorityCount })
   } catch (e) {
-    showToast('加载统计失败')
+    showToast(e.message || '加载统计失败')
   }
 }
+
+let bigNumberAnimTimer = null
 
 function animateBigNumbers(target) {
   if (bigNumberAnimTimer) clearTimeout(bigNumberAnimTimer)
@@ -573,70 +496,9 @@ function animateBigNumbers(target) {
   tick()
 }
 
-function drawHistorySpark() {
-  const canvas = historySparkRef.value
-  if (!canvas) return
-  const data = historySparkData.value
-  if (!data || data.length < 2) return
-
-  const ctx = canvas.getContext('2d')
-  const dpr = window.devicePixelRatio || 1
-  const w = canvas.parentElement.clientWidth || 300
-  const h = 36
-  canvas.width = w * dpr
-  canvas.height = h * dpr
-  canvas.style.width = w + 'px'
-  canvas.style.height = h + 'px'
-  ctx.scale(dpr, dpr)
-  ctx.clearRect(0, 0, w, h)
-
-  const max = Math.max(...data, 1)
-  const pad = { l: 2, r: 2, t: 4, b: 4 }
-  const cw = w - pad.l - pad.r
-  const ch = h - pad.t - pad.b
-  const pts = data.map((v, i) => ({
-    x: pad.l + (i / (data.length - 1)) * cw,
-    y: pad.t + ch - (v / max) * ch,
-  }))
-
-  // 填充渐变（淡到透明）
-  ctx.beginPath()
-  ctx.moveTo(pts[0].x, h)
-  pts.forEach((p, i) => i === 0 ? ctx.lineTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
-  ctx.lineTo(pts[pts.length - 1].x, h)
-  ctx.closePath()
-  const grad = ctx.createLinearGradient(0, pad.t, 0, h)
-  grad.addColorStop(0, 'rgba(0,122,255,0.18)')
-  grad.addColorStop(1, 'rgba(0,122,255,0)')
-  ctx.fillStyle = grad
-  ctx.fill()
-
-  // 折线
-  ctx.beginPath()
-  ctx.strokeStyle = '#007AFF'
-  ctx.lineWidth = 1.5
-  ctx.lineJoin = 'round'
-  ctx.lineCap = 'round'
-  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
-  ctx.stroke()
-
-  // 最后一个点高亮
-  const last = pts[pts.length - 1]
-  ctx.beginPath()
-  ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2)
-  ctx.fillStyle = '#007AFF'
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(last.x, last.y, 1, 0, Math.PI * 2)
-  ctx.fillStyle = '#fff'
-  ctx.fill()
-}
-
 async function loadTrend() {
   try {
-    const params = { days: trendDays.value }
-    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
-    const res = await api.get('/customers/trend', { params })
+    const res = await api.get('/customers/trend', { params: scopeParams({ days: trendDays.value }) })
     const counts = res.counts || []
     const prevCounts = res.prev_counts || []
     const dates = res.dates || []
@@ -646,23 +508,23 @@ async function loadTrend() {
     const prevTotal = prevCounts.reduce((a, b) => a + b, 0)
     let compareDir = 'up', compareText = '—'
     if (prevTotal > 0) {
-      const pct = Math.round(((currentTotal - prevTotal) / prevTotal) * 100)
-      compareDir = pct >= 0 ? 'up' : 'down'
-      compareText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
+      const p = Math.round(((currentTotal - prevTotal) / prevTotal) * 100)
+      compareDir = p >= 0 ? 'up' : 'down'
+      compareText = `${p >= 0 ? '↑' : '↓'} ${Math.abs(p)}%`
     } else {
       compareText = currentTotal > 0 ? '↑新增' : '—'
     }
 
     trendDateLabels.value = labels
     trendSummary.value = { currentTotal, prevTotal, todayCount: counts[counts.length - 1] || 0, compareDir, compareText }
-    // 历史客户 sparkline 数据：取最近 7 天每日新增（trend 接口返回的 counts）
+    // 历史客户 sparkline：最近 7 天每日新增
     historySparkData.value = counts.slice(-7)
     nextTick(() => setTimeout(() => {
       drawTrendCanvas(counts, prevCounts)
       drawHistorySpark()
     }, 50))
   } catch (e) {
-    showToast('加载趋势失败')
+    showToast(e.message || '加载趋势失败')
   }
 }
 
@@ -717,186 +579,134 @@ function drawTrendCanvas(counts, prevCounts) {
   drawLine(counts, '#007AFF', 'rgba(0,122,255,0.1)')
 }
 
-function switchTrendDays(days) {
-  if (!loggedIn.value) { showToast('请先登录'); return }
-  trendDays.value = days
-  loadTrend()
-}
-
-async function loadMonthlyStats() {
-  try {
-    const params = { months: 6 }
-    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
-    const res = await api.get('/customers/monthly-stats', { params })
-    const months = res.months || []
-    const counts = res.counts || []
-    const labels = months.map(m => m.split('-')[1] + '月')
-    const currentMonth = counts[counts.length - 1] || 0
-    const lastMonth = counts[counts.length - 2] || 0
-    const diff = currentMonth - lastMonth
-    let compareDir = 'up', compareText = '—'
-    if (lastMonth > 0) {
-      const pct = Math.round(((currentMonth - lastMonth) / lastMonth) * 100)
-      compareDir = pct >= 0 ? 'up' : 'down'
-      compareText = `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%`
-    } else {
-      compareText = diff >= 0 ? '持续增长' : '—'
-    }
-
-    monthlyLabels.value = labels
-    monthlySummary.value = { currentMonth, lastMonth, diff: diff >= 0 ? `+${diff}` : `${diff}`, compareDir, compareText }
-    nextTick(() => setTimeout(() => drawMonthlyCanvas(counts), 50))
-  } catch (e) {
-    showToast('加载月度统计失败')
-  }
-}
-
-function drawMonthlyCanvas(counts) {
-  const canvas = monthlyCanvasRef.value
+function drawHistorySpark() {
+  const canvas = historySparkRef.value
   if (!canvas) return
+  const data = historySparkData.value
+  if (!data || data.length < 2) return
 
   const ctx = canvas.getContext('2d')
   const dpr = window.devicePixelRatio || 1
   const w = canvas.parentElement.clientWidth || 300
-  const h = window.innerWidth >= 1024 ? 130 : 80
+  const h = 36
   canvas.width = w * dpr
   canvas.height = h * dpr
   canvas.style.width = w + 'px'
   canvas.style.height = h + 'px'
   ctx.scale(dpr, dpr)
-
-  const max = Math.max(...counts, 1)
-  const pad = { t: 6, b: 6, x: 4 }
-  const cw = w - pad.x * 2
-  const ch = h - pad.t - pad.b
-  const n = counts.length
-  const toX = (i) => pad.x + (n > 1 ? (i / (n - 1)) * cw : cw / 2)
-  const toY = (v) => pad.t + ch - (v / max) * ch
-
   ctx.clearRect(0, 0, w, h)
 
-  // Area
+  const max = Math.max(...data, 1)
+  const pad = { l: 2, r: 2, t: 4, b: 4 }
+  const cw = w - pad.l - pad.r
+  const ch = h - pad.t - pad.b
+  const pts = data.map((v, i) => ({
+    x: pad.l + (i / (data.length - 1)) * cw,
+    y: pad.t + ch - (v / max) * ch,
+  }))
+
   ctx.beginPath()
-  counts.forEach((v, i) => { i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)) })
-  ctx.lineTo(toX(n - 1), h)
-  ctx.lineTo(toX(0), h)
+  ctx.moveTo(pts[0].x, h)
+  pts.forEach((p, i) => i === 0 ? ctx.lineTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
+  ctx.lineTo(pts[pts.length - 1].x, h)
   ctx.closePath()
   const grad = ctx.createLinearGradient(0, pad.t, 0, h)
-  grad.addColorStop(0, 'rgba(175,82,222,0.2)')
-  grad.addColorStop(1, 'rgba(175,82,222,0.02)')
+  grad.addColorStop(0, 'rgba(0,122,255,0.18)')
+  grad.addColorStop(1, 'rgba(0,122,255,0)')
   ctx.fillStyle = grad
   ctx.fill()
 
-  // Line
   ctx.beginPath()
-  ctx.strokeStyle = '#AF52DE'
-  ctx.lineWidth = 2
+  ctx.strokeStyle = '#007AFF'
+  ctx.lineWidth = 1.5
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'
-  counts.forEach((v, i) => { i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)) })
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
   ctx.stroke()
 
-  // Dots
-  counts.forEach((v, i) => {
-    ctx.beginPath()
-    ctx.arc(toX(i), toY(v), 3, 0, Math.PI * 2)
-    ctx.fillStyle = '#AF52DE'
-    ctx.fill()
-  })
+  const last = pts[pts.length - 1]
+  ctx.beginPath()
+  ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2)
+  ctx.fillStyle = '#007AFF'
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(last.x, last.y, 1, 0, Math.PI * 2)
+  ctx.fillStyle = '#fff'
+  ctx.fill()
 }
 
-async function loadPriorityCustomers() {
+function switchTrendDays(days) {
+  trendDays.value = days
+  loadTrend()
+}
+
+// ── 更新日历 ────────────────────────────────────────────
+function prevMonth() {
+  let year = calendarYear.value
+  let month = calendarMonth.value - 1
+  if (month < 1) { month = 12; year-- }
+  loadCalendar(year, month)
+}
+
+function nextMonth() {
+  const today = new Date()
+  if (calendarYear.value > today.getFullYear() ||
+      (calendarYear.value === today.getFullYear() && calendarMonth.value >= today.getMonth() + 1)) {
+    return
+  }
+  let year = calendarYear.value
+  let month = calendarMonth.value + 1
+  if (month > 12) { month = 1; year++ }
+  loadCalendar(year, month)
+}
+
+async function loadCalendar(year, month) {
   try {
-    const params = {}
-    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
-    const res = await api.get('/customers/priority', { params })
-    priorityCustomers.value = (res || []).map((c, idx) => ({
-      ...c,
-      lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '',
-      avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-      visitStatus: calcVisitStatus(c.last_visit_at),
-    }))
+    const params = scopeParams()
+    if (year && month) { params.year = year; params.month = month }
+    const res = await api.get('/customers/calendar', { params })
+
+    const firstDay = new Date(res.year, res.month - 1, 1).getDay()
+    const days = res.days || []
+    const gridDays = []
+    for (let i = 0; i < firstDay; i++) gridDays.push(null)
+    for (const d of days) gridDays.push(d)
+
+    calendarYear.value = res.year
+    calendarMonth.value = res.month
+    calendarDays.value = gridDays
+    calendarData.value = {
+      updated_count: res.updated_count,
+      missed_count: res.missed_count,
+      update_rate: res.update_rate,
+    }
   } catch (e) {
-    showToast('加载优先客户失败')
+    showToast(e.message || '加载日历失败')
   }
 }
 
-// ── 成交统计 ──
-const dealMonthLabels = computed(() => (dealStats.value.monthly?.months || []).map((ym) => ym.slice(5) + '月'))
-const dealMaxCount = computed(() => Math.max(...(dealStats.value.monthly?.counts || [0]), 1))
-function pct(part, total) { return total > 0 ? Math.round((part / total) * 100) : 0 }
-function dealDesc(d) {
-  if (d.deal_type === 'vehicle') return d.vehicle_desc || d.vin || '车辆'
-  return [d.port, d.plate_kind, d.plate_number].filter(Boolean).join(' · ')
-}
+// ── 成交统计 ────────────────────────────────────────────
 async function loadDealStats() {
   try {
-    const params = {}
-    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
-    dealStats.value = await api.get('/customers/deal-stats', { params })
+    dealStats.value = await api.get('/customers/deal-stats', { params: scopeParams() })
   } catch (e) {
-    console.error('加载成交统计失败', e)
+    showToast(e.message || '加载成交统计失败')
   }
 }
 
-function toggleKeyList() { keyListExpanded.value = !keyListExpanded.value }
-
-function openDetailPanel(customer) {
-  activeCustomer.value = customer
-  showDetailPanel.value = true
-}
-
-function onKeyListItemTap(customer) {
-  if (!loggedIn.value) { showToast('请先登录'); return }
-  if (isAdmin.value) return
-  openDetailPanel(customer)
-}
-
-function onDateCustomerTap(customer) {
-  if (!loggedIn.value) { showToast('请先登录'); return }
-  if (isAdmin.value) return
-  openDetailPanel(customer)
-}
-
-// 面板内数据变更（跟进/成交/重点）后刷新统计相关列表
+// 面板内数据变更后刷新统计与明细
 function refreshAfterPanelUpdate() {
-  loadPriorityCustomers()
   loadStats()
-  if (selectedDateFilter.value) loadCustomersByDate()
+  loadDealStats()
+  loadMonthData()
 }
 
-async function loadDefaultDate() {
-  try {
-    const params = {}
-    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
-    const res = await api.get('/customers/latest-date', { params })
-    let dateStr = res.latest_date || (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}` })()
-    selectedDateFilter.value = dateStr
-    loadCustomersByDate()
-  } catch (e) { console.error('加载默认日期失败', e) }
-}
-
-async function loadCustomersByDate() {
-  try {
-    const params = { date: selectedDateFilter.value }
-    if (isAdmin.value && currentUserId.value) params.target_user_id = currentUserId.value
-    const res = await api.get('/customers/by-date', { params })
-    dateCustomerList.value = (res.customers || []).map(c => ({ ...c, lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '' }))
-    dateCustomerTotal.value = dateCustomerList.value.length
-  } catch (e) { showToast('加载客户失败') }
-}
+// ── 生命周期 ────────────────────────────────────────────
+watch(scopeUserId, () => loadAll())
 
 onMounted(() => {
-  loggedIn.value = checkLoggedIn()
-  if (loggedIn.value) {
-    const userInfo = getUserInfo()
-    isAdmin.value = userInfo?.role === 'admin'
-    currentUserId.value = userInfo?.role === 'admin' ? null : userInfo?.user_id
-    if (isAdmin.value) loadUsersList()
-    loadAllData()
-  } else {
-    loadMockData()
-  }
+  loadAll()
+  if (isAdmin.value) loadUsers()
 })
 
 onUnmounted(() => {
@@ -906,535 +716,221 @@ onUnmounted(() => {
 
 <style scoped>
 .stats-page {
-  padding: 0 14px 80px;
+  padding: 18px 14px 80px;
   min-height: 100vh;
-  background: #F5F5F7;
+  background: var(--bg-primary);
 }
 
-/* Demo Banner */
-.demo-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  background: linear-gradient(135deg, #FF9500, #FF6B00);
-  padding: 10px 14px;
+.st-top { margin-bottom: 14px; }
+.st-title { font-size: 24px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.3px; line-height: 1.2; }
+.st-sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+
+.card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 13px;
+}
+.card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 14px;
 }
-.demo-banner-text { display: flex; align-items: center; gap: 8px; }
-.demo-banner-badge { background: rgba(255,255,255,0.3); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; color: white; }
-.demo-banner-label { font-size: 13px; color: white; font-weight: 500; }
-.demo-banner-btn { background: white; color: #FF9500; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.title-icon { width: 16px; height: 16px; color: var(--primary); }
 
-/* Admin Select */
-.admin-select { margin-bottom: 6px; padding-top: 14px; }
-.select-trigger { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.72); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; }
-.select-label { font-size: 13px; color: rgba(29,29,31,0.55); font-weight: 500; }
-.select-value { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: #007AFF; }
-.select-arrow { font-size: 10px; }
-
-/* Modal */
-.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: flex; align-items: flex-end; justify-content: center; z-index: 1000; }
-.modal-sheet { width: 100%; background: #fff; border-radius: 16px 16px 0 0; padding: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); max-height: 85vh; overflow-y: auto; }
-.modal-handle { width: 32px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); margin: 0 auto 12px; }
-.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #1D1D1F; }
-.picker-list { max-height: 300px; overflow-y: auto; }
-.picker-item { padding: 14px 16px; font-size: 15px; color: #1D1D1F; border-bottom: 1px solid rgba(0,0,0,0.06); cursor: pointer; }
-.picker-item:active { background: #F5F5F7; }
-.picker-item.active { color: #007AFF; font-weight: 600; }
-
-/* Card */
-.card {
-  background: rgba(255,255,255,0.72);
-  border: 1px solid rgba(0,0,0,0.06);
+/* ── Bento 总览 ── */
+.bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bento-card {
+  background: #fff;
+  border: 1px solid var(--border-glass);
   border-radius: 14px;
   padding: 14px;
-  margin-bottom: 10px;
-}
-.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.card-title { font-size: 14px; font-weight: 600; color: #1D1D1F; display: flex; align-items: center; }
-
-/* 区块标题图标（移动端基础尺寸，PC 端 @media 中放大） */
-.title-icon {
-  width: 16px;
-  height: 16px;
-  margin-right: 5px;
-  flex-shrink: 0;
-}
-.overview-card .title-icon { color: var(--primary); }
-.priority-card-block .title-icon { color: var(--warning); }
-.chart-trend .title-icon { color: var(--info); }
-.chart-monthly .title-icon { color: var(--purple); }
-.customer-detail-card .title-icon { color: var(--success); }
-
-/* ── Bento 大数字矩阵 ─────────────────────────────── */
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.bento-card {
   display: flex;
   flex-direction: column;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.55);
-  border-radius: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  min-height: 124px;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.bento-card:active {
-  transform: scale(0.985);
-}
-.bento-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.bento-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(29, 29, 31, 0.55);
-  letter-spacing: 0.2px;
-}
+.bento-main { grid-column: 1 / -1; }
+.bento-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.bento-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
 .bento-tag {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--blue-light);
-  color: var(--primary);
-  letter-spacing: 0.6px;
+  font-size: 9px; font-weight: 800; letter-spacing: 1px;
+  color: var(--primary); background: var(--primary-light);
+  padding: 2px 7px; border-radius: 99px;
 }
-.bento-dot-mark {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.12);
-}
-.bento-dot-mark.month { background: var(--success); }
-.bento-dot-mark.current { background: var(--warning); }
-.bento-dot-mark.priority { background: var(--danger); }
-
-/* 巨号数字：等宽字体强调精确感 */
-.bento-value {
-  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1.05;
-  color: #1D1D1F;
-  letter-spacing: -0.5px;
-  margin-bottom: 8px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* sparkline 容器（仅主卡） */
-.bento-spark-wrap {
-  margin-top: auto;
-  margin-bottom: 6px;
-  height: 36px;
-  width: 100%;
-}
-.bento-spark-canvas {
-  display: block;
-  width: 100%;
-}
-
-/* 对比条（上月 / 本月） */
+.bento-value { font-size: 32px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; line-height: 1.1; }
+.bento-main .bento-value { font-size: 38px; }
+.bento-spark-wrap { margin-top: 8px; height: 36px; }
+.bento-spark-canvas { display: block; }
+.bento-trend-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.bento-trend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.bento-trend-text { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.bento-trend-text.up { color: #28a745; }
+.bento-trend-text.down { color: #d70015; }
 .bento-compare-bar {
-  margin-top: auto;
-  height: 4px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 6px;
+  height: 6px; border-radius: 99px; background: var(--bg-primary);
+  margin-top: auto; overflow: hidden;
 }
-.bento-compare-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.bento-compare-fill.last { background: var(--success); }
-.bento-compare-fill.current { background: var(--warning); }
+.bento-compare-fill { height: 100%; border-radius: 99px; }
+.bento-compare-fill.last { background: rgba(0, 122, 255, 0.3); }
+.bento-compare-fill.current { background: var(--primary); }
+.bento-dot-mark { width: 8px; height: 8px; border-radius: 50%; }
+.bento-dot-mark.month { background: rgba(0, 122, 255, 0.3); }
+.bento-dot-mark.current { background: var(--primary); }
+.bento-dot-mark.priority { background: var(--warning); }
+.bento-dot-grid { display: flex; gap: 4px; margin-top: auto; flex-wrap: wrap; }
+.bento-dot-cell { width: 8px; height: 8px; border-radius: 2px; }
+.bento-dot-cell.filled { background: var(--warning); }
+.bento-dot-cell.empty { background: var(--bg-primary); }
 
-/* dot grid（重点客户：最多 8 个圆点，未达 8 显示空心占位） */
-.bento-dot-grid {
-  margin-top: auto;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-  margin-bottom: 6px;
-}
-.bento-dot-cell {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.06);
-}
-.bento-dot-cell.filled { background: var(--danger); }
-
-/* 趋势文本与指示 */
-.bento-trend-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: rgba(29, 29, 31, 0.55);
-  font-weight: 500;
-}
-.bento-trend-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--primary);
-}
-.bento-trend-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(29, 29, 31, 0.55);
-  letter-spacing: 0.1px;
-}
-.bento-trend-text.up { color: var(--success); }
-.bento-trend-text.down { color: var(--danger); }
-.bento-trend-text.flat { color: rgba(29, 29, 31, 0.4); }
-
-/* 主卡（历史客户）跨整行 */
-.bento-card.bento-main {
-  grid-column: span 2;
-  background: linear-gradient(135deg, rgba(0, 122, 255, 0.06), rgba(0, 122, 255, 0.02));
-  border-color: rgba(0, 122, 255, 0.1);
-  min-height: 140px;
-}
-.bento-card.bento-main .bento-value {
-  font-size: 36px;
-}
-
-/* Priority */
-.expand-btn { font-size: 12px; color: #007AFF; font-weight: 500; cursor: pointer; }
-.empty-box { text-align: center; padding: 24px 16px; }
-.empty-icon { font-size: 28px; margin-bottom: 6px; }
-.empty-text { font-size: 13px; color: rgba(29,29,31,0.55); }
-.priority-list { max-height: 180px; overflow: hidden; transition: max-height 0.3s; }
-.priority-list.expanded { max-height: none; }
-.priority-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06); cursor: pointer; }
-.priority-item:last-child { border-bottom: none; }
-.priority-item:active { background: #F5F5F7; }
-.priority-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
-.priority-info { flex: 1; min-width: 0; }
-.priority-name { font-size: 13px; font-weight: 600; color: #1D1D1F; display: flex; align-items: center; gap: 6px; }
-.priority-remark { font-size: 10px; font-weight: 500; padding: 2px 5px; border-radius: 3px; background: rgba(0,122,255,0.08); color: #007AFF; }
-.priority-meta { font-size: 11px; color: rgba(29,29,31,0.55); margin-top: 2px; }
-.priority-visit { font-size: 10px; font-weight: 600; padding: 3px 6px; border-radius: 5px; flex-shrink: 0; }
-
-/* Trend */
-.trend-pills { display: flex; gap: 2px; background: rgba(0,0,0,0.04); border-radius: 10px; padding: 2px; }
-.pill { font-size: 10px; padding: 3px 8px; border-radius: 8px; color: rgba(29,29,31,0.55); font-weight: 500; cursor: pointer; }
-.pill.active { background: #007AFF; color: white; }
-.legend { display: flex; gap: 12px; margin-bottom: 6px; }
-.legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: rgba(29,29,31,0.55); }
-.legend-dot { width: 7px; height: 7px; border-radius: 50%; }
-.legend-dot.current { background: #007AFF; }
+/* ── 趋势 ── */
+.trend-pills { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 9px; }
+.pill { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 7px; color: var(--text-secondary); cursor: pointer; }
+.pill.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+.legend-dot.current { background: var(--primary); }
 .legend-dot.previous { background: #C7C7CC; }
-.chart-container { width: 100%; height: 100px; margin-bottom: 4px; }
-.chart-container canvas { display: block; }
-.x-labels { display: flex; justify-content: space-between; padding: 0 2px; font-size: 10px; color: rgba(29,29,31,0.28); }
-.x-labels.monthly { margin-top: 4px; }
-.summary { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.06); }
-.summary-item { text-align: center; flex: 1; }
-.summary-value { font-size: 15px; font-weight: 700; color: #007AFF; }
-.summary-value.secondary { color: rgba(29,29,31,0.4); }
-.summary-value.up { color: #34C759; }
-.summary-value.down { color: #FF3B30; }
-.summary-label { font-size: 9px; color: rgba(29,29,31,0.55); }
-.summary-compare { font-size: 10px; font-weight: 600; }
-.summary-compare.up { color: #34C759; }
-.summary-compare.down { color: #FF3B30; }
-
-/* Date Customer */
-.date-input { font-size: 12px; padding: 4px 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; background: white; color: #1D1D1F; }
-.customer-list { max-height: 250px; overflow-y: auto; }
-.customer-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06); cursor: pointer; }
-.customer-item:last-child { border-bottom: none; }
-.customer-item:active { background: #F5F5F7; }
-.customer-info { flex: 1; min-width: 0; }
-.customer-name { font-size: 13px; font-weight: 600; color: #1D1D1F; display: flex; align-items: center; gap: 6px; }
-.badge { font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 3px; background: rgba(255,149,0,0.1); color: #FF9500; }
-.customer-date { font-size: 11px; color: rgba(29,29,31,0.55); margin-top: 2px; }
-.customer-arrow { font-size: 16px; color: rgba(29,29,31,0.28); }
-
-/* 成交统计 */
-.deal-stats-card .title-icon { color: #EA580C; }
-.deal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 4px; }
-.deal-cell { background: rgba(234,88,12,0.06); border-radius: 10px; padding: 12px; text-align: center; }
-.deal-val { font-size: 20px; font-weight: 800; color: #1D1D1F; line-height: 1.1; }
-.deal-val.money { color: #EA580C; }
-.deal-lbl { font-size: 11px; color: rgba(29,29,31,0.55); margin-top: 4px; line-height: 1.3; }
-.deal-sub { font-size: 10px; color: rgba(29,29,31,0.4); }
-.deal-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.06); }
-.deal-sub-title { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.7); margin-bottom: 10px; }
-.deal-bars { display: flex; align-items: flex-end; gap: 8px; height: 110px; }
-.deal-bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; min-width: 0; }
-.deal-bar-num { font-size: 9px; color: rgba(29,29,31,0.5); margin-bottom: 3px; white-space: nowrap; }
-.deal-bar-track { width: 70%; flex: 1; background: rgba(234,88,12,0.08); border-radius: 6px; display: flex; align-items: flex-end; min-height: 40px; }
-.deal-bar-fill { width: 100%; background: linear-gradient(180deg, #FB923C, #EA580C); border-radius: 6px; min-height: 2px; transition: height 0.4s; }
-.deal-bar-label { font-size: 10px; color: rgba(29,29,31,0.5); margin-top: 4px; }
-.deal-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-.deal-row-name { font-size: 12px; color: rgba(29,29,31,0.7); width: 64px; flex-shrink: 0; }
-.deal-row-bar { flex: 1; height: 18px; background: rgba(0,0,0,0.04); border-radius: 9px; overflow: hidden; }
-.deal-row-bar .fill { height: 100%; border-radius: 9px; transition: width 0.4s; }
-.deal-row-bar .fill.vehicle { background: #007AFF; }
-.deal-row-bar .fill.plate { background: #AF52DE; }
-.deal-row-bar .fill.port { background: #34C759; }
-.deal-row-bar .fill.kind { background: #FF9500; }
-.deal-row-num { font-size: 12px; font-weight: 600; color: rgba(29,29,31,0.7); width: 24px; text-align: right; }
-.deal-recent-item { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04); font-size: 12px; flex-wrap: wrap; }
-.deal-recent-item:last-child { border-bottom: none; }
-.deal-tag-sm { font-size: 10px; padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
-.deal-tag-sm.vehicle { background: rgba(0,122,255,0.1); }
-.deal-tag-sm.plate { background: rgba(175,82,222,0.1); }
-.deal-recent-name { font-weight: 600; color: #1D1D1F; }
-.deal-recent-desc { color: rgba(29,29,31,0.55); flex: 1; min-width: 80px; }
-.deal-recent-amt { color: #EA580C; font-weight: 700; }
-.deal-recent-date { color: rgba(29,29,31,0.4); font-size: 11px; }
-
-/* Visit Modal */
-.visit-name { font-size: 13px; font-weight: 600; color: #1D1D1F; margin-bottom: 6px; }
-.visit-info { margin-bottom: 10px; }
-.visit-remark { font-size: 11px; color: rgba(29,29,31,0.55); margin-bottom: 2px; }
-.visit-days { font-size: 11px; color: rgba(29,29,31,0.55); }
-.visit-input { width: 100%; min-height: 70px; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; font-size: 13px; color: #1D1D1F; resize: none; margin-bottom: 10px; }
-.visit-input:focus { border-color: #007AFF; outline: none; }
-.modal-btns { display: flex; gap: 8px; }
-.btn-danger { flex: 1; padding: 10px; border-radius: 10px; background: white; color: #FF3B30; font-size: 13px; font-weight: 600; border: 1px solid rgba(0,0,0,0.1); }
-.btn-primary { flex: 1; padding: 10px; border-radius: 10px; background: #007AFF; color: white; font-size: 13px; font-weight: 600; }
-
-/* Toast */
-.toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.75); color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; }
-
-@media (min-width: 768px) {
-  .stats-page { max-width: 414px; margin: 0 auto; }
+.chart-container { width: 100%; }
+.chart-container canvas { display: block; width: 100%; }
+.x-labels {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--text-tertiary);
+  padding: 6px 4px 0;
 }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.summary-item { background: var(--bg-primary); border-radius: 10px; padding: 10px 12px; text-align: center; }
+.summary-value { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.summary-value.secondary { color: var(--text-secondary); }
+.summary-label { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; font-weight: 600; }
+.summary-compare { font-size: 11px; font-weight: 700; margin-top: 3px; }
+.summary-compare.up { color: #28a745; }
+.summary-compare.down { color: #d70015; }
 
-/* PC 适配 */
+/* ── 更新日历 ── */
+.cal-nav { display: flex; align-items: center; gap: 6px; }
+.cal-nav-btn {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: var(--bg-primary); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; cursor: pointer;
+}
+.cal-nav-btn.disabled { opacity: 0.3; }
+.cal-month-label { font-size: 12px; font-weight: 700; color: var(--text-primary); min-width: 66px; text-align: center; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-cell-header { text-align: center; font-size: 10px; color: var(--text-tertiary); font-weight: 700; padding-bottom: 4px; }
+.cal-day-inner {
+  aspect-ratio: 1; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  background: var(--bg-primary);
+}
+.cal-updated { background: rgba(52, 199, 89, 0.14); color: #28a745; }
+.cal-missed { background: rgba(255, 59, 48, 0.06); color: rgba(255, 59, 48, 0.45); }
+.cal-summary {
+  display: flex; align-items: center;
+  margin-top: 14px; padding: 10px;
+  background: var(--bg-primary); border-radius: 10px;
+}
+.cal-summary-item { flex: 1; text-align: center; }
+.cal-summary-value { font-size: 17px; font-weight: 700; }
+.cal-text-updated { color: #28a745; }
+.cal-text-missed { color: #d70015; }
+.cal-text-rate { color: var(--primary); }
+.cal-summary-label { font-size: 10px; color: var(--text-tertiary); margin-top: 1px; font-weight: 600; }
+.cal-summary-divider { width: 1px; height: 26px; background: var(--border-glass); }
+
+/* ── 成交统计 ── */
+.deal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.deal-cell { background: var(--bg-primary); border-radius: 11px; padding: 11px 8px; text-align: center; }
+.deal-val { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+.deal-lbl { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; font-weight: 600; }
+.deal-section { margin-top: 16px; }
+.deal-sub-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+.deal-bars { display: flex; align-items: flex-end; gap: 10px; height: 110px; }
+.deal-bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
+.deal-bar-num { font-size: 10px; font-weight: 700; color: var(--text-secondary); }
+.deal-bar-track { width: 100%; max-width: 40px; height: 100%; background: var(--bg-primary); border-radius: 7px 7px 3px 3px; display: flex; align-items: flex-end; overflow: hidden; }
+.deal-bar-fill { width: 100%; background: linear-gradient(180deg, #5AC8FA, #007AFF); border-radius: 7px 7px 3px 3px; }
+.deal-bar-label { font-size: 10px; color: var(--text-tertiary); font-weight: 600; }
+.deal-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.deal-row:last-child { margin-bottom: 0; }
+.deal-row-name { width: 64px; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.deal-row-bar { flex: 1; height: 8px; border-radius: 99px; background: var(--bg-primary); overflow: hidden; }
+.deal-row-bar .fill { height: 100%; border-radius: 99px; }
+.fill.vehicle { background: var(--primary); }
+.fill.plate { background: var(--purple); }
+.fill.port { background: var(--teal); }
+.fill.kind { background: var(--warning); }
+.deal-row-num { width: 26px; flex-shrink: 0; text-align: right; font-size: 12px; font-weight: 700; color: var(--text-primary); }
+
+/* ── 明细 ── */
+.dt-tabs { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 10px; }
+.dt-tab { font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; }
+.dt-tab.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+.dt-month { display: flex; align-items: center; gap: 6px; }
+.dt-month-btn {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: var(--bg-primary); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; cursor: pointer;
+}
+.dt-month-btn.disabled { opacity: 0.3; }
+.dt-month-text { font-size: 12px; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.dt-list { display: flex; flex-direction: column; }
+.dt-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 2px; border-bottom: 1px solid var(--border-glass);
+  font-size: 13px; cursor: pointer;
+}
+.dt-row:last-child { border-bottom: none; }
+.dt-row:active { background: rgba(0, 0, 0, 0.02); }
+.dt-date { font-size: 11px; font-weight: 800; color: var(--text-tertiary); width: 36px; flex-shrink: 0; }
+.dt-name { font-weight: 600; color: var(--text-primary); flex-shrink: 0; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dt-name .lead { color: var(--text-tertiary); font-weight: 600; font-size: 10.5px; }
+.dt-tag { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
+.dt-tag.vehicle { background: rgba(0, 122, 255, 0.1); color: var(--primary); }
+.dt-tag.plate { background: rgba(175, 82, 222, 0.1); color: var(--purple); }
+.dt-tag.ok { background: rgba(52, 199, 89, 0.12); color: #28a745; }
+.dt-tag.no { background: rgba(255, 149, 0, 0.12); color: #c77700; }
+.dt-desc { flex: 1; min-width: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dt-amount { font-weight: 800; font-size: 12.5px; color: #EA580C; flex-shrink: 0; }
+
+/* ── 空态 ── */
+.empty-box { text-align: center; padding: 32px 20px; }
+.empty-icon { font-size: 34px; margin-bottom: 10px; }
+.empty-text { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.empty-desc { font-size: 12px; color: var(--text-tertiary); margin-top: 5px; }
+
+/* ── PC ── */
 @media (min-width: 1024px) {
-  /* 解除 768 断点的 414px 锁宽,PC 下铺满 */
-  .stats-page {
-    max-width: none;
-    margin: 0;
-  }
-
-  .demo-banner {
-    position: relative;
-    border-radius: 12px;
-    margin: 0 0 16px;
-    padding: 12px 18px;
-  }
-
-  .admin-select {
-    padding-top: 0;
-    margin-bottom: 12px;
-  }
-
-  /* 数据总览 + 月度同行 */
-  .card {
-    padding: 18px 22px;
-    margin-bottom: 14px;
-  }
-
-  .card-title {
-    font-size: 16px;
-  }
-
-  /* 趋势图 + 月度统计 并排:父容器用 grid,这两个卡各占一半,其余卡占满宽 */
-  .stats-page {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-
-  /* 默认所有直接子元素跨满两列(banner / admin-select / 数据总览 / 重点客户 / 客户明细 / 弹窗等) */
-  .stats-page > * {
-    grid-column: 1 / -1;
-  }
-
-  /* 仅"图表对"各占一半 */
-  .chart-trend,
-  .chart-monthly {
-    grid-column: span 1;
-    margin-bottom: 0;
-  }
-
-  /* 卡片自身下边距交给 grid gap 统一管理 */
-  .stats-page > .card {
-    margin-bottom: 0;
-  }
-
-  /* Bento 大数字矩阵：PC 端 4 列一行，主卡（历史客户）与子卡同高 */
-  .bento-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-  }
-
-  .bento-card {
-    padding: 16px 16px 14px;
-    min-height: 150px;
-  }
-
-  .bento-value {
-    font-size: 34px;
-  }
-
-  .bento-card.bento-main {
-    grid-column: span 1;       /* PC 端 4 等权，主卡不跨列 */
-    min-height: 150px;
-  }
-
-  .bento-card.bento-main .bento-value {
-    font-size: 38px;
-  }
-
-  .bento-trend-text,
-  .bento-trend-row {
-    font-size: 12px;
-  }
-
-  .ring-label {
-    font-size: 12px;
-    margin-bottom: 4px;
-  }
-
-  /* 重点客户列表区域 */
-  .priority-list {
-    max-height: none;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0 18px;
-  }
-
-  .priority-list.expanded {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .priority-item {
-    padding: 10px 0;
-  }
-
-  /* 趋势图 / 月度图更大画布 */
-  .chart-container {
-    height: 140px;
-  }
-
-  .summary-value {
-    font-size: 18px;
-  }
-
-  /* 客户明细：双列 */
-  .customer-list {
-    max-height: 320px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0 18px;
-  }
-
-  .customer-item {
-    padding: 12px 0;
-  }
-
-  /* 弹窗居中 */
-  .modal-mask {
-    align-items: center;
-    background: rgba(0, 0, 0, 0.35);
-  }
-
-  .modal-sheet {
-    width: 460px;
-    max-width: calc(100vw - 48px);
-    border-radius: 14px;
-    padding: 24px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-    animation: pop-in 0.2s ease;
-    max-height: calc(100vh - 80px);
-  }
-
-  .modal-handle {
-    display: none;
-  }
-
-  .modal-title {
-    font-size: 18px;
-    text-align: center;
-    margin-bottom: 16px;
-  }
-
-  .visit-name {
-    text-align: center;
-  }
-
-  .visit-input {
-    font-size: 14px;
-    padding: 12px 14px;
-  }
-
-  .modal-btns .btn-danger,
-  .modal-btns .btn-primary {
-    padding: 12px;
-  }
-
-  .toast {
-    top: 80px;
-    bottom: auto;
-  }
+  .stats-page { padding: 24px 28px 40px; }
+  .st-title { font-size: 26px; }
+  .card { padding: 20px 22px; border-radius: 18px; }
+  .two-col { display: grid; grid-template-columns: 1.55fr 1fr; gap: 13px; margin-bottom: 0; }
+  .two-col .card { margin-bottom: 13px; }
+  .bento-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .bento-main { grid-column: auto; }
+  .deal-grid { gap: 10px; }
+  .deal-cell { padding: 14px 10px; }
+  .deal-bars { gap: 16px; height: 130px; }
+  .dt-row:hover { background: rgba(0, 0, 0, 0.02); border-radius: 8px; }
 }
 
-@keyframes pop-in {
-  from { opacity: 0; transform: scale(1.05); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* ============ PC 端增强：布局重组 + 配色 + 图标（方案 A） ============ */
-@media (min-width: 1024px) {
-  /* 卡片标题图标 */
-  .card-title { display: flex; align-items: center; }
-  .title-icon { width: 18px; height: 18px; margin-right: 7px; flex-shrink: 0; }
-  .overview-card .title-icon { color: var(--primary); }
-  .priority-card-block .title-icon { color: var(--warning); }
-  .chart-trend .title-icon { color: var(--info); }
-  .chart-monthly .title-icon { color: var(--purple); }
-  .customer-detail-card .title-icon { color: var(--success); }
-
-  /* 4 个内容卡两两并排：重点+趋势 / 月度+明细 */
-  .priority-card-block,
-  .customer-detail-card {
-    grid-column: span 1;
-  }
-
-  /* Bento 卡片：保留语义色做点缀（数字主色仍为黑，仅背景轻微着色） */
-  .bento-card.bento-main {
-    background: linear-gradient(135deg, rgba(0,122,255,0.08), rgba(0,122,255,0.02));
-    border-color: rgba(0,122,255,0.12);
-  }
-  .bento-card:nth-child(2) { border-color: rgba(52,199,89,0.14); }
-  .bento-card:nth-child(3) { border-color: rgba(255,149,0,0.14); }
-  .bento-card:nth-child(4) { border-color: rgba(255,59,48,0.14); }
-
-  .bento-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
-  .bento-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
-  }
-
-  /* 半宽卡内列表收为单列，避免拥挤 */
-  .priority-list { grid-template-columns: 1fr; }
-  .priority-list.expanded { grid-template-columns: repeat(2, 1fr); }
-  .customer-list { grid-template-columns: 1fr; }
-
-  /* 图表加高 */
-  .chart-container { height: 170px; }
+/* ── 超宽屏 ── */
+@media (min-width: 1440px) {
+  .deal-grid { grid-template-columns: repeat(4, 1fr); }
 }
 </style>

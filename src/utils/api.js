@@ -28,15 +28,21 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response) {
-      if (error.response.status === 401) {
+      const detail = error.response.data?.detail
+      // 登录接口自身的 401（密码错误等）原样透传，不做清token/跳转
+      const isAuthApi = String(error.config?.url || '').startsWith('/auth/')
+      if (error.response.status === 401 && !isAuthApi) {
         clearAuth()
-        // 带上当前路径作为 redirect，登录成功后跳回原页面，避免「跳 /mine 再点一次登录按钮」的体验
-        const redirect = router.currentRoute.value.fullPath
-        router.push({ path: '/login', query: { redirect } })
-        return Promise.reject(new Error('登錄已過期，請重新登錄'))
+        // 带上当前路径作为 redirect，登录成功后跳回原页面；并发 401 只跳一次
+        const current = router.currentRoute.value
+        if (current.path !== '/login') {
+          const redirect = current.fullPath
+          router.push({ path: '/login', query: { redirect } })
+        }
+        return Promise.reject(new Error('登录已过期，请重新登录'))
       }
       if (error.response.status >= 400) {
-        return Promise.reject(new Error(error.response.data?.detail || `請求失敗 (${error.response.status})`))
+        return Promise.reject(new Error(detail || `请求失败 (${error.response.status})`))
       }
     }
     return Promise.reject(error)

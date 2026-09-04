@@ -1,4 +1,5 @@
-import { getToken } from './auth'
+import { getToken, clearAuth } from './auth'
+import router from '../router'
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE}/customerapi`
 
@@ -6,7 +7,7 @@ const API_BASE_URL = `${import.meta.env.VITE_API_BASE}/customerapi`
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onerror = () => reject(new Error('文件讀取失敗'))
+    reader.onerror = () => reject(new Error('文件读取失败'))
     reader.onload = () => {
       const result = reader.result
       const idx = typeof result === 'string' ? result.indexOf(',') : -1
@@ -32,14 +33,23 @@ export async function recognizeImage(file, signal) {
   })
 
   if (!res.ok) {
-    let msg = `請求失敗 (${res.status})`
+    // fetch 不走 axios 拦截器：401 手动对齐「清 token + 跳登录」的处理
+    if (res.status === 401) {
+      clearAuth()
+      const current = router.currentRoute.value
+      if (current.path !== '/login') {
+        router.push({ path: '/login', query: { redirect: current.fullPath } })
+      }
+      throw new Error('登录已过期，请重新登录')
+    }
+    let msg = `请求失败 (${res.status})`
     try {
       const errBody = await res.json()
       if (errBody?.detail) msg = errBody.detail
     } catch (_) {}
     throw new Error(msg)
   }
-  if (!res.body) throw new Error('無法讀取識別結果流')
+  if (!res.body) throw new Error('无法读取识别结果流')
 
   const reader = res.body.getReader()
   const decoder = new TextDecoder('utf-8')
@@ -61,11 +71,11 @@ export async function recognizeImage(file, signal) {
         } else if (evt.step === 'empty') {
           resultContacts = []
         } else if (evt.step === 'error') {
-          throw new Error(evt.message || '識別失敗')
+          throw new Error(evt.message || '识别失败')
         }
         // 其他 step (vl_ocr / text_structuring / …) 暂不展示，留作扩展
       } catch (e) {
-        if (e instanceof Error && /識別失敗|失敗/.test(e.message)) throw e
+        if (e instanceof Error && /识别失败|失败/.test(e.message)) throw e
       }
     }
   }
