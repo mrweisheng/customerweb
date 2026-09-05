@@ -1,1 +1,0 @@
-import{I as e}from"./index-Bux2-VS8.js";var t=e({show:!1,message:``}),n=null;function r(){function e(e,r=2e3){t.message=e,t.show=!0,n&&clearTimeout(n),n=setTimeout(()=>{t.show=!1},r)}return{toast:t,showToast:e}}export{r as t};

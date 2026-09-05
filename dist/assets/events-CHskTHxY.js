@@ -1,1 +1,0 @@
-var e=`customerweb:contacts-imported`;function t(t={}){window.dispatchEvent(new CustomEvent(e,{detail:t}))}function n(t){let n=e=>t(e.detail);return window.addEventListener(e,n),()=>window.removeEventListener(e,n)}export{n,t};
