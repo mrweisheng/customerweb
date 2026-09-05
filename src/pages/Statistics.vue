@@ -837,8 +837,8 @@ onUnmounted(() => {
   font-size: 11px; font-weight: 600; color: var(--text-secondary);
   background: var(--bg-primary);
 }
-.cal-updated { background: rgba(52, 199, 89, 0.14); color: #28a745; }
-.cal-missed { background: rgba(255, 59, 48, 0.06); color: rgba(255, 59, 48, 0.45); }
+.cal-updated { background: #34c759; color: #fff; font-weight: 800; box-shadow: 0 2px 8px rgba(52, 199, 89, 0.35); }
+.cal-missed { background: #ff3b30; color: #fff; font-weight: 800; box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3); }
 .cal-summary {
   display: flex; align-items: center;
   margin-top: 14px; padding: 10px;
