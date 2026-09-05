@@ -171,15 +171,14 @@
 
       <!-- 成交明细 -->
       <template v-if="detailTab === 'deal'">
-        <div v-if="monthDeals.length === 0" class="empty-box">
-          <div class="empty-icon">🚗</div>
-          <div class="empty-text">该月暂无成交</div>
+        <div v-if="monthDeals.length === 0">
+          <EmptyState icon="car" text="该月暂无成交" />
         </div>
         <div v-else class="dt-list">
           <div class="dt-row" v-for="d in monthDeals" :key="d.id" @click="onDealRowTap(d)">
             <span class="dt-date">{{ d.deal_time?.slice(5) || '—' }}</span>
             <span class="dt-name"><span class="lead" v-if="d.lead_date_short">{{ d.lead_date_short }}/</span>{{ d.customer_name || '—' }}</span>
-            <span class="dt-tag" :class="d.deal_type">{{ d.deal_type === 'vehicle' ? '🚗 车辆' : '🚦 两地牌' }}</span>
+            <span class="dt-tag" :class="d.deal_type"><svg class="dt-tag-icon" v-if="d.deal_type === 'vehicle'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg><svg class="dt-tag-icon" v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>{{ d.deal_type === 'vehicle' ? '车辆' : '两地牌' }}</span>
             <span class="dt-desc">{{ dealDesc(d) }}</span>
             <span class="dt-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
           </div>
@@ -188,9 +187,8 @@
 
       <!-- 到店明细 -->
       <template v-else>
-        <div v-if="monthVisits.length === 0" class="empty-box">
-          <div class="empty-icon">📍</div>
-          <div class="empty-text">该月暂无到店</div>
+        <div v-if="monthVisits.length === 0">
+          <EmptyState icon="map-pin" text="该月暂无到店" />
         </div>
         <div v-else class="dt-list">
           <div class="dt-row" v-for="v in monthVisits" :key="v.id" @click="onVisitRowTap(v)">
@@ -240,40 +238,36 @@
           <BaseChart :option="dealMonthlyOption" :height="dealChartHeight" />
         </div>
 
-        <!-- 成交结构 -->
+        <!-- 成交结构：环形图（占总成交）+ 口岸条形/牌照分段（占两地牌），口径分层展示 -->
         <div class="deal-section">
           <div class="deal-sub-title">成交结构</div>
-          <div class="deal-row">
-            <span class="deal-row-name"><span class="row-dot vehicle"></span>车辆</span>
-            <div class="deal-row-bar"><div class="fill vehicle" :style="{ width: pct(dealStats.vehicle_count, dealStats.total_count) + '%' }"></div></div>
-            <span class="deal-row-num">{{ dealStats.vehicle_count }}</span>
-          </div>
-          <div class="deal-row">
-            <span class="deal-row-name"><span class="row-dot plate"></span>两地牌</span>
-            <div class="deal-row-bar"><div class="fill plate" :style="{ width: pct(dealStats.plate_count, dealStats.total_count) + '%' }"></div></div>
-            <span class="deal-row-num">{{ dealStats.plate_count }}</span>
-          </div>
-          <template v-if="dealStats.plate_count">
-            <div class="deal-row" v-for="(c, port) in dealStats.by_port" :key="'port-' + port">
-              <span class="deal-row-name"><span class="row-dot port"></span>{{ port }}</span>
-              <div class="deal-row-bar"><div class="fill port" :style="{ width: pct(c, dealStats.plate_count) + '%' }"></div></div>
-              <span class="deal-row-num">{{ c }}</span>
+          <div class="ds-layout">
+            <div class="ds-donut">
+              <BaseChart :option="typeDonutOption" height="198px" />
+              <div class="ds-legend">
+                <div class="ds-item"><i class="ds-dot" style="background:#007AFF"></i><span>车辆</span><b>{{ dealStats.vehicle_count }} 单</b><em>{{ pct(dealStats.vehicle_count, dealStats.total_count) }}%</em></div>
+                <div class="ds-item"><i class="ds-dot" style="background:#AF52DE"></i><span>两地牌</span><b>{{ dealStats.plate_count }} 单</b><em>{{ pct(dealStats.plate_count, dealStats.total_count) }}%</em></div>
+              </div>
             </div>
-          </template>
-          <template v-if="dealStats.plate_count">
-            <div class="deal-row" v-for="(c, kind) in dealStats.by_plate_kind" :key="'kind-' + kind">
-              <span class="deal-row-name"><span class="row-dot kind"></span>{{ kind }}</span>
-              <div class="deal-row-bar"><div class="fill kind" :style="{ width: pct(c, dealStats.plate_count) + '%' }"></div></div>
-              <span class="deal-row-num">{{ c }}</span>
+            <div class="ds-bars" v-if="dealStats.plate_count">
+              <div class="ds-mini-title">口岸分布 <span class="ds-cap">占两地牌</span></div>
+              <BaseChart v-if="portRows.length" :option="portsOption" height="148px" />
+              <template v-if="kindRows.length">
+                <div class="ds-mini-title">牌照类型 <span class="ds-cap">占两地牌</span></div>
+                <div class="ds-seg">
+                  <div v-for="(k, i) in kindRows" :key="k.name" class="ds-seg-item" :class="'seg-' + i" :style="{ width: k.pct + '%' }">{{ k.name }} {{ k.value }} 单</div>
+                </div>
+                <div class="ds-seg-legend">
+                  <span v-for="k in kindRows" :key="k.name">{{ k.name }} {{ fmtPct(k.value / (dealStats.plate_count || 1) * 100) }}%</span>
+                </div>
+              </template>
             </div>
-          </template>
+          </div>
         </div>
       </template>
 
-      <div v-else class="empty-box">
-        <div class="empty-icon">💰</div>
-        <div class="empty-text">暂无成交记录</div>
-        <div class="empty-desc">在客户编辑面板记录成交后，这里展示统计</div>
+      <div v-else>
+        <EmptyState icon="banknote" text="暂无成交记录" desc="在客户编辑面板记录成交后，这里展示统计" />
       </div>
     </div>
 
@@ -295,9 +289,12 @@ import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
 import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 import BaseChart from '../components/BaseChart.vue'
+import EmptyState from '../components/EmptyState.vue'
+import { useDevice } from '../composables/useDevice'
 
 const { toast, showToast } = useToast()
 const { scopeUserId, isAdmin, scopeParams, scopeUserName, loadUsers } = useScope()
+const { isDesktop: isPC } = useDevice()
 
 // ── 数据总览 ────────────────────────────────────────────
 const bigNumbers = ref({ history: 0, lastMonth: 0, month: 0, priority: 0 })
@@ -319,9 +316,6 @@ const trendCounts = ref([])
 const trendPrevCounts = ref([])
 const trendSummary = ref(null)
 
-// PC / 移动端分别给图表不同的展示高度
-const isPC = ref(window.innerWidth >= 1024)
-const onWindowResize = () => { isPC.value = window.innerWidth >= 1024 }
 const trendChartHeight = computed(() => (isPC.value ? '170px' : '120px'))
 const dealChartHeight = computed(() => (isPC.value ? '150px' : '120px'))
 
@@ -456,6 +450,85 @@ const dealMonthlyOption = computed(() => ({
       label: { show: true, position: 'top', fontSize: 10, fontWeight: 700, color: '#6E6E73' },
     },
   ],
+}))
+
+// ── 成交结构：类型环形图 + 两地牌细分 ────────────────────
+// 百分比：整数直接显示，带小数保留一位（避免 62.5% 被抹成整数后合计不为 100%）
+function fmtPct(n) { return n % 1 ? n.toFixed(1) : String(Math.round(n)) }
+
+const typeDonutOption = computed(() => ({
+  tooltip: { ...tooltipStyle, trigger: 'item', formatter: (p) => `${p.name}<br/><b>${p.value} 单</b> · 占总成交 ${p.percent}%` },
+  title: {
+    text: String(dealStats.value.total_count || 0),
+    subtext: '总成交单',
+    left: 'center',
+    top: '31%',
+    textStyle: { fontSize: 28, fontWeight: 700, color: '#1D1D1F' },
+    subtextStyle: { fontSize: 11, color: '#8E8E93' },
+  },
+  series: [{
+    type: 'pie',
+    radius: ['58%', '82%'],
+    center: ['50%', '50%'],
+    label: { show: false },
+    labelLine: { show: false },
+    itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 4 },
+    data: [
+      { name: '车辆', value: dealStats.value.vehicle_count || 0, itemStyle: { color: '#007AFF' } },
+      { name: '两地牌', value: dealStats.value.plate_count || 0, itemStyle: { color: '#AF52DE' } },
+    ],
+  }],
+}))
+
+const portRows = computed(() =>
+  Object.entries(dealStats.value.by_port || {})
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+)
+
+const kindRows = computed(() =>
+  Object.entries(dealStats.value.by_plate_kind || {})
+    .map(([name, value]) => ({ name, value, pct: pct(value, dealStats.value.plate_count) }))
+)
+
+const portsOption = computed(() => ({
+  grid: { left: 4, right: 4, top: 8, bottom: 4, containLabel: true },
+  tooltip: {
+    ...tooltipStyle,
+    trigger: 'axis',
+    axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(0,0,0,0.04)' } },
+    formatter: (ps) => {
+      const p = ps[0]
+      return `${p.name}<br/><b>${p.value} 单</b> · 占两地牌 ${fmtPct(p.value / (dealStats.value.plate_count || 1) * 100)}%`
+    },
+  },
+  // x 轴以两地牌总数为满刻度：条形长度即「占两地牌」的比例，与文案口径一致
+  xAxis: { type: 'value', max: dealStats.value.plate_count || 1, show: false },
+  yAxis: {
+    type: 'category',
+    inverse: true,
+    data: portRows.value.map((p) => p.name),
+    axisLine: { show: false },
+    axisTick: { show: false },
+    axisLabel: { color: '#6E6E73', fontSize: 12, fontWeight: 600 },
+  },
+  series: [{
+    type: 'bar',
+    barWidth: 12,
+    data: portRows.value.map((p) => p.value),
+    itemStyle: {
+      borderRadius: [0, 6, 6, 0],
+      color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#5AC8FA' }, { offset: 1, color: '#007AFF' }] },
+    },
+    label: {
+      show: true,
+      position: 'right',
+      formatter: (p) => `${p.value}单 · ${fmtPct(p.value / (dealStats.value.plate_count || 1) * 100)}%`,
+      color: '#6E6E73',
+      fontSize: 11,
+      fontWeight: 600,
+    },
+  }],
 }))
 
 // ── 更新日历 ────────────────────────────────────────────
@@ -730,13 +803,13 @@ function refreshAfterPanelUpdate() {
 watch(scopeUserId, () => loadAll())
 
 onMounted(() => {
-  window.addEventListener('resize', onWindowResize)
+
   loadAll()
   if (isAdmin.value) loadUsers()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', onWindowResize)
+
   if (bigNumberAnimTimer) clearTimeout(bigNumberAnimTimer)
 })
 </script>
@@ -828,8 +901,8 @@ onUnmounted(() => {
 .bento-trend-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .bento-trend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
 .bento-trend-text { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
-.bento-trend-text.up { color: #28a745; }
-.bento-trend-text.down { color: #d70015; }
+.bento-trend-text.up { color: var(--success); }
+.bento-trend-text.down { color: var(--danger); }
 .bento-compare-bar {
   height: 6px; border-radius: 99px; background: var(--bg-primary);
   margin-top: auto; overflow: hidden;
@@ -857,8 +930,8 @@ onUnmounted(() => {
 .summary-value.secondary { color: var(--text-secondary); }
 .summary-label { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; font-weight: 600; }
 .summary-compare { font-size: 11px; font-weight: 700; margin-top: 3px; }
-.summary-compare.up { color: #28a745; }
-.summary-compare.down { color: #d70015; }
+.summary-compare.up { color: var(--success); }
+.summary-compare.down { color: var(--danger); }
 
 /* ── 更新日历 ── */
 .cal-nav { display: flex; align-items: center; gap: 6px; }
@@ -887,13 +960,13 @@ onUnmounted(() => {
 }
 .cal-summary-item { flex: 1; text-align: center; }
 .cal-summary-value { font-size: 17px; font-weight: 700; }
-.cal-text-updated { color: #28a745; }
-.cal-text-missed { color: #d70015; }
+.cal-text-updated { color: var(--success); }
+.cal-text-missed { color: var(--danger); }
 .cal-text-rate { color: var(--primary); }
 .cal-summary-label { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 10px; color: var(--text-tertiary); margin-top: 1px; font-weight: 600; }
 .cal-label-icon { width: 11px; height: 11px; flex-shrink: 0; }
-.cal-label-icon.c-updated { color: #28a745; }
-.cal-label-icon.c-missed { color: #d70015; }
+.cal-label-icon.c-updated { color: var(--success); }
+.cal-label-icon.c-missed { color: var(--danger); }
 .cal-label-icon.c-rate { color: var(--primary); }
 .cal-summary-divider { width: 1px; height: 26px; background: var(--border-glass); }
 
@@ -925,21 +998,23 @@ onUnmounted(() => {
   content: ''; width: 3px; height: 12px; border-radius: 2px;
   background: linear-gradient(180deg, #5AC8FA, #007AFF);
 }
-.deal-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
-.deal-row:last-child { margin-bottom: 0; }
-.deal-row-name { width: 64px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-.row-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
-.row-dot.vehicle { background: var(--primary); }
-.row-dot.plate { background: var(--purple); }
-.row-dot.port { background: var(--teal); }
-.row-dot.kind { background: var(--warning); }
-.deal-row-bar { flex: 1; height: 8px; border-radius: 99px; background: var(--bg-primary); overflow: hidden; }
-.deal-row-bar .fill { height: 100%; border-radius: 99px; }
-.fill.vehicle { background: var(--primary); }
-.fill.plate { background: var(--purple); }
-.fill.port { background: var(--teal); }
-.fill.kind { background: var(--warning); }
-.deal-row-num { width: 26px; flex-shrink: 0; text-align: right; font-size: 12px; font-weight: 700; color: var(--text-primary); }
+/* ── 成交结构 ── */
+.ds-layout { display: flex; flex-direction: column; gap: 8px; }
+.ds-donut { display: flex; flex-direction: column; align-items: center; }
+.ds-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; width: 100%; max-width: 250px; }
+.ds-item { display: flex; align-items: center; gap: 7px; background: var(--bg-primary); border-radius: 9px; padding: 7px 11px; font-size: 12px; }
+.ds-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.ds-item span { color: var(--text-secondary); font-weight: 600; }
+.ds-item b { margin-left: auto; font-size: 12.5px; color: var(--text-primary); }
+.ds-item em { font-style: normal; color: var(--text-tertiary); font-size: 11px; width: 38px; text-align: right; }
+.ds-bars { min-width: 0; display: flex; flex-direction: column; }
+.ds-mini-title { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--text-primary); margin: 2px 0 2px; }
+.ds-cap { font-size: 10px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-primary); border-radius: 99px; padding: 2px 8px; }
+.ds-seg { display: flex; height: 30px; border-radius: 9px; overflow: hidden; margin-top: 10px; }
+.ds-seg-item { display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; }
+.ds-seg-item.seg-0 { background: #AF52DE; }
+.ds-seg-item.seg-1 { background: #DDC3EF; color: #7A2FA8; }
+.ds-seg-legend { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--text-tertiary); }
 
 /* ── 明细 ── */
 .dt-tabs { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 10px; }
@@ -965,19 +1040,14 @@ onUnmounted(() => {
 .dt-date { font-size: 11px; font-weight: 800; color: var(--text-tertiary); width: 36px; flex-shrink: 0; }
 .dt-name { font-weight: 600; color: var(--text-primary); flex-shrink: 0; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-name .lead { color: var(--text-tertiary); font-weight: 600; font-size: 10.5px; }
-.dt-tag { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
+.dt-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
+.dt-tag-icon { width: 11px; height: 11px; }
 .dt-tag.vehicle { background: rgba(0, 122, 255, 0.1); color: var(--primary); }
 .dt-tag.plate { background: rgba(175, 82, 222, 0.1); color: var(--purple); }
-.dt-tag.ok { background: rgba(52, 199, 89, 0.12); color: #28a745; }
-.dt-tag.no { background: rgba(255, 149, 0, 0.12); color: #c77700; }
+.dt-tag.ok { background: rgba(52, 199, 89, 0.12); color: var(--success); }
+.dt-tag.no { background: rgba(255, 149, 0, 0.12); color: var(--warning); }
 .dt-desc { flex: 1; min-width: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-amount { font-weight: 800; font-size: 12.5px; color: #EA580C; flex-shrink: 0; }
-
-/* ── 空态 ── */
-.empty-box { text-align: center; padding: 32px 20px; }
-.empty-icon { font-size: 34px; margin-bottom: 10px; }
-.empty-text { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.empty-desc { font-size: 12px; color: var(--text-tertiary); margin-top: 5px; }
 
 /* ── PC ── */
 @media (min-width: 1024px) {
@@ -990,7 +1060,12 @@ onUnmounted(() => {
   .bento-main { grid-column: auto; }
   .deal-grid { gap: 10px; }
   .deal-cell { padding: 14px 10px; }
+  .ds-layout { flex-direction: row; gap: 18px; align-items: stretch; }
+  .ds-donut { width: 218px; flex-shrink: 0; }
   .dt-row:hover { background: rgba(0, 0, 0, 0.02); border-radius: 8px; }
+  .pill:hover, .dt-tab:hover { opacity: 0.72; }
+  .cal-nav-btn:hover, .dt-month-btn:not(.disabled):hover { background: rgba(0, 0, 0, 0.08); }
+  .btn-add:hover { filter: brightness(1.08); }
 }
 
 /* ── 超宽屏 ── */

@@ -70,10 +70,8 @@
         </div>
         <span class="action-arrow">›</span>
       </div>
-      <div v-if="searchResults.length === 0 && hasSearched" class="empty-box">
-        <div class="empty-icon">🔍</div>
-        <div class="empty-text">未找到相关客户</div>
-        <div class="empty-desc">试试其他关键字，或直接录入新客户</div>
+      <div v-if="searchResults.length === 0 && hasSearched">
+        <EmptyState icon="search" text="未找到相关客户" desc="试试其他关键字，或直接录入新客户" />
       </div>
     </div>
 
@@ -97,17 +95,18 @@
         </span>
       </div>
 
-      <div v-if="loaded && filteredCustomers.length === 0" class="empty-box">
+      <div v-if="loaded && filteredCustomers.length === 0">
         <template v-if="loadFailed">
-          <div class="empty-icon">⚠️</div>
-          <div class="empty-text">加载失败</div>
-          <div class="empty-desc">网络异常或登录过期，请重试</div>
-          <button class="empty-retry" @click="loadAll">重新加载</button>
+          <EmptyState icon="alert" text="加载失败" desc="网络异常或登录过期，请重试">
+            <button class="empty-retry" @click="loadAll">重新加载</button>
+          </EmptyState>
         </template>
         <template v-else>
-          <div class="empty-icon">📋</div>
-          <div class="empty-text">{{ filter === 'all' ? '暂无重点客户' : '该筛选下暂无客户' }}</div>
-          <div class="empty-desc">{{ filter === 'all' ? '在上方搜索客户后标注重点，或录入新客户' : '换一个筛选条件看看' }}</div>
+          <EmptyState
+            icon="clipboard"
+            :text="filter === 'all' ? '暂无重点客户' : '该筛选下暂无客户'"
+            :desc="filter === 'all' ? '在上方搜索客户后标注重点，或录入新客户' : '换一个筛选条件看看'"
+          />
         </template>
       </div>
 
@@ -179,6 +178,7 @@ import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
 import { onContactsImported } from '../utils/events'
 import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
+import EmptyState from '../components/EmptyState.vue'
 import ImportFlow from '../components/ImportFlow.vue'
 
 const router = useRouter()
@@ -547,9 +547,9 @@ onUnmounted(() => {
 .success .visit-dot { background: var(--success); }
 .warning .visit-dot { background: var(--warning); }
 .danger .visit-dot { background: var(--danger); }
-.success .cc-foot { color: #28a745; }
-.warning .cc-foot { color: #c77700; }
-.danger .cc-foot { color: #d70015; }
+.success .cc-foot { color: var(--success); }
+.warning .cc-foot { color: var(--warning); }
+.danger .cc-foot { color: var(--danger); }
 
 /* ── 搜索结果 ── */
 .results-section { margin-top: 4px; }
@@ -585,16 +585,12 @@ onUnmounted(() => {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .result-visit { font-size: 11px; font-weight: 700; flex-shrink: 0; }
-.result-visit.success { color: #28a745; }
-.result-visit.warning { color: #c77700; }
-.result-visit.danger { color: #d70015; }
+.result-visit.success { color: var(--success); }
+.result-visit.warning { color: var(--warning); }
+.result-visit.danger { color: var(--danger); }
 .action-arrow { color: var(--text-tertiary); font-size: 18px; flex-shrink: 0; }
 
 /* ── 空态 ── */
-.empty-box { text-align: center; padding: 48px 20px; }
-.empty-icon { font-size: 40px; margin-bottom: 12px; }
-.empty-text { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-.empty-desc { font-size: 12px; color: var(--text-tertiary); margin-top: 6px; }
 .empty-retry {
   margin-top: 14px; padding: 9px 26px; border-radius: 99px;
   background: var(--primary); color: #fff;
@@ -612,7 +608,7 @@ onUnmounted(() => {
   color: #fff;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 10px 24px rgba(0, 122, 255, 0.45);
-  z-index: 998;
+  z-index: var(--z-nav);
   cursor: pointer;
 }
 .wb-fab:active { transform: scale(0.94); }
@@ -625,7 +621,7 @@ onUnmounted(() => {
 
 /* ── 录入客户弹窗（仅 PC 使用）── */
 .imp-modal-mask {
-  position: fixed; inset: 0; z-index: 900;
+  position: fixed; inset: 0; z-index: var(--z-modal);
   background: rgba(15, 23, 42, 0.45);
   display: flex; align-items: center; justify-content: center;
   animation: imp-fade 0.18s ease;
@@ -691,6 +687,8 @@ onUnmounted(() => {
   .cust-grid { grid-template-columns: repeat(3, 1fr); gap: 13px; }
   .wb-fab { display: none; }
   .result-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1); }
+  .f-chip:hover { border-color: rgba(0, 0, 0, 0.14); }
+  .hist-chip:hover { filter: brightness(0.96); }
 }
 
 /* ── 超宽屏 ── */

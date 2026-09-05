@@ -68,7 +68,7 @@
 
       <!-- 操作按钮 -->
       <div v-if="imageQueue.length > 0" class="action-buttons">
-        <button class="btn-secondary" @click="clearQueue">清空列表</button>
+        <button class="btn-secondary btn-plain" @click="clearQueue">清空列表</button>
         <button class="btn-primary" :disabled="!canProceed" @click="proceedToConfirm">
           下一步 · 确认信息
         </button>
@@ -82,7 +82,7 @@
         <div class="confirm-subtitle">
           共 {{ contacts.length }} 个联系人，已选 {{ validContactCount }} 个有效可导入<span v-if="duplicateCount > 0" class="dup-tag">（{{ duplicateCount }} 位重复）</span>
         </div>
-        <div class="over-limit-hint" v-if="overLimit">⚠️ 联系人超过 200 条上限，请移除部分图片后分批导入</div>
+        <div class="over-limit-hint" v-if="overLimit">联系人超过 200 条上限，请移除部分图片后分批导入</div>
       </div>
 
       <div class="contacts-list">
@@ -121,7 +121,7 @@
       </div>
 
       <div class="action-buttons">
-        <button class="btn-secondary" @click="goBack">返回</button>
+        <button class="btn-secondary btn-plain" @click="goBack">返回</button>
         <button class="btn-primary" :disabled="validContactCount === 0 || importing || overLimit" @click="startImport">
           {{ importing ? '导入中...' : `开始导入（${validContactCount} 位）` }}
         </button>
@@ -186,7 +186,7 @@
       </div>
 
       <div class="action-buttons">
-        <button class="btn-secondary" @click="resetImport">继续导入</button>
+        <button class="btn-secondary btn-plain" @click="resetImport">继续导入</button>
         <button class="btn-primary" @click="goBack">完成</button>
       </div>
     </div>
@@ -205,7 +205,7 @@
           <input class="form-input" type="date" v-model="editingContact.dateDisplay" />
         </div>
         <div class="modal-actions">
-          <button class="btn-secondary" @click="closeEditModal">取消</button>
+          <button class="btn-secondary btn-plain" @click="closeEditModal">取消</button>
           <button class="btn-primary" @click="saveContact">保存</button>
         </div>
       </div>
@@ -804,7 +804,7 @@ onUnmounted(() => {
 .confirm-subtitle { font-size: 14px; color: var(--text-secondary); }
 .over-limit-hint {
   margin-top: 10px; font-size: 12.5px; font-weight: 600;
-  color: #d70015; background: rgba(255, 59, 48, 0.07);
+  color: var(--danger); background: var(--red-light);
   border: 1px solid rgba(255, 59, 48, 0.2);
   border-radius: 10px; padding: 8px 12px;
 }
@@ -902,7 +902,7 @@ onUnmounted(() => {
 /* 编辑弹窗 */
 .modal-mask {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25);
-  display: flex; align-items: flex-end; justify-content: center; z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: center; z-index: var(--z-modal);
 }
 .modal-sheet {
   width: 100%; background: #FFFFFF;
@@ -957,7 +957,10 @@ onUnmounted(() => {
   }
   .modal-handle { display: none; }
   .modal-title { font-size: 18px; text-align: center; }
-  .toast { top: 80px; bottom: auto; }
+
+  .btn-retry:hover, .btn-edit:hover { filter: brightness(1.06); }
+  .btn-remove:hover { color: var(--danger); }
+  .queue-item-status .processing { opacity: 0.8; }
 
   /* 步骤1：无队列时上传区居中限宽；有队列时双栏 */
   .step-content { max-width: none; }

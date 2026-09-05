@@ -179,7 +179,7 @@ onMounted(() => {
 <style scoped>
 .mine-page {
   min-height: 100vh;
-  background: #F5F5F7;
+  background: var(--bg-primary);
   padding: 18px 14px 80px;
 }
 
@@ -247,20 +247,20 @@ onMounted(() => {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .profile-info { flex: 1; min-width: 0; }
-.profile-name { font-size: 18px; font-weight: 700; color: #1D1D1F; }
+.profile-name { font-size: 18px; font-weight: 700; color: var(--text-primary); }
 .profile-name-input {
   width: 100%;
   font-size: 18px;
   font-weight: 700;
-  color: #1D1D1F;
+  color: var(--text-primary);
   border: none;
   outline: none;
   background: transparent;
   padding: 0;
   font-family: inherit;
 }
-.profile-name-input::placeholder { color: rgba(29,29,31,0.4); }
-.profile-id { font-size: 12px; color: rgba(29,29,31,0.55); margin-top: 4px; }
+.profile-name-input::placeholder { color: var(--text-tertiary); }
+.profile-id { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
 
 /* Menu List */
 .menu-list {
@@ -290,8 +290,8 @@ onMounted(() => {
   margin-right: 12px;
 }
 .menu-icon svg { width: 18px; height: 18px; }
-.menu-text { flex: 1; font-size: 15px; font-weight: 500; color: #1D1D1F; }
-.menu-value { font-size: 13px; color: rgba(29,29,31,0.4); }
+.menu-text { flex: 1; font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.menu-value { font-size: 13px; color: var(--text-tertiary); }
 .scope-select {
   border: 1px solid var(--border-glass);
   border-radius: 10px;
@@ -311,7 +311,7 @@ onMounted(() => {
   padding: 16px;
   border-radius: 18px;
   background: white;
-  color: #FF3B30;
+  color: var(--danger);
   font-size: 15px;
   font-weight: 600;
   font-family: inherit;
@@ -319,7 +319,7 @@ onMounted(() => {
   border: 1px solid rgba(255, 59, 48, 0.15);
   cursor: pointer;
 }
-.btn-logout:active { background: #F5F5F7; }
+.btn-logout:active { background: var(--bg-primary); }
 
 /* PC 适配 */
 @media (min-width: 768px) {
@@ -337,6 +337,5 @@ onMounted(() => {
   .menu-item:hover { background: rgba(0, 0, 0, 0.03); }
   .btn-logout { cursor: pointer; }
   .btn-logout:hover { background: rgba(255, 59, 48, 0.06); }
-  .toast { top: 80px; bottom: auto; }
 }
 </style>

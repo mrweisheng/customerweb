@@ -65,7 +65,7 @@ function switchTab(path) {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  z-index: 999;
+  z-index: var(--z-nav);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -88,7 +88,7 @@ function switchTab(path) {
   width: 24px;
   height: 24px;
   margin-bottom: 2px;
-  color: #999999;
+  color: var(--text-secondary);
   transition: color 0.2s;
 }
 
@@ -100,15 +100,15 @@ function switchTab(path) {
 .tabbar-text {
   font-size: 10px;
   font-weight: 500;
-  color: #999999;
+  color: var(--text-secondary);
   transition: color 0.2s;
 }
 
 .tabbar-item.active .tabbar-icon {
-  color: #007AFF;
+  color: var(--primary);
 }
 
 .tabbar-item.active .tabbar-text {
-  color: #007AFF;
+  color: var(--primary);
 }
 </style>

@@ -22,7 +22,7 @@
           <!-- ① 当前需求（客户级字段，重点跟进时一键更新） -->
           <div class="cdp-section">
             <div class="sec-head">
-              <span class="sec-icon">🚩</span>当前需求
+              <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>当前需求
             </div>
 
             <!-- 查看 -->
@@ -49,7 +49,7 @@
                 同步记入跟进时间线
               </label>
               <div class="need-btns">
-                <button class="btn-cancel" @click="editingNeeds = false">取消</button>
+                <button class="btn-plain" @click="editingNeeds = false">取消</button>
                 <button class="btn-primary" @click="submitNeeds" :disabled="loading">
                   {{ loading ? '保存中' : '保存需求' }}
                 </button>
@@ -60,7 +60,7 @@
           <!-- ② 跟进记录（时间线，追加不覆盖；输入框只做一件事：记录跟进，始终可提交） -->
           <div class="cdp-section" v-if="!panelLoading">
             <div class="sec-head">
-              <span class="sec-icon">💬</span>跟进记录
+              <svg class="sec-icon ic-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>跟进记录
               <span class="sec-count">{{ followups.length }}</span>
             </div>
             <div class="fu-list" v-if="followups.length">
@@ -88,7 +88,7 @@
           <!-- ③ 到店记录（登记未成交到店会自动标为重点） -->
           <div class="cdp-section" v-if="!panelLoading">
             <div class="sec-head">
-              <span class="sec-icon">📍</span>到店记录
+              <svg class="sec-icon ic-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>到店记录
               <span class="sec-count">{{ visits.length }}</span>
               <button class="btn-add" @click="openVisitForm(null)">+ 登记</button>
             </div>
@@ -99,8 +99,8 @@
                 </div>
                 <div class="visit-body">
                   <div class="deal-meta">
-                    <span v-if="v.visit_time">📅 {{ v.visit_time }}</span>
-                    <span class="visit-deal-sum" v-if="v.is_deal && dealSummary(v.deal_id)">💰 {{ dealSummary(v.deal_id) }}</span>
+                    <span v-if="v.visit_time"><svg class="ic meta-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> {{ v.visit_time }}</span>
+                    <span class="visit-deal-sum" v-if="v.is_deal && dealSummary(v.deal_id)"><svg class="ic meta-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg> {{ dealSummary(v.deal_id) }}</span>
                   </div>
                   <div class="visit-needs" v-if="v.needs">{{ v.needs }}</div>
                   <div class="visit-needs empty" v-else-if="!v.is_deal">（未填写需求）</div>
@@ -118,7 +118,7 @@
           <!-- ④ 成交记录（车辆 / 两地牌；新增成交自动移出重点） -->
           <div class="cdp-section" v-if="!panelLoading">
             <div class="sec-head">
-              <span class="sec-icon">💰</span>成交记录
+              <svg class="sec-icon ic-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>成交记录
               <span class="sec-count">{{ deals.length }}</span>
               <span class="sec-total" v-if="totalAmount">累计 ¥{{ totalAmount }}</span>
               <button class="btn-add" @click="openDealForm(null)">+ 添加</button>
@@ -126,8 +126,10 @@
             <div class="deal-list" v-if="deals.length">
               <div class="deal-item" v-for="d in deals" :key="d.id">
                 <div class="deal-tag" :class="d.deal_type">
-                  {{ d.deal_type === 'vehicle' ? '🚗 车辆' : '🚦 两地牌' }}
-                </div>
+              <svg class="ic" v-if="d.deal_type === 'vehicle'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>
+              <svg class="ic" v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>
+              {{ d.deal_type === 'vehicle' ? '车辆' : '两地牌' }}
+            </div>
                 <div class="deal-body">
                   <template v-if="d.deal_type === 'vehicle'">
                     <div class="deal-main">{{ d.vehicle_desc || '车辆' }}</div>
@@ -138,7 +140,7 @@
                     <div class="deal-sub" v-if="d.plate_number">车牌 {{ d.plate_number }}</div>
                   </template>
                   <div class="deal-meta">
-                    <span v-if="d.deal_time">📅 {{ d.deal_time }}</span>
+                    <span v-if="d.deal_time"><svg class="ic meta-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> {{ d.deal_time }}</span>
                     <span class="deal-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
                   </div>
                   <div class="deal-remark" v-if="d.remark">{{ d.remark }}</div>
@@ -157,10 +159,10 @@
       <!-- ⑤ 重点开关 -->
       <div class="cdp-actions">
         <button v-if="customer.is_priority" class="btn-danger" @click="confirmRemovePriority">
-          ★ 取消重点
+          <svg class="btn-ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 取消重点
         </button>
         <button v-else class="btn-primary" :disabled="loading" @click="addPriority">
-          {{ loading ? '处理中…' : '☆ 标注为重点' }}
+          {{ loading ? '处理中…' : '<svg class="btn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 标注为重点' }}
         </button>
       </div>
 
@@ -173,15 +175,15 @@
           <!-- Tab 切换（仅新增模式；切换时各 Tab 数据各自保留，互不丢失） -->
           <div class="df-tabs" v-if="!editingDeal">
             <button type="button" class="df-tab" :class="{ active: activeTab === 'vehicle' }" @click="activeTab = 'vehicle'">
-              <span>🚗</span>车辆
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>车辆
             </button>
             <button type="button" class="df-tab" :class="{ active: activeTab === 'plate' }" @click="activeTab = 'plate'">
-              <span>🚦</span>两地牌
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>两地牌
             </button>
           </div>
           <div class="df-tab-hint" v-if="!editingDeal">两个 Tab 都填，会同时记录两条成交</div>
 
-          <!-- 🚗 车辆字段 -->
+          <!-- 车辆字段 -->
           <div class="df-block" v-if="activeTab === 'vehicle'" :key="'vehicle'">
             <div class="df-field">
               <label>车架号</label>
@@ -205,7 +207,7 @@
             </div>
           </div>
 
-          <!-- 🚦 两地牌字段 -->
+          <!-- 两地牌字段 -->
           <div class="df-block" v-else :key="'plate'">
             <div class="df-field">
               <label>口岸</label>
@@ -240,7 +242,7 @@
           </div>
 
           <div class="df-btns">
-            <button class="btn-cancel" @click="showDealForm = false">取消</button>
+            <button class="btn-plain" @click="showDealForm = false">取消</button>
             <button class="btn-primary" :disabled="loading" @click="submitDeal">{{ loading ? '保存中…' : '保存' }}</button>
           </div>
         </div>
@@ -275,7 +277,7 @@
           <div class="df-tab-hint" v-if="editingVisit && editingVisit.is_deal">该到店由成交记录自动生成，需求/备注可补充；成交详情请在「成交记录」中编辑</div>
 
           <div class="df-btns">
-            <button class="btn-cancel" @click="showVisitForm = false">取消</button>
+            <button class="btn-plain" @click="showVisitForm = false">取消</button>
             <button class="btn-primary" :disabled="loading" @click="submitVisit">{{ loading ? '保存中…' : '保存' }}</button>
           </div>
         </div>
@@ -293,7 +295,7 @@
         @confirm="confirm.action"
       />
 
-      <div class="cdp-toast" v-if="toast.show">{{ toast.message }}</div>
+      <div class="toast" v-if="toast.show">{{ toast.message }}</div>
     </div>
   </div>
 </template>
@@ -707,7 +709,7 @@ async function addPriority() {
 <style scoped>
 .cdp-mask {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.3);
-  display: flex; align-items: flex-end; justify-content: center; z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: center; z-index: var(--z-modal);
 }
 .cdp-sheet {
   width: 100%; background: #fff; border-radius: 20px 20px 0 0; padding: 20px;
@@ -725,13 +727,17 @@ async function addPriority() {
 .health-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .cdp-health .success, .health-dot.success { color: #34C759; background: #34C759; }
 .cdp-health .warning, .health-dot.warning { color: #FF9500; background: #FF9500; }
-.cdp-health .danger, .health-dot.danger { color: #FF3B30; background: #FF3B30; }
+.cdp-health .danger, .health-dot.danger { color: var(--danger); background: var(--danger); }
 .cdp-health .success, .cdp-health .warning, .cdp-health .danger { background: none; }
 .cdp-close { width: 30px; height: 30px; border: none; background: rgba(0,0,0,0.06); border-radius: 50%; font-size: 20px; color: var(--text-secondary); cursor: pointer; line-height: 1; flex-shrink: 0; }
 
 .cdp-section { border-top: 1px solid var(--border-glass); padding: 14px 0; }
 .sec-head { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
-.sec-icon { font-size: 16px; }
+.sec-icon { width: 15px; height: 15px; flex-shrink: 0; }
+.ic-danger { color: var(--danger); }
+.ic-blue { color: var(--primary); }
+.ic-orange { color: var(--warning); }
+.ic-green { color: var(--success); }
 .sec-count { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
 .sec-total { margin-left: auto; font-size: 13px; font-weight: 600; color: #EA580C; }
 .btn-add { margin-left: 8px; padding: 5px 12px; border-radius: 16px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
@@ -783,15 +789,18 @@ async function addPriority() {
 /* ── ③④ 记录列表 ── */
 .visit-list, .deal-list { display: flex; flex-direction: column; gap: 10px; }
 .visit-item, .deal-item { display: flex; gap: 10px; background: var(--bg-primary); border-radius: 12px; padding: 11px; }
-.visit-tag, .deal-tag { flex-shrink: 0; align-self: flex-start; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 7px; white-space: nowrap; }
+.visit-tag, .deal-tag { flex-shrink: 0; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 7px; white-space: nowrap; }
+.deal-tag .ic { width: 12px; height: 12px; }
 .visit-tag.dealt { background: rgba(52,199,89,0.12); color: #34C759; }
 .visit-tag.not-dealt { background: rgba(255,149,0,0.12); color: #FF9500; }
-.deal-tag.vehicle { background: rgba(0,122,255,0.1); color: #007AFF; }
-.deal-tag.plate { background: rgba(175,82,222,0.1); color: #AF52DE; }
+.deal-tag.vehicle { background: var(--blue-light); color: var(--primary); }
+.deal-tag.plate { background: var(--purple-light); color: var(--purple); }
 .visit-body, .deal-body { flex: 1; min-width: 0; }
 .deal-main { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .deal-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; word-break: break-all; }
-.deal-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 12px; color: var(--text-tertiary); }
+.deal-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 12px; color: var(--text-tertiary); align-items: center; }
+.deal-meta .meta-ic { width: 12px; height: 12px; }
+.deal-meta span { display: inline-flex; align-items: center; gap: 3px; }
 .deal-amount { color: #EA580C; font-weight: 700; }
 .deal-remark { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
 .visit-needs { font-size: 14px; color: var(--text-primary); line-height: 1.5; word-break: break-all; margin-top: 2px; }
@@ -804,16 +813,17 @@ async function addPriority() {
 
 /* ── ⑤ 底部操作 ── */
 .cdp-actions { padding-top: 14px; }
-.cdp-actions button { width: 100%; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.cdp-actions button { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-ic { width: 15px; height: 15px; }
 .cdp-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger { background: #fff; color: var(--danger); border: 1px solid rgba(255,59,48,0.3); }
-.btn-primary { background: var(--primary); color: #fff; border: none; }
-.btn-cancel { background: #fff; color: var(--text-secondary); border: 1px solid var(--border-glass); }
+
+
 
 /* ── 表单覆盖层 ── */
 .df-mask {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
-  display: flex; align-items: flex-end; justify-content: center; z-index: 2000;
+  display: flex; align-items: flex-end; justify-content: center; z-index: var(--z-overlay);
 }
 .df-sheet {
   width: 100%; background: #fff; border-radius: 20px 20px 0 0;
@@ -826,7 +836,7 @@ async function addPriority() {
 
 .df-tabs { display: flex; gap: 4px; background: var(--bg-primary); border-radius: 13px; padding: 4px; margin-bottom: 8px; }
 .df-tab { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; font-family: inherit; }
-.df-tab span { font-size: 17px; }
+.df-tab .ic { width: 16px; height: 16px; }
 .df-tab.active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .df-tab-hint { font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; }
 
@@ -852,7 +862,6 @@ async function addPriority() {
 .df-btns { display: flex; gap: 10px; margin-top: 6px; }
 .df-btns button { flex: 1; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
-.cdp-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.78); color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 14px; z-index: 9999; }
 
 /* PC：居中自适应大弹窗 —— 宽度 min(1160px, 94vw)，屏幕越小相对越宽；
    内容分双列（需求+跟进 | 到店+成交），头部/底部固定，仅中间内容区滚动 */
@@ -897,6 +906,13 @@ async function addPriority() {
     gap: 12px;
   }
   .cdp-actions button { width: auto; min-width: 260px; padding: 12px 30px; }
+
+  .btn-add:hover { filter: brightness(1.08); }
+  .btn-submit:hover { filter: brightness(1.06); }
+  .need-btn:hover { filter: brightness(0.97); }
+  .deal-ops span:hover { color: var(--primary); }
+  .deal-ops span.danger:hover { color: var(--danger); }
+  .btn-plain:hover, .btn-danger:hover { background: #F7F7FA; }
 
   /* 内嵌表单：居中自适应，字段双列排布降低表单高度 */
   .df-mask { align-items: center; }

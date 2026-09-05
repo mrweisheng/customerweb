@@ -41,7 +41,7 @@ const showShell = computed(() => route.meta.showTabbar)
 }
 
 .app-main.with-sidebar {
-  margin-left: 232px;
+  margin-left: var(--sidebar-width);
   min-height: 100vh;
   background: transparent;
 }

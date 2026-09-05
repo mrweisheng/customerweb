@@ -32,6 +32,18 @@
   --bg-card: rgba(255, 255, 255, 0.72);
   --border-glass: rgba(0, 0, 0, 0.06);
   --sidebar-width: 232px;
+
+  /* ── z-index 分层约定（全局唯一口径，新增浮层请对号入座）──
+     --z-sidebar  100  侧边栏（App 壳层）
+     --z-nav      900  底部导航 / 页面悬浮元素（TabBar、FAB）
+     --z-modal    1000 页面级弹窗遮罩（录入弹窗、客户面板、导入编辑弹层）
+     --z-overlay  2000 弹窗内二级浮层（成交/到店表单、确认弹窗）
+     --z-toast    3000 全局 Toast（永远在最上） */
+  --z-sidebar: 100;
+  --z-nav: 900;
+  --z-modal: 1000;
+  --z-overlay: 2000;
+  --z-toast: 3000;
 }
 
 * {
@@ -90,8 +102,45 @@ input, textarea {
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
-  z-index: 9999;
+  z-index: var(--z-toast);
   pointer-events: none;
+}
+
+/* ── 公共按钮：全项目统一的实心主按钮 / 描边次按钮 ──
+   组件内如需布局差异（flex 占比、加宽等）用局部样式补充，不要重写配色 */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-plain {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--border-glass);
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
 @media (min-width: 768px) {
@@ -116,8 +165,15 @@ input, textarea {
   }
 
   .toast {
-    z-index: 3000;
+    top: 24px;
+    bottom: auto;
+    transform: translateX(-50%);
+    z-index: var(--z-toast);
   }
+
+  /* PC 端统一 hover 反馈 */
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-plain:hover { background: #F7F7FA; }
 
   /* 自定义滚动条：PC 下更克制 */
   ::-webkit-scrollbar {

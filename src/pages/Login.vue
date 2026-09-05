@@ -207,6 +207,10 @@ async function onLogin() {
   cursor: pointer;
 }
 
+@media (min-width: 1024px) {
+  .btn-login:hover { filter: brightness(1.06); }
+}
+
 .btn-login:active {
   transform: scale(0.98);
 }

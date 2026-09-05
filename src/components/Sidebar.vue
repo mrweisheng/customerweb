@@ -112,12 +112,12 @@ onMounted(() => {
   top: 0;
   left: 0;
   bottom: 0;
-  width: 232px;
+  width: var(--sidebar-width);
   background: #FFFFFF;
   border-right: 1px solid var(--border-glass);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  z-index: var(--z-sidebar);
 }
 
 .sidebar-brand {
