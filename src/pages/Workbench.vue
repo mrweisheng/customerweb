@@ -497,7 +497,6 @@ onUnmounted(() => {
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
 .cc-name { font-size: 14.5px; font-weight: 700; letter-spacing: 0.2px; min-width: 0; }
-.lead-date { color: var(--text-tertiary); font-weight: 600; font-size: 12px; }
 .cc-copy {
   width: 24px; height: 24px; border-radius: 7px;
   background: var(--bg-primary); color: var(--text-tertiary);
@@ -553,7 +552,6 @@ onUnmounted(() => {
 }
 .result-info { flex: 1; min-width: 0; }
 .result-name { font-size: 14.5px; font-weight: 700; color: var(--text-primary); }
-.result-name .lead-date { margin-right: 0; }
 .priority-badge {
   display: inline-block; margin-left: 6px; padding: 1px 7px;
   font-size: 10px; font-weight: 700; border-radius: 99px;
