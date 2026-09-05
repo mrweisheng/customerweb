@@ -17,135 +17,141 @@
 
       <div class="cdp-loading" v-if="panelLoading"><span class="cdp-loading-dot"></span>加载客户数据中…</div>
 
-      <!-- ① 当前需求（客户级字段，重点跟进时一键更新） -->
-      <div class="cdp-section">
-        <div class="sec-head">
-          <span class="sec-icon">🚩</span>当前需求
-        </div>
-
-        <!-- 查看 -->
-        <div class="need-card" v-if="!editingNeeds">
-          <div class="need-text" v-if="currentNeeds">{{ currentNeeds }}</div>
-          <div class="need-text empty" v-else>尚未记录客户需求</div>
-          <div class="need-foot">
-            <span class="need-hint">{{ currentNeeds ? '重点跟进时随时更新' : '标注重点前建议先写清需求' }}</span>
-            <button class="need-btn" @click="openNeedsEdit">{{ currentNeeds ? '更新需求' : '补充需求' }}</button>
-          </div>
-        </div>
-
-        <!-- 编辑 -->
-        <div class="need-card editing" v-else>
-          <textarea
-            class="need-input"
-            v-model="needsDraft"
-            rows="3"
-            placeholder="写清客户当前关注点，如：黑色SUV，预算40万，GLC/X3 对比中"
-            maxlength="2000"
-          ></textarea>
-          <label class="need-followup-toggle">
-            <input type="checkbox" v-model="needsAlsoFollowup" />
-            同步记入跟进时间线
-          </label>
-          <div class="need-btns">
-            <button class="btn-cancel" @click="editingNeeds = false">取消</button>
-            <button class="btn-primary" @click="submitNeeds" :disabled="loading">
-              {{ loading ? '保存中' : '保存需求' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ② 跟进记录（时间线，追加不覆盖；输入框只做一件事：记录跟进，始终可提交） -->
-      <div class="cdp-section" v-if="!panelLoading">
-        <div class="sec-head">
-          <span class="sec-icon">💬</span>跟进记录
-          <span class="sec-count">{{ followups.length }}</span>
-        </div>
-        <div class="fu-list" v-if="followups.length">
-          <div class="fu-item" v-for="f in followups" :key="f.id">
-            <div class="fu-time">{{ formatTime(f.created_at) }}</div>
-            <div class="fu-content">{{ f.content }}</div>
-          </div>
-        </div>
-        <div v-else class="sec-empty">暂无跟进记录</div>
-        <div class="fu-input-wrap">
-          <textarea
-            class="fu-input"
-            v-model="newFollowup"
-            placeholder="记录本次跟进内容…"
-            rows="2"
-          ></textarea>
-          <button class="btn-submit" @click="submitFollowup" :disabled="loading">
-            {{ loading ? '提交中' : '提交' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- ③ 到店记录（登记未成交到店会自动标为重点） -->
-      <div class="cdp-section" v-if="!panelLoading">
-        <div class="sec-head">
-          <span class="sec-icon">📍</span>到店记录
-          <span class="sec-count">{{ visits.length }}</span>
-          <button class="btn-add" @click="openVisitForm(null)">+ 登记</button>
-        </div>
-        <div class="visit-list" v-if="visits.length">
-          <div class="visit-item" v-for="v in visits" :key="v.id">
-            <div class="visit-tag" :class="v.is_deal ? 'dealt' : 'not-dealt'">
-              {{ v.is_deal ? '✓ 已成交' : '未成交' }}
+      <div class="cdp-body">
+        <div class="cdp-col">
+          <!-- ① 当前需求（客户级字段，重点跟进时一键更新） -->
+          <div class="cdp-section">
+            <div class="sec-head">
+              <span class="sec-icon">🚩</span>当前需求
             </div>
-            <div class="visit-body">
-              <div class="deal-meta">
-                <span v-if="v.visit_time">📅 {{ v.visit_time }}</span>
-                <span class="visit-deal-sum" v-if="v.is_deal && dealSummary(v.deal_id)">💰 {{ dealSummary(v.deal_id) }}</span>
+
+            <!-- 查看 -->
+            <div class="need-card" v-if="!editingNeeds">
+              <div class="need-text" v-if="currentNeeds">{{ currentNeeds }}</div>
+              <div class="need-text empty" v-else>尚未记录客户需求</div>
+              <div class="need-foot">
+                <span class="need-hint">{{ currentNeeds ? '重点跟进时随时更新' : '标注重点前建议先写清需求' }}</span>
+                <button class="need-btn" @click="openNeedsEdit">{{ currentNeeds ? '更新需求' : '补充需求' }}</button>
               </div>
-              <div class="visit-needs" v-if="v.needs">{{ v.needs }}</div>
-              <div class="visit-needs empty" v-else-if="!v.is_deal">（未填写需求）</div>
-              <div class="deal-remark" v-if="v.remark">{{ v.remark }}</div>
             </div>
-            <div class="deal-ops">
-              <span @click="openVisitForm(v)">编辑</span>
-              <span class="danger" @click="confirmDeleteVisit(v)">删除</span>
-            </div>
-          </div>
-        </div>
-        <div v-else class="sec-empty">暂无到店记录，点击「+ 登记」记录到店时间与需求</div>
-      </div>
 
-      <!-- ④ 成交记录（车辆 / 两地牌；新增成交自动移出重点） -->
-      <div class="cdp-section" v-if="!panelLoading">
-        <div class="sec-head">
-          <span class="sec-icon">💰</span>成交记录
-          <span class="sec-count">{{ deals.length }}</span>
-          <span class="sec-total" v-if="totalAmount">累计 ¥{{ totalAmount }}</span>
-          <button class="btn-add" @click="openDealForm(null)">+ 添加</button>
-        </div>
-        <div class="deal-list" v-if="deals.length">
-          <div class="deal-item" v-for="d in deals" :key="d.id">
-            <div class="deal-tag" :class="d.deal_type">
-              {{ d.deal_type === 'vehicle' ? '🚗 车辆' : '🚦 两地牌' }}
-            </div>
-            <div class="deal-body">
-              <template v-if="d.deal_type === 'vehicle'">
-                <div class="deal-main">{{ d.vehicle_desc || '车辆' }}</div>
-                <div class="deal-sub" v-if="d.vin">车架号 {{ d.vin }}</div>
-              </template>
-              <template v-else>
-                <div class="deal-main">{{ d.port || '-' }} · {{ d.plate_kind || '-' }}</div>
-                <div class="deal-sub" v-if="d.plate_number">车牌 {{ d.plate_number }}</div>
-              </template>
-              <div class="deal-meta">
-                <span v-if="d.deal_time">📅 {{ d.deal_time }}</span>
-                <span class="deal-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
+            <!-- 编辑 -->
+            <div class="need-card editing" v-else>
+              <textarea
+                class="need-input"
+                v-model="needsDraft"
+                rows="3"
+                placeholder="写清客户当前关注点，如：黑色SUV，预算40万，GLC/X3 对比中"
+                maxlength="2000"
+              ></textarea>
+              <label class="need-followup-toggle">
+                <input type="checkbox" v-model="needsAlsoFollowup" />
+                同步记入跟进时间线
+              </label>
+              <div class="need-btns">
+                <button class="btn-cancel" @click="editingNeeds = false">取消</button>
+                <button class="btn-primary" @click="submitNeeds" :disabled="loading">
+                  {{ loading ? '保存中' : '保存需求' }}
+                </button>
               </div>
-              <div class="deal-remark" v-if="d.remark">{{ d.remark }}</div>
-            </div>
-            <div class="deal-ops">
-              <span @click="openDealForm(d)">编辑</span>
-              <span class="danger" @click="confirmDeleteDeal(d)">删除</span>
             </div>
           </div>
+
+          <!-- ② 跟进记录（时间线，追加不覆盖；输入框只做一件事：记录跟进，始终可提交） -->
+          <div class="cdp-section" v-if="!panelLoading">
+            <div class="sec-head">
+              <span class="sec-icon">💬</span>跟进记录
+              <span class="sec-count">{{ followups.length }}</span>
+            </div>
+            <div class="fu-list" v-if="followups.length">
+              <div class="fu-item" v-for="f in followups" :key="f.id">
+                <div class="fu-time">{{ formatTime(f.created_at) }}</div>
+                <div class="fu-content">{{ f.content }}</div>
+              </div>
+            </div>
+            <div v-else class="sec-empty">暂无跟进记录</div>
+            <div class="fu-input-wrap">
+              <textarea
+                class="fu-input"
+                v-model="newFollowup"
+                placeholder="记录本次跟进内容…"
+                rows="2"
+              ></textarea>
+              <button class="btn-submit" @click="submitFollowup" :disabled="loading">
+                {{ loading ? '提交中' : '提交' }}
+              </button>
+            </div>
+          </div>
+
         </div>
-        <div v-else class="sec-empty">暂无成交记录，点击「+ 添加」记录车辆或两地牌成交</div>
+        <div class="cdp-col">
+          <!-- ③ 到店记录（登记未成交到店会自动标为重点） -->
+          <div class="cdp-section" v-if="!panelLoading">
+            <div class="sec-head">
+              <span class="sec-icon">📍</span>到店记录
+              <span class="sec-count">{{ visits.length }}</span>
+              <button class="btn-add" @click="openVisitForm(null)">+ 登记</button>
+            </div>
+            <div class="visit-list" v-if="visits.length">
+              <div class="visit-item" v-for="v in visits" :key="v.id">
+                <div class="visit-tag" :class="v.is_deal ? 'dealt' : 'not-dealt'">
+                  {{ v.is_deal ? '✓ 已成交' : '未成交' }}
+                </div>
+                <div class="visit-body">
+                  <div class="deal-meta">
+                    <span v-if="v.visit_time">📅 {{ v.visit_time }}</span>
+                    <span class="visit-deal-sum" v-if="v.is_deal && dealSummary(v.deal_id)">💰 {{ dealSummary(v.deal_id) }}</span>
+                  </div>
+                  <div class="visit-needs" v-if="v.needs">{{ v.needs }}</div>
+                  <div class="visit-needs empty" v-else-if="!v.is_deal">（未填写需求）</div>
+                  <div class="deal-remark" v-if="v.remark">{{ v.remark }}</div>
+                </div>
+                <div class="deal-ops">
+                  <span @click="openVisitForm(v)">编辑</span>
+                  <span class="danger" @click="confirmDeleteVisit(v)">删除</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="sec-empty">暂无到店记录，点击「+ 登记」记录到店时间与需求</div>
+          </div>
+
+          <!-- ④ 成交记录（车辆 / 两地牌；新增成交自动移出重点） -->
+          <div class="cdp-section" v-if="!panelLoading">
+            <div class="sec-head">
+              <span class="sec-icon">💰</span>成交记录
+              <span class="sec-count">{{ deals.length }}</span>
+              <span class="sec-total" v-if="totalAmount">累计 ¥{{ totalAmount }}</span>
+              <button class="btn-add" @click="openDealForm(null)">+ 添加</button>
+            </div>
+            <div class="deal-list" v-if="deals.length">
+              <div class="deal-item" v-for="d in deals" :key="d.id">
+                <div class="deal-tag" :class="d.deal_type">
+                  {{ d.deal_type === 'vehicle' ? '🚗 车辆' : '🚦 两地牌' }}
+                </div>
+                <div class="deal-body">
+                  <template v-if="d.deal_type === 'vehicle'">
+                    <div class="deal-main">{{ d.vehicle_desc || '车辆' }}</div>
+                    <div class="deal-sub" v-if="d.vin">车架号 {{ d.vin }}</div>
+                  </template>
+                  <template v-else>
+                    <div class="deal-main">{{ d.port || '-' }} · {{ d.plate_kind || '-' }}</div>
+                    <div class="deal-sub" v-if="d.plate_number">车牌 {{ d.plate_number }}</div>
+                  </template>
+                  <div class="deal-meta">
+                    <span v-if="d.deal_time">📅 {{ d.deal_time }}</span>
+                    <span class="deal-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
+                  </div>
+                  <div class="deal-remark" v-if="d.remark">{{ d.remark }}</div>
+                </div>
+                <div class="deal-ops">
+                  <span @click="openDealForm(d)">编辑</span>
+                  <span class="danger" @click="confirmDeleteDeal(d)">删除</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="sec-empty">暂无成交记录，点击「+ 添加」记录车辆或两地牌成交</div>
+          </div>
+        </div>
       </div>
 
       <!-- ⑤ 重点开关 -->
@@ -193,7 +199,7 @@
               <label>成交时间</label>
               <input class="df-input" type="date" v-model="formVehicle.deal_time" />
             </div>
-            <div class="df-field">
+            <div class="df-field df-field-wide">
               <label>备注</label>
               <input class="df-input" v-model.trim="formVehicle.remark" placeholder="选填" />
             </div>
@@ -251,7 +257,7 @@
               <label>到店时间</label>
               <input class="df-input" type="date" v-model="formVisit.visit_time" />
             </div>
-            <div class="df-field">
+            <div class="df-field df-field-wide">
               <label>需求{{ editingVisit && editingVisit.is_deal ? '（选填）' : '（必填）' }}</label>
               <textarea
                 class="df-input"
@@ -260,7 +266,7 @@
                 :placeholder="formVisit.needs || currentNeeds ? '默认带入当前需求，可修改' : '请写清楚客户需求'"
               ></textarea>
             </div>
-            <div class="df-field">
+            <div class="df-field df-field-wide">
               <label>备注</label>
               <input class="df-input" v-model.trim="formVisit.remark" placeholder="选填" />
             </div>
@@ -827,6 +833,8 @@ async function addPriority() {
 .df-block { background: var(--bg-primary); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
 .df-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .df-field:last-child { margin-bottom: 0; }
+/* PC 端 df-block 为双列网格，带此类的字段占满整行（长文本/备注类） */
+.df-field-wide { grid-column: 1 / -1; }
 .df-field > label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 .df-input {
   width: 100%; padding: 13px 14px; border: 1px solid var(--border-glass); border-radius: 12px;
@@ -846,20 +854,62 @@ async function addPriority() {
 
 .cdp-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.78); color: #fff; padding: 11px 22px; border-radius: 10px; font-size: 14px; z-index: 9999; }
 
-/* PC：面板改为右侧抽屉（保留列表上下文），表单仍居中 */
+/* PC：居中自适应大弹窗 —— 宽度 min(1160px, 94vw)，屏幕越小相对越宽；
+   内容分双列（需求+跟进 | 到店+成交），头部/底部固定，仅中间内容区滚动 */
 @media (min-width: 1024px) {
-  .cdp-mask { align-items: stretch; justify-content: flex-end; background: rgba(0,0,0,0.35); }
+  .cdp-mask { align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); }
   .cdp-sheet {
-    width: 520px; max-width: calc(100vw - 48px);
-    border-radius: 20px 0 0 20px;
-    padding: 30px 28px;
-    max-height: none; height: 100vh;
-    box-shadow: -18px 0 50px rgba(0, 0, 0, 0.2);
+    width: min(1160px, 94vw);
+    max-height: min(880px, 92vh);
+    height: auto;
+    border-radius: 20px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
   }
   .cdp-handle { display: none; }
 
+  .cdp-header { padding: 20px 28px 12px; margin-bottom: 0; }
+  .cdp-title { font-size: 19px; }
+  .cdp-loading { padding: 16px 28px 6px; }
+
+  .cdp-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 30px;
+    padding: 0 28px;
+    overflow-y: auto;
+  }
+  .cdp-col { min-width: 0; }
+  .cdp-col .cdp-section { border-top: none; border-bottom: 1px solid var(--border-glass); padding: 6px 0 16px; }
+  .cdp-col .cdp-section:last-child { border-bottom: none; }
+
+  .cdp-actions {
+    flex-shrink: 0;
+    padding: 14px 28px calc(16px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border-glass);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .cdp-actions button { width: auto; min-width: 260px; padding: 12px 30px; }
+
+  /* 内嵌表单：居中自适应，字段双列排布降低表单高度 */
   .df-mask { align-items: center; }
-  .df-sheet { width: 760px; max-width: calc(100vw - 48px); border-radius: 18px; padding: 34px; max-height: calc(100vh - 80px); box-shadow: 0 24px 60px rgba(0,0,0,0.25); }
+  .df-sheet {
+    width: min(720px, 94vw);
+    border-radius: 18px;
+    padding: 26px 28px;
+    max-height: calc(100vh - 72px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  }
   .df-handle { display: none; }
+  .df-block { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; padding: 18px; }
+  .df-field { margin-bottom: 0; }
+  .df-btns { margin-top: 2px; }
 }
 </style>
