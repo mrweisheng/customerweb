@@ -45,7 +45,7 @@
       <!-- 图片队列 -->
       <div v-if="imageQueue.length > 0" class="image-queue">
         <div class="queue-header">
-          <span>已选择 {{ imageQueue.length }} 张图片</span>
+          <span>已选择 {{ imageQueue.length }} 张图片 · 共识别到 {{ contacts.length }} 个联系人</span>
           <span class="queue-progress">{{ queueDoneCount }}/{{ imageQueue.length }} 已处理</span>
         </div>
         <div v-for="item in imageQueue" :key="item.id" class="queue-item" :class="item.status">
@@ -734,6 +734,7 @@ onUnmounted(() => {
 
 /* 队列 */
 .image-queue { margin-top: 20px; }
+.queue-item { min-width: 0; }
 .queue-header {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);
@@ -969,8 +970,13 @@ onUnmounted(() => {
     gap: 24px; align-items: start;
   }
   .step-content.step-1:has(.image-queue) .action-buttons { grid-column: 1 / -1; }
-  .image-queue { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .image-queue .queue-header { grid-column: 1 / -1; }
+  /* 双栏队列：限高滚动；网格子项 min-width:0 防止长文件名撑破布局 */
+  .image-queue {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    max-height: 400px; overflow-y: auto; padding-right: 2px;
+  }
+  .image-queue > * { min-width: 0; }
+  .image-queue .queue-header { grid-column: 1 / -1; position: sticky; top: 0; background: var(--bg-primary); z-index: 1; }
 }
 
 /* 超宽屏：确认页联系人三列 */
