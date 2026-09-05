@@ -151,6 +151,54 @@
       </div>
     </div>
 
+    <!-- 成交 / 到店明细（吸收原重点页月度面板，可切月；点行打开编辑面板） -->
+    <div class="card detail-card">
+      <div class="card-header">
+        <div class="dt-tabs">
+          <div class="dt-tab" :class="{ active: detailTab === 'deal' }" @click="detailTab = 'deal'">成交明细</div>
+          <div class="dt-tab" :class="{ active: detailTab === 'visit' }" @click="detailTab = 'visit'">到店明细</div>
+        </div>
+        <div class="dt-month">
+          <div class="dt-month-btn" @click="shiftMonth(-1)">‹</div>
+          <div class="dt-month-text">{{ viewMonthText }}</div>
+          <div class="dt-month-btn" :class="{ disabled: monthIsCurrent }" @click="shiftMonth(1)">›</div>
+        </div>
+      </div>
+
+      <!-- 成交明细 -->
+      <template v-if="detailTab === 'deal'">
+        <div v-if="monthDeals.length === 0" class="empty-box">
+          <div class="empty-icon">🚗</div>
+          <div class="empty-text">该月暂无成交</div>
+        </div>
+        <div v-else class="dt-list">
+          <div class="dt-row" v-for="d in monthDeals" :key="d.id" @click="onDealRowTap(d)">
+            <span class="dt-date">{{ d.deal_time?.slice(5) || '—' }}</span>
+            <span class="dt-name"><span class="lead" v-if="d.lead_date_short">{{ d.lead_date_short }}/</span>{{ d.customer_name || '—' }}</span>
+            <span class="dt-tag" :class="d.deal_type">{{ d.deal_type === 'vehicle' ? '🚗 车辆' : '🚦 两地牌' }}</span>
+            <span class="dt-desc">{{ dealDesc(d) }}</span>
+            <span class="dt-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
+          </div>
+        </div>
+      </template>
+
+      <!-- 到店明细 -->
+      <template v-else>
+        <div v-if="monthVisits.length === 0" class="empty-box">
+          <div class="empty-icon">📍</div>
+          <div class="empty-text">该月暂无到店</div>
+        </div>
+        <div v-else class="dt-list">
+          <div class="dt-row" v-for="v in monthVisits" :key="v.id" @click="onVisitRowTap(v)">
+            <span class="dt-date">{{ v.visit_time?.slice(5) || '—' }}</span>
+            <span class="dt-name"><span class="lead" v-if="v.lead_date_short">{{ v.lead_date_short }}/</span>{{ v.customer_name || '—' }}</span>
+            <span class="dt-tag" :class="v.is_deal ? 'ok' : 'no'">{{ v.is_deal ? '✓ 已成交' : '未成交' }}</span>
+            <span class="dt-desc">{{ visitDesc(v) }}</span>
+          </div>
+        </div>
+      </template>
+    </div>
+
     <!-- 成交统计 -->
     <div class="card deal-stats-card">
       <div class="card-header">
@@ -227,54 +275,6 @@
         <div class="empty-text">暂无成交记录</div>
         <div class="empty-desc">在客户编辑面板记录成交后，这里展示统计</div>
       </div>
-    </div>
-
-    <!-- 成交 / 到店明细（吸收原重点页月度面板，可切月；点行打开编辑面板） -->
-    <div class="card detail-card">
-      <div class="card-header">
-        <div class="dt-tabs">
-          <div class="dt-tab" :class="{ active: detailTab === 'deal' }" @click="detailTab = 'deal'">成交明细</div>
-          <div class="dt-tab" :class="{ active: detailTab === 'visit' }" @click="detailTab = 'visit'">到店明细</div>
-        </div>
-        <div class="dt-month">
-          <div class="dt-month-btn" @click="shiftMonth(-1)">‹</div>
-          <div class="dt-month-text">{{ viewMonthText }}</div>
-          <div class="dt-month-btn" :class="{ disabled: monthIsCurrent }" @click="shiftMonth(1)">›</div>
-        </div>
-      </div>
-
-      <!-- 成交明细 -->
-      <template v-if="detailTab === 'deal'">
-        <div v-if="monthDeals.length === 0" class="empty-box">
-          <div class="empty-icon">🚗</div>
-          <div class="empty-text">该月暂无成交</div>
-        </div>
-        <div v-else class="dt-list">
-          <div class="dt-row" v-for="d in monthDeals" :key="d.id" @click="onDealRowTap(d)">
-            <span class="dt-date">{{ d.deal_time?.slice(5) || '—' }}</span>
-            <span class="dt-name"><span class="lead" v-if="d.lead_date_short">{{ d.lead_date_short }}/</span>{{ d.customer_name || '—' }}</span>
-            <span class="dt-tag" :class="d.deal_type">{{ d.deal_type === 'vehicle' ? '🚗 车辆' : '🚦 两地牌' }}</span>
-            <span class="dt-desc">{{ dealDesc(d) }}</span>
-            <span class="dt-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
-          </div>
-        </div>
-      </template>
-
-      <!-- 到店明细 -->
-      <template v-else>
-        <div v-if="monthVisits.length === 0" class="empty-box">
-          <div class="empty-icon">📍</div>
-          <div class="empty-text">该月暂无到店</div>
-        </div>
-        <div v-else class="dt-list">
-          <div class="dt-row" v-for="v in monthVisits" :key="v.id" @click="onVisitRowTap(v)">
-            <span class="dt-date">{{ v.visit_time?.slice(5) || '—' }}</span>
-            <span class="dt-name"><span class="lead" v-if="v.lead_date_short">{{ v.lead_date_short }}/</span>{{ v.customer_name || '—' }}</span>
-            <span class="dt-tag" :class="v.is_deal ? 'ok' : 'no'">{{ v.is_deal ? '✓ 已成交' : '未成交' }}</span>
-            <span class="dt-desc">{{ visitDesc(v) }}</span>
-          </div>
-        </div>
-      </template>
     </div>
 
     <!-- 客户编辑面板 -->
