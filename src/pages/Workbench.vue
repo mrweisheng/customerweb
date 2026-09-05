@@ -214,7 +214,7 @@ async function loadAll() {
   loadFailed.value = false
   try {
     const listRes = await api.get('/customers/priority', { params: scopeParams() })
-    priorityCustomers.value = (listRes || []).map((c, idx) => ({
+    priorityCustomers.value = (Array.isArray(listRes) ? listRes : []).map((c, idx) => ({
       ...c,
       lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '',
       avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
@@ -254,7 +254,7 @@ async function doSearch() {
   if (!query) return
   try {
     const res = await api.get('/customers/search', { params: { keyword: query, ...scopeParams() } })
-    searchResults.value = (res || []).map((c, idx) => ({
+    searchResults.value = (Array.isArray(res) ? res : []).map((c, idx) => ({
       ...c,
       lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '',
       avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],

@@ -334,7 +334,7 @@ const dealStats = ref({
   total_count: 0, customer_count: 0, vehicle_count: 0, plate_count: 0, month_count: 0,
   monthly: { months: [], counts: [] }, by_port: {}, by_plate_kind: {}, recent: [],
 })
-const dealMonthLabels = computed(() => (dealStats.value.monthly?.months || []).map((ym) => ym.slice(5) + '月'))
+const dealMonthLabels = computed(() => (Array.isArray(dealStats.value.monthly?.months) ? dealStats.value.monthly.months : []).map((ym) => ym.slice(5) + '月'))
 const dealMaxCount = computed(() => Math.max(...(dealStats.value.monthly?.counts || [0]), 1))
 function pct(part, total) { return total > 0 ? Math.round((part / total) * 100) : 0 }
 function dealDesc(d) {
@@ -381,11 +381,11 @@ async function loadMonthData() {
       api.get('/customers/deal-list', { params }),
       api.get('/customers/visit-list', { params }),
     ])
-    monthDeals.value = (dealsRes || []).map((d) => ({
+    monthDeals.value = (Array.isArray(dealsRes) ? dealsRes : []).map((d) => ({
       ...d,
       lead_date_short: d.lead_date ? d.lead_date.slice(3).replace(/-/g, '') : '',
     }))
-    monthVisits.value = (visitsRes || []).map((v) => ({
+    monthVisits.value = (Array.isArray(visitsRes) ? visitsRes : []).map((v) => ({
       ...v,
       lead_date_short: v.lead_date ? v.lead_date.slice(3).replace(/-/g, '') : '',
     }))
@@ -499,9 +499,9 @@ function animateBigNumbers(target) {
 async function loadTrend() {
   try {
     const res = await api.get('/customers/trend', { params: scopeParams({ days: trendDays.value }) })
-    const counts = res.counts || []
-    const prevCounts = res.prev_counts || []
-    const dates = res.dates || []
+    const counts = Array.isArray(res.counts) ? res.counts : []
+    const prevCounts = Array.isArray(res.prev_counts) ? res.prev_counts : []
+    const dates = Array.isArray(res.dates) ? res.dates : []
 
     const labels = dates.map((d, i) => (i === 0 || i === dates.length - 1 || i === Math.floor(dates.length / 2)) ? d : '')
     const currentTotal = counts.reduce((a, b) => a + b, 0)
@@ -667,7 +667,7 @@ async function loadCalendar(year, month) {
     const res = await api.get('/customers/calendar', { params })
 
     const firstDay = new Date(res.year, res.month - 1, 1).getDay()
-    const days = res.days || []
+    const days = Array.isArray(res.days) ? res.days : []
     const gridDays = []
     for (let i = 0; i < firstDay; i++) gridDays.push(null)
     for (const d of days) gridDays.push(d)
