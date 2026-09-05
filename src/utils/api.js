@@ -3,7 +3,12 @@ import { getToken, clearAuth } from './auth'
 import router from '../router'
 
 // 后端地址统一从 .env 读取（VITE_API_BASE），切换环境只改 .env 即可
-const BASE_URL = `${import.meta.env.VITE_API_BASE}/customerapi`
+const API_BASE = import.meta.env.VITE_API_BASE
+if (!API_BASE) {
+  // 缺失配置时直接报错，避免打包出 /undefined/ 的错误接口地址
+  throw new Error('缺少 VITE_API_BASE 环境变量：请在 customerweb/.env 中配置（参考 .env.example）后重新打包')
+}
+const BASE_URL = `${API_BASE}/customerapi`
 
 const api = axios.create({
   baseURL: BASE_URL,
