@@ -39,7 +39,7 @@ defineEmits(['cancel', 'confirm'])
 .confirm-sheet {
   width: 100%;
   max-width: 300px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--bg-glass-strong);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 14px;
@@ -65,7 +65,7 @@ defineEmits(['cancel', 'confirm'])
 
 .confirm-actions {
   display: flex;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--border-glass);
 }
 
 .confirm-actions button {
@@ -79,13 +79,17 @@ defineEmits(['cancel', 'confirm'])
   transition: background 0.15s;
 }
 
+@media (min-width: 1024px) {
+  .confirm-actions button:hover { background: var(--bg-hover); }
+}
+
 .confirm-actions button:active {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-hover);
 }
 
 .btn-cancel {
   color: var(--text-secondary);
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: 1px solid var(--border-glass);
 }
 
 .btn-confirm {

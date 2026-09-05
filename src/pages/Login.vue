@@ -122,10 +122,10 @@ async function onLogin() {
 .login-card {
   width: 100%;
   max-width: 360px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-glass);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-glass);
   border-radius: 22px;
   padding: 36px 30px 28px;
   box-shadow: 0 24px 60px -20px rgba(15, 23, 42, 0.18);
@@ -174,8 +174,8 @@ async function onLogin() {
 
 .form-input {
   width: 100%;
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--surface);
+  border: 1px solid var(--border-glass);
   border-radius: 12px;
   padding: 12px 14px;
   font-size: 15px;

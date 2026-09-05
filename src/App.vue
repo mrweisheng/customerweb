@@ -28,7 +28,7 @@ const showShell = computed(() => route.meta.showTabbar)
 }
 
 #app.app-pc {
-  background: #F2F3F5;
+  background: var(--bg-page-pc);
   display: block;
 }
 

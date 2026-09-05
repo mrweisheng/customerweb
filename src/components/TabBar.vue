@@ -58,10 +58,10 @@ function switchTab(path) {
   left: 0;
   right: 0;
   height: 60px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border-glass);
   display: flex;
   align-items: center;
   justify-content: space-around;

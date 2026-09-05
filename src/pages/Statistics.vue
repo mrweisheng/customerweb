@@ -291,10 +291,12 @@ import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 import BaseChart from '../components/BaseChart.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { useDevice } from '../composables/useDevice'
+import { useTheme } from '../composables/useTheme'
 
 const { toast, showToast } = useToast()
 const { scopeUserId, isAdmin, scopeParams, scopeUserName, loadUsers } = useScope()
 const { isDesktop: isPC } = useDevice()
+const { isDark } = useTheme()
 
 // ── 数据总览 ────────────────────────────────────────────
 const bigNumbers = ref({ history: 0, lastMonth: 0, month: 0, priority: 0 })
@@ -319,35 +321,40 @@ const trendSummary = ref(null)
 const trendChartHeight = computed(() => (isPC.value ? '170px' : '120px'))
 const dealChartHeight = computed(() => (isPC.value ? '150px' : '120px'))
 
-// 三张图共用的悬浮提示样式：PC 悬停 / 移动端点按都会显示数值
-const tooltipStyle = {
+// 三张图共用的悬浮提示样式：PC 悬停 / 移动端点按都会显示数值（随夜间模式换肤）
+const tooltipStyle = computed(() => ({
   trigger: 'axis',
   confine: true,
-  backgroundColor: 'rgba(255,255,255,0.98)',
-  borderColor: 'rgba(0,0,0,0.06)',
+  backgroundColor: isDark.value ? 'rgba(44, 44, 48, 0.98)' : 'rgba(255,255,255,0.98)',
+  borderColor: isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
   borderRadius: 10,
   padding: [8, 12],
-  textStyle: { color: '#1D1D1F', fontSize: 12 },
+  textStyle: { color: isDark.value ? '#F2F2F7' : '#1D1D1F', fontSize: 12 },
   extraCssText: 'box-shadow: 0 4px 16px rgba(0,0,0,0.10);',
-}
+}))
+// 图表坐标轴/标题的随主题色
+const axisLabelColor = computed(() => (isDark.value ? '#A6A6AD' : '#8E8E93'))
+const axisLineColor = computed(() => (isDark.value ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.08)'))
+const splitLineColor = computed(() => (isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'))
+const chartTitleColor = computed(() => (isDark.value ? '#F2F2F7' : '#1D1D1F'))
 
 // 客户趋势：本期/上期双折线
 const trendOption = computed(() => ({
   grid: { left: 6, right: 12, top: 14, bottom: 2, containLabel: true },
-  tooltip: { ...tooltipStyle, valueFormatter: (v) => `${v ?? 0} 位` },
+  tooltip: { ...tooltipStyle.value, valueFormatter: (v) => `${v ?? 0} 位` },
   xAxis: {
     type: 'category',
     boundaryGap: false,
     data: trendDates.value.map((d) => d.slice(5)),
     axisTick: { show: false },
-    axisLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } },
-    axisLabel: { color: '#8E8E93', fontSize: 10 },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+    axisLabel: { color: axisLabelColor.value, fontSize: 10 },
   },
   yAxis: {
     type: 'value',
     minInterval: 1,
-    axisLabel: { color: '#8E8E93', fontSize: 10 },
-    splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } },
+    axisLabel: { color: axisLabelColor.value, fontSize: 10 },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
     {
@@ -389,7 +396,7 @@ const trendOption = computed(() => ({
 const sparkCounts = computed(() => trendCounts.value.slice(-7))
 const sparkOption = computed(() => ({
   grid: { left: 2, right: 2, top: 5, bottom: 5 },
-  tooltip: { ...tooltipStyle, valueFormatter: (v) => `${v ?? 0} 位` },
+  tooltip: { ...tooltipStyle.value, valueFormatter: (v) => `${v ?? 0} 位` },
   xAxis: { type: 'category', boundaryGap: false, data: trendDates.value.slice(-7).map((d) => d.slice(5)), show: false },
   yAxis: { type: 'value', show: false },
   series: [
@@ -418,19 +425,19 @@ const sparkOption = computed(() => ({
 // 月度成交单数柱状图
 const dealMonthlyOption = computed(() => ({
   grid: { left: 6, right: 6, top: 22, bottom: 2, containLabel: true },
-  tooltip: { ...tooltipStyle, valueFormatter: (v) => `${v ?? 0} 单` },
+  tooltip: { ...tooltipStyle.value, valueFormatter: (v) => `${v ?? 0} 单` },
   xAxis: {
     type: 'category',
     data: (dealStats.value.monthly?.months || []).map((ym) => ym.slice(5) + '月'),
     axisTick: { show: false },
-    axisLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } },
-    axisLabel: { color: '#8E8E93', fontSize: 10 },
+    axisLine: { lineStyle: { color: axisLineColor.value } },
+    axisLabel: { color: axisLabelColor.value, fontSize: 10 },
   },
   yAxis: {
     type: 'value',
     minInterval: 1,
-    axisLabel: { color: '#8E8E93', fontSize: 10 },
-    splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } },
+    axisLabel: { color: axisLabelColor.value, fontSize: 10 },
+    splitLine: { lineStyle: { color: splitLineColor.value } },
   },
   series: [
     {
@@ -457,14 +464,14 @@ const dealMonthlyOption = computed(() => ({
 function fmtPct(n) { return n % 1 ? n.toFixed(1) : String(Math.round(n)) }
 
 const typeDonutOption = computed(() => ({
-  tooltip: { ...tooltipStyle, trigger: 'item', formatter: (p) => `${p.name}<br/><b>${p.value} 单</b> · 占总成交 ${p.percent}%` },
+  tooltip: { ...tooltipStyle.value, trigger: 'item', formatter: (p) => `${p.name}<br/><b>${p.value} 单</b> · 占总成交 ${p.percent}%` },
   title: {
     text: String(dealStats.value.total_count || 0),
     subtext: '总成交单',
     left: 'center',
     top: '31%',
-    textStyle: { fontSize: 28, fontWeight: 700, color: '#1D1D1F' },
-    subtextStyle: { fontSize: 11, color: '#8E8E93' },
+    textStyle: { fontSize: 28, fontWeight: 700, color: chartTitleColor.value },
+    subtextStyle: { fontSize: 11, color: axisLabelColor.value },
   },
   series: [{
     type: 'pie',
@@ -472,7 +479,7 @@ const typeDonutOption = computed(() => ({
     center: ['50%', '50%'],
     label: { show: false },
     labelLine: { show: false },
-    itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 4 },
+    itemStyle: { borderColor: isDark.value ? "#1C1C1E" : "#fff", borderWidth: 2, borderRadius: 4 },
     data: [
       { name: '车辆', value: dealStats.value.vehicle_count || 0, itemStyle: { color: '#007AFF' } },
       { name: '两地牌', value: dealStats.value.plate_count || 0, itemStyle: { color: '#AF52DE' } },
@@ -494,9 +501,9 @@ const kindRows = computed(() =>
 const portsOption = computed(() => ({
   grid: { left: 4, right: 4, top: 8, bottom: 4, containLabel: true },
   tooltip: {
-    ...tooltipStyle,
+    ...tooltipStyle.value,
     trigger: 'axis',
-    axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(0,0,0,0.04)' } },
+    axisPointer: { type: 'shadow', shadowStyle: { color: isDark.value ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } },
     formatter: (ps) => {
       const p = ps[0]
       return `${p.name}<br/><b>${p.value} 单</b> · 占两地牌 ${fmtPct(p.value / (dealStats.value.plate_count || 1) * 100)}%`
@@ -510,7 +517,7 @@ const portsOption = computed(() => ({
     data: portRows.value.map((p) => p.name),
     axisLine: { show: false },
     axisTick: { show: false },
-    axisLabel: { color: '#6E6E73', fontSize: 12, fontWeight: 600 },
+    axisLabel: { color: axisLabelColor.value, fontSize: 12, fontWeight: 600 },
   },
   series: [{
     type: 'bar',
@@ -859,12 +866,12 @@ onUnmounted(() => {
 .title-chip.ti-blue { background: rgba(0, 122, 255, 0.12); color: #007AFF; }
 .title-chip.ti-green { background: rgba(52, 199, 89, 0.14); color: #34C759; }
 .title-chip.ti-purple { background: rgba(175, 82, 222, 0.12); color: #AF52DE; }
-.title-chip.ti-orange { background: rgba(255, 149, 0, 0.14); color: #FF9500; }
+.title-chip.ti-orange { background: var(--orange-light); color: var(--warning); }
 
 /* ── Bento 总览 ── */
 .bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .bento-card {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-glass);
   border-radius: 14px;
   padding: 14px;
@@ -873,10 +880,15 @@ onUnmounted(() => {
 }
 .bento-main { grid-column: 1 / -1; }
 /* 每张指标卡一个专属色的角落光晕，低透明度不抢数据 */
-.tint-blue { background: radial-gradient(110px 90px at top right, rgba(0, 122, 255, 0.10), transparent 70%), #fff; }
-.tint-purple { background: radial-gradient(110px 90px at top right, rgba(175, 82, 222, 0.10), transparent 70%), #fff; }
-.tint-green { background: radial-gradient(110px 90px at top right, rgba(52, 199, 89, 0.11), transparent 70%), #fff; }
-.tint-orange { background: radial-gradient(110px 90px at top right, rgba(255, 149, 0, 0.11), transparent 70%), #fff; }
+.tint-blue { background: radial-gradient(110px 90px at top right, rgba(0, 122, 255, 0.10), transparent 70%), var(--surface); }
+.tint-purple { background: radial-gradient(110px 90px at top right, rgba(175, 82, 222, 0.10), transparent 70%), var(--surface); }
+.tint-green { background: radial-gradient(110px 90px at top right, rgba(52, 199, 89, 0.11), transparent 70%), var(--surface); }
+.tint-orange { background: radial-gradient(110px 90px at top right, rgba(255, 149, 0, 0.11), transparent 70%), var(--surface); }
+/* 夜间：角落光晕提亮，深色卡片上仍可感知 */
+.dark .tint-blue { background: radial-gradient(110px 90px at top right, rgba(10, 132, 255, 0.26), transparent 70%), var(--surface); }
+.dark .tint-purple { background: radial-gradient(110px 90px at top right, rgba(191, 90, 242, 0.24), transparent 70%), var(--surface); }
+.dark .tint-green { background: radial-gradient(110px 90px at top right, rgba(48, 209, 88, 0.22), transparent 70%), var(--surface); }
+.dark .tint-orange { background: radial-gradient(110px 90px at top right, rgba(255, 159, 10, 0.24), transparent 70%), var(--surface); }
 .bento-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .bento-label-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .bento-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
@@ -889,7 +901,7 @@ onUnmounted(() => {
 .bento-icon.bi-blue { background: rgba(0, 122, 255, 0.12); color: #007AFF; }
 .bento-icon.bi-purple { background: rgba(175, 82, 222, 0.12); color: #AF52DE; }
 .bento-icon.bi-green { background: rgba(52, 199, 89, 0.14); color: #34C759; }
-.bento-icon.bi-orange { background: rgba(255, 149, 0, 0.14); color: #FF9500; }
+.bento-icon.bi-orange { background: var(--orange-light); color: var(--warning); }
 .bento-tag {
   font-size: 9px; font-weight: 800; letter-spacing: 1px;
   color: var(--primary); background: var(--primary-light);
@@ -908,7 +920,7 @@ onUnmounted(() => {
   margin-top: auto; overflow: hidden;
 }
 .bento-compare-fill { height: 100%; border-radius: 99px; }
-.bento-compare-fill.last { background: rgba(0, 122, 255, 0.3); }
+.bento-compare-fill.last { background: var(--blue-light); }
 .bento-compare-fill.current { background: var(--primary); }
 .bento-dot-grid { display: flex; gap: 4px; margin-top: auto; flex-wrap: wrap; }
 .bento-dot-cell { width: 8px; height: 8px; border-radius: 2px; }
@@ -918,7 +930,7 @@ onUnmounted(() => {
 /* ── 趋势 ── */
 .trend-pills { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 9px; }
 .pill { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 7px; color: var(--text-secondary); cursor: pointer; }
-.pill.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+.pill.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
 .legend-item { display: flex; align-items: center; gap: 5px; }
 .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
@@ -986,7 +998,7 @@ onUnmounted(() => {
 .deal-cell-icon.di-blue { background: rgba(0, 122, 255, 0.12); color: #007AFF; }
 .deal-cell-icon.di-green { background: rgba(52, 199, 89, 0.14); color: #34C759; }
 .deal-cell-icon.di-purple { background: rgba(175, 82, 222, 0.12); color: #AF52DE; }
-.deal-cell-icon.di-orange { background: rgba(255, 149, 0, 0.14); color: #FF9500; }
+.deal-cell-icon.di-orange { background: var(--orange-light); color: var(--warning); }
 .deal-val { font-size: 20px; font-weight: 700; color: var(--text-primary); }
 .deal-lbl { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; font-weight: 600; }
 .deal-section { margin-top: 16px; }
@@ -1019,7 +1031,7 @@ onUnmounted(() => {
 /* ── 明细 ── */
 .dt-tabs { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 10px; }
 .dt-tab { font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; }
-.dt-tab.active { background: #fff; color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+.dt-tab.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 .dt-month { display: flex; align-items: center; gap: 6px; }
 .dt-month-btn {
   width: 26px; height: 26px; border-radius: 8px;
@@ -1036,16 +1048,16 @@ onUnmounted(() => {
   font-size: 13px; cursor: pointer;
 }
 .dt-row:last-child { border-bottom: none; }
-.dt-row:active { background: rgba(0, 0, 0, 0.02); }
+.dt-row:active { background: var(--bg-hover); }
 .dt-date { font-size: 11px; font-weight: 800; color: var(--text-tertiary); width: 36px; flex-shrink: 0; }
 .dt-name { font-weight: 600; color: var(--text-primary); flex-shrink: 0; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-name .lead { color: var(--text-tertiary); font-weight: 600; font-size: 10.5px; }
 .dt-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
 .dt-tag-icon { width: 11px; height: 11px; }
-.dt-tag.vehicle { background: rgba(0, 122, 255, 0.1); color: var(--primary); }
-.dt-tag.plate { background: rgba(175, 82, 222, 0.1); color: var(--purple); }
+.dt-tag.vehicle { background: var(--blue-light); color: var(--primary); }
+.dt-tag.plate { background: var(--purple-light); color: var(--purple); }
 .dt-tag.ok { background: rgba(52, 199, 89, 0.12); color: var(--success); }
-.dt-tag.no { background: rgba(255, 149, 0, 0.12); color: var(--warning); }
+.dt-tag.no { background: var(--orange-light); color: var(--warning); }
 .dt-desc { flex: 1; min-width: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-amount { font-weight: 800; font-size: 12.5px; color: #EA580C; flex-shrink: 0; }
 
@@ -1062,9 +1074,9 @@ onUnmounted(() => {
   .deal-cell { padding: 14px 10px; }
   .ds-layout { flex-direction: row; gap: 18px; align-items: stretch; }
   .ds-donut { width: 218px; flex-shrink: 0; }
-  .dt-row:hover { background: rgba(0, 0, 0, 0.02); border-radius: 8px; }
+  .dt-row:hover { background: var(--bg-hover); border-radius: 8px; }
   .pill:hover, .dt-tab:hover { opacity: 0.72; }
-  .cal-nav-btn:hover, .dt-month-btn:not(.disabled):hover { background: rgba(0, 0, 0, 0.08); }
+  .cal-nav-btn:hover, .dt-month-btn:not(.disabled):hover { background: var(--bg-hover); }
   .btn-add:hover { filter: brightness(1.08); }
 }
 

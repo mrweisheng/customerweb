@@ -46,7 +46,7 @@ function goBack() {
   gap: 3px;
   padding: 8px 12px 8px 8px;
   border-radius: 11px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border-glass);
   color: var(--text-secondary);
   font-size: 13px;

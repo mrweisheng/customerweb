@@ -136,7 +136,7 @@
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
           </svg>
-          <svg v-else-if="isAllDuplicates" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2" width="48" height="48">
+          <svg v-else-if="isAllDuplicates" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" stroke-width="2" width="48" height="48">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -729,7 +729,7 @@ onUnmounted(() => {
   font-family: inherit;
   font-size: 11px; font-weight: 700;
   border: 1px solid var(--border-glass); border-radius: 5px;
-  padding: 1px 5px; color: var(--text-secondary); background: #fff;
+  padding: 1px 5px; color: var(--text-secondary); background: var(--surface);
 }
 
 /* 队列 */
@@ -757,7 +757,7 @@ onUnmounted(() => {
 }
 .queue-item.processing { border-color: var(--primary); background: rgba(0, 122, 255, 0.02); }
 .queue-item.done { border-color: var(--success); background: rgba(52, 199, 89, 0.02); }
-.queue-item.error { border-color: var(--danger); background: rgba(255, 59, 48, 0.02); }
+.queue-item.error { border-color: var(--danger); background: var(--red-light); }
 .queue-item-info { flex: 1; min-width: 0; }
 .queue-item-name {
   font-size: 13px; font-weight: 600; color: var(--text-primary);
@@ -784,19 +784,11 @@ onUnmounted(() => {
 .action-buttons { display: flex; gap: 10px; margin-top: 20px; }
 .btn-secondary {
   flex: 1; padding: 13px; border-radius: 13px;
-  background: white; color: var(--text-primary);
-  font-size: 14px; font-weight: 600;
-  border: 1px solid var(--border-glass);
-  font-family: inherit; cursor: pointer;
 }
 .btn-primary {
   flex: 1.4; padding: 13px; border-radius: 13px;
-  background: var(--primary); color: white;
-  font-size: 14px; font-weight: 600;
-  font-family: inherit; cursor: pointer; border: none;
   box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
 }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* 确认页 */
 .confirm-header { text-align: center; margin-bottom: 20px; }
@@ -821,7 +813,7 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 .contact-item:hover { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05); transform: translateY(-1px); }
-.contact-item.invalid { border-color: var(--danger); background: rgba(255, 59, 48, 0.02); }
+.contact-item.invalid { border-color: var(--danger); background: var(--red-light); }
 .contact-item.disabled { opacity: 0.55; }
 .contact-group { margin-bottom: 18px; }
 .group-header {
@@ -838,7 +830,7 @@ onUnmounted(() => {
 .group-count { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 .btn-group-action {
   padding: 4px 10px; border-radius: 6px;
-  background: white; color: var(--text-secondary);
+  background: var(--surface); color: var(--text-secondary);
   font-size: 12px; font-weight: 500;
   border: 1px solid var(--border-glass);
   font-family: inherit; cursor: pointer;
@@ -853,7 +845,7 @@ onUnmounted(() => {
 .dup-badge {
   display: inline-block; margin-left: 6px; padding: 1px 6px;
   font-size: 11px; font-weight: 600;
-  color: #FF9500; background: rgba(255, 149, 0, 0.12);
+  color: var(--warning); background: var(--orange-light);
   border-radius: 4px; vertical-align: middle;
 }
 .contact-action { flex-shrink: 0; }
@@ -874,7 +866,7 @@ onUnmounted(() => {
 }
 .result-card.success { border: 1px solid rgba(52, 199, 89, 0.2); }
 .result-card.error { border: 1px solid rgba(255, 59, 48, 0.2); }
-.result-card.warn { border: 1px solid rgba(255, 149, 0, 0.25); background: rgba(255, 149, 0, 0.04); }
+.result-card.warn { border: 1px solid rgba(255, 149, 0, 0.25); background: var(--orange-light); }
 .result-icon { margin-bottom: 16px; }
 .result-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
 .result-desc { font-size: 14px; color: var(--text-secondary); }
@@ -884,7 +876,7 @@ onUnmounted(() => {
 .result-stat-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .result-stat.added .result-stat-value { color: var(--success); }
 .result-stat.updated .result-stat-value { color: var(--primary); }
-.result-stat.skipped .result-stat-value { color: #FF9500; }
+.result-stat.skipped .result-stat-value { color: var(--warning); }
 .skip-detail {
   margin-top: 14px; padding-top: 12px;
   border-top: 1px dashed var(--border-glass);
@@ -894,8 +886,8 @@ onUnmounted(() => {
 .skip-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
 .skip-name { color: var(--text-primary); font-weight: 500; }
 .skip-reason {
-  font-size: 11px; font-weight: 600; color: #FF9500;
-  background: rgba(255, 149, 0, 0.1);
+  font-size: 11px; font-weight: 600; color: var(--warning);
+  background: var(--orange-light);
   padding: 2px 8px; border-radius: 4px;
 }
 
@@ -905,7 +897,7 @@ onUnmounted(() => {
   display: flex; align-items: flex-end; justify-content: center; z-index: var(--z-modal);
 }
 .modal-sheet {
-  width: 100%; background: #FFFFFF;
+  width: 100%; background: var(--surface);
   border-radius: 18px 18px 0 0;
   padding: 14px 14px 0;
   padding-bottom: calc(14px + env(safe-area-inset-bottom));

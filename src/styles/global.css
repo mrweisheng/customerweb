@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   /* 主色与基础语义色 */
   --primary: #007AFF;
   --primary-light: rgba(0, 122, 255, 0.1);
@@ -32,6 +33,14 @@
   --bg-card: rgba(255, 255, 255, 0.72);
   --border-glass: rgba(0, 0, 0, 0.06);
   --sidebar-width: 232px;
+
+  /* 表层（surface = 浮起面板/卡片/输入框；glass = 半透明条形玻璃）
+     夜间模式下由 :root.dark 统一给深色值，组件内请勿再写死 #fff */
+  --surface: #FFFFFF;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --bg-glass-strong: rgba(255, 255, 255, 0.96);
+  --bg-page-pc: #F2F3F5;
+  --bg-hover: #F7F7FA;
 
   /* ── z-index 分层约定（全局唯一口径，新增浮层请对号入座）──
      --z-sidebar  100  侧边栏（App 壳层）
@@ -133,7 +142,7 @@ input, textarea {
   justify-content: center;
   padding: 12px 20px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 600;
@@ -141,6 +150,52 @@ input, textarea {
   border: 1px solid var(--border-glass);
   cursor: pointer;
   transition: background 0.15s;
+}
+
+/* ── 夜间模式令牌（iOS 深色色板）──
+   不用纯黑：页面用近黑深灰，弹层/卡片用更亮的 #1C1C1E 系表达层级；
+   主色与语义色整体提亮降饱和，保证深底上的对比度 */
+:root.dark {
+  color-scheme: dark;
+  --primary: #0A84FF;
+  --primary-light: rgba(10, 132, 255, 0.18);
+  --success: #30D158;
+  --warning: #FF9F0A;
+  --danger: #FF453A;
+
+  --info: #64D2FF;
+  --purple: #BF5AF2;
+  --indigo: #5E5CE6;
+  --teal: #40C8E0;
+  --pink: #FF375F;
+
+  --blue-light: rgba(10, 132, 255, 0.2);
+  --green-light: rgba(48, 209, 88, 0.18);
+  --orange-light: rgba(255, 159, 10, 0.18);
+  --red-light: rgba(255, 69, 58, 0.18);
+  --purple-light: rgba(191, 90, 242, 0.2);
+  --cyan-light: rgba(100, 210, 255, 0.16);
+  --indigo-light: rgba(94, 92, 230, 0.2);
+  --teal-light: rgba(64, 200, 224, 0.16);
+  --pink-light: rgba(255, 55, 95, 0.18);
+
+  --text-primary: #F2F2F7;
+  --text-secondary: rgba(235, 235, 245, 0.62);
+  --text-tertiary: rgba(235, 235, 245, 0.3);
+  --bg-primary: #0F0F12;
+  --bg-card: rgba(30, 30, 34, 0.66);
+  --border-glass: rgba(255, 255, 255, 0.09);
+  --surface: #1C1C1E;
+  --bg-glass: rgba(28, 28, 30, 0.82);
+  --bg-glass-strong: rgba(44, 44, 46, 0.96);
+  --bg-page-pc: #0B0B0D;
+  --bg-hover: rgba(255, 255, 255, 0.08);
+}
+
+/* 深色下 Toast 反色（浅底深字），避免黑底融进页面 */
+:root.dark .toast {
+  background: rgba(242, 242, 247, 0.95);
+  color: #1D1D1F;
 }
 
 @media (min-width: 768px) {
@@ -153,7 +208,7 @@ input, textarea {
 /* PC: 1024px 起切换为侧边栏 + 主内容区布局 */
 @media (min-width: 1024px) {
   body {
-    background: #F2F3F5;
+    background: var(--bg-page-pc);
     overflow-x: hidden;
   }
 

@@ -8,6 +8,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>客資管理</title>
+    <script>
+      // 防闪烁：应用挂载前按持久化的外观模式先挂上 .dark 类（与 useTheme 的判断保持一致）
+      try {
+        var m = localStorage.getItem('appearance_mode')
+        var dark = m === 'dark'
+        if (m === 'auto') {
+          var h = new Date().getHours()
+          dark = h >= 18.5 || h < 6.5
+        }
+        if (dark) document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="app"></div>

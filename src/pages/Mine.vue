@@ -30,9 +30,19 @@
 
     <!-- 设置列表 -->
     <div class="menu-list">
+      <!-- 外观模式（夜间模式三档切换：浅色 / 深色 / 日出日落自动） -->
+      <div class="menu-item">
+        <div class="menu-icon" style="background:var(--indigo-light);color:var(--indigo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
+        <div class="menu-text">外观</div>
+        <div class="appearance-seg">
+          <button :class="{ on: mode === 'light' }" @click="setMode('light')">浅色</button>
+          <button :class="{ on: mode === 'dark' }" @click="setMode('dark')">深色</button>
+          <button :class="{ on: mode === 'auto' }" @click="setMode('auto')">日落</button>
+        </div>
+      </div>
       <!-- 管理员数据范围（移动端唯一切换入口，PC 端在侧边栏，两处共享同一状态） -->
       <div class="menu-item scope-item" v-if="isAdmin">
-        <div class="menu-icon" style="background:rgba(0,122,255,0.12);color:#007AFF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+        <div class="menu-icon" style="background:var(--blue-light);color:var(--primary)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
         <div class="menu-text">数据范围</div>
         <select class="scope-select" :value="scopeValue" @change="onScopeChange">
           <option value="all">全部用户</option>
@@ -40,10 +50,13 @@
         </select>
       </div>
       <div class="menu-item">
-        <div class="menu-icon" style="background:rgba(255,149,0,0.12);color:#FF9500"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+        <div class="menu-icon" style="background:var(--orange-light);color:var(--warning)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
         <div class="menu-text">关于系统</div>
         <div class="menu-value">v2.0.0</div>
       </div>
+    </div>
+    <div class="appearance-hint" v-if="mode === 'auto'">
+      每天 18:30 至次日 06:30 自动进入夜间模式
     </div>
 
     <!-- 退出登录（低风险操作，无二次确认） -->
@@ -61,11 +74,13 @@ import { getUserInfo, setUserInfo, clearAuth } from '../utils/auth'
 import { getAvatarColor } from '../utils/constants'
 import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
+import { useTheme } from '../composables/useTheme'
 import { compressImage } from '../utils/imageCompress'
 
 const router = useRouter()
 const { toast, showToast } = useToast()
 const { scopeUserId, users, isAdmin, setScope, loadUsers, resetScope } = useScope()
+const { mode, setMode } = useTheme()
 
 const userInfo = ref(null)
 const editNickname = ref('')
@@ -216,7 +231,7 @@ onMounted(() => {
   right: -2px;
   width: 22px;
   height: 22px;
-  background: white;
+  background: var(--surface);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -231,7 +246,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.55);
+  background: var(--bg-glass);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   border-radius: 18px;
@@ -277,7 +292,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(0,0,0,0.04);
+  border-bottom: 1px solid var(--border-glass);
 }
 .menu-item:last-child { border-bottom: none; }
 .menu-icon {
@@ -295,7 +310,7 @@ onMounted(() => {
 .scope-select {
   border: 1px solid var(--border-glass);
   border-radius: 10px;
-  background: #fff;
+  background: var(--surface);
   padding: 7px 10px;
   font-family: inherit;
   font-size: 13px;
@@ -305,12 +320,45 @@ onMounted(() => {
   max-width: 150px;
 }
 
+/* 外观模式三档切换 */
+.appearance-seg {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-primary);
+  border-radius: 10px;
+  padding: 3px;
+}
+.appearance-seg button {
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.appearance-seg button.on {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.appearance-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  padding: 0 4px;
+  margin: -8px 0 12px;
+}
+
 /* Logout */
 .btn-logout {
   width: 100%;
   padding: 16px;
   border-radius: 18px;
-  background: white;
+  background: var(--surface);
   color: var(--danger);
   font-size: 15px;
   font-weight: 600;
@@ -334,8 +382,8 @@ onMounted(() => {
   }
   .profile-card, .menu-list, .btn-logout { max-width: 480px; }
   .menu-item { transition: background 0.2s; }
-  .menu-item:hover { background: rgba(0, 0, 0, 0.03); }
+  .menu-item:hover { background: var(--bg-hover); }
   .btn-logout { cursor: pointer; }
-  .btn-logout:hover { background: rgba(255, 59, 48, 0.06); }
+  .btn-logout:hover { background: var(--red-light); }
 }
 </style>

@@ -427,7 +427,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-glass);
   border: 1px solid var(--border-glass);
   border-radius: 14px;
   padding: 11px 14px;
@@ -476,7 +476,7 @@ onUnmounted(() => {
 .f-chip {
   padding: 6px 14px; border-radius: 99px;
   font-size: 12px; font-weight: 600; color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--bg-glass);
   border: 1px solid var(--border-glass);
   font-family: inherit; cursor: pointer;
 }
@@ -566,7 +566,7 @@ onUnmounted(() => {
   border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
   cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
-.result-card:active { background: rgba(255, 255, 255, 0.95); }
+.result-card:active { background: var(--surface); }
 .result-avatar {
   width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -577,7 +577,7 @@ onUnmounted(() => {
 .priority-badge {
   display: inline-block; margin-left: 6px; padding: 1px 7px;
   font-size: 10px; font-weight: 700; border-radius: 99px;
-  background: rgba(255, 149, 0, 0.12); color: var(--warning);
+  background: var(--orange-light); color: var(--warning);
   vertical-align: 1px;
 }
 .result-meta {
@@ -629,7 +629,7 @@ onUnmounted(() => {
 .imp-modal-box {
   width: 760px; max-width: calc(100vw - 48px);
   max-height: calc(100vh - 64px);
-  background: var(--bg-primary);
+  background: var(--surface);
   border-radius: 16px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
   display: flex; flex-direction: column;
@@ -645,10 +645,10 @@ onUnmounted(() => {
 .imp-modal-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
 .imp-modal-close {
   width: 28px; height: 28px; border-radius: 8px; border: none;
-  background: rgba(15, 23, 42, 0.06); color: var(--text-secondary);
+  background: var(--bg-primary); color: var(--text-secondary);
   font-size: 13px; cursor: pointer; font-family: inherit;
 }
-.imp-modal-close:hover { background: rgba(15, 23, 42, 0.12); }
+.imp-modal-close:hover { background: var(--bg-hover); }
 .imp-modal-body {
   flex: 1; min-height: 0;
   padding: 14px 18px 18px;
@@ -687,7 +687,7 @@ onUnmounted(() => {
   .cust-grid { grid-template-columns: repeat(3, 1fr); gap: 13px; }
   .wb-fab { display: none; }
   .result-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1); }
-  .f-chip:hover { border-color: rgba(0, 0, 0, 0.14); }
+  .f-chip:hover { border-color: var(--text-tertiary); }
   .hist-chip:hover { filter: brightness(0.96); }
 }
 

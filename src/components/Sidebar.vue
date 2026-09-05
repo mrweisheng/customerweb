@@ -44,6 +44,11 @@
           <option v-for="u in users" :key="u.id" :value="u.id">{{ u.nickname }}</option>
         </select>
       </div>
+      <button class="theme-toggle" @click="toggle" :title="isDark ? '切换到浅色模式' : '切换到深色模式'">
+        <svg v-if="isDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span>{{ isDark ? '浅色模式' : '深色模式' }}</span>
+      </button>
       <div class="sidebar-version">v2.0.0</div>
     </div>
   </aside>
@@ -55,10 +60,12 @@ import { useRouter, useRoute } from 'vue-router'
 import { getUserInfo } from '../utils/auth'
 import { getAvatarColor } from '../utils/constants'
 import { useScope } from '../composables/useScope'
+import { useTheme } from '../composables/useTheme'
 
 const router = useRouter()
 const route = useRoute()
 const { scopeUserId, users, isAdmin, setScope, loadUsers } = useScope()
+const { isDark, toggle } = useTheme()
 
 const userInfo = computed(() => getUserInfo())
 const avatarText = computed(() => {
@@ -113,7 +120,7 @@ onMounted(() => {
   left: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: #FFFFFF;
+  background: var(--surface);
   border-right: 1px solid var(--border-glass);
   display: flex;
   flex-direction: column;
@@ -295,6 +302,26 @@ onMounted(() => {
   cursor: pointer;
   padding: 0;
 }
+
+.theme-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glass);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.theme-toggle svg { width: 16px; height: 16px; }
+.theme-toggle:hover { background: var(--bg-hover); }
 
 .sidebar-version {
   font-size: 11px;
