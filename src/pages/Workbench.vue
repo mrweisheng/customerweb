@@ -115,11 +115,14 @@
           v-for="c in filteredCustomers"
           :key="c.id"
           class="cust-card"
-          :class="c.visitStatus.class"
           @click="onCardTap(c)"
         >
           <div class="cc-head">
-            <span class="cc-name"><span class="lead-date" v-if="c.lead_date_short">{{ c.lead_date_short }}/</span>{{ c.customer_name }}</span>
+            <div class="cc-avatar" :style="{ background: c.avatarColor.bg, color: c.avatarColor.color }">
+              {{ c.customer_name?.charAt(0) || '?' }}
+            </div>
+            <div class="cc-name">{{ c.customer_name }}<span class="cc-lead" v-if="c.lead_date_short">{{ c.lead_date_short }}</span></div>
+            <span class="cc-visit" :class="c.visitStatus.class">{{ c.visitStatus.text }}</span>
             <span
               class="cc-copy"
               :class="{ copied: copiedId === c.id }"
@@ -135,16 +138,15 @@
               </svg>
             </span>
           </div>
-          <div class="cc-remark" :class="{ none: !c.remark && !c.current_needs }">
-            <svg class="remark-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-              <line x1="4" y1="22" x2="4" y2="15"></line>
-            </svg>
-            <span class="remark-text">{{ c.remark || c.current_needs || '暂无备注' }}</span>
+          <!-- 需求是卡片的核心信息：浅蓝底衬主展示，无需求时给引导性占位 -->
+          <div class="cc-need" :class="{ empty: !c.current_needs }">
+            <div class="cc-need-label">当前需求</div>
+            <div class="cc-need-text">{{ c.current_needs || '暂无需求，点击补充' }}</div>
           </div>
-          <div class="cc-foot">
-            <span class="visit-dot"></span>
-            <span class="visit-text">{{ c.visitStatus.text }}</span>
+          <!-- 备注独立次要行：只在有内容时出现，不与需求互相遮挡 -->
+          <div class="cc-remark-row" v-if="c.remark">
+            <span class="cc-remark-tag">备注</span>
+            <span class="cc-remark-text">{{ c.remark }}</span>
           </div>
         </div>
       </div>
@@ -505,51 +507,66 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-glass);
   border-radius: 15px;
-  padding: 13px 14px 11px;
+  padding: 12px 13px 11px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
-  border-top: 3px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
 }
 .cust-card:active { transform: scale(0.985); }
-.cust-card.success { border-top-color: var(--success); }
-.cust-card.warning { border-top-color: var(--warning); }
-.cust-card.danger { border-top-color: var(--danger); }
-.cc-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+.cc-head { display: flex; align-items: center; gap: 9px; }
+.cc-avatar {
+  width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700;
 }
-.cc-name { font-size: 14.5px; font-weight: 700; letter-spacing: 0.2px; min-width: 0; }
+.cc-name {
+  font-size: 14.5px; font-weight: 700; color: var(--text-primary);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cc-lead {
+  font-size: 10px; font-weight: 700; color: var(--text-tertiary);
+  background: var(--bg-primary); border-radius: 5px; padding: 1px 6px;
+  vertical-align: 1px; margin-left: 5px;
+}
+.cc-visit {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
+}
+.cc-visit.success { background: var(--green-light); color: var(--success); }
+.cc-visit.warning { background: var(--orange-light); color: var(--warning); }
+.cc-visit.danger { background: var(--red-light); color: var(--danger); }
 .cc-copy {
   width: 24px; height: 24px; border-radius: 7px;
   background: var(--bg-primary); color: var(--text-tertiary);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .cc-copy:active { opacity: 0.5; }
-.cc-copy.copied { background: rgba(52, 199, 89, 0.12); color: var(--success); }
+.cc-copy.copied { background: var(--green-light); color: var(--success); }
 .cc-copy svg { width: 12px; height: 12px; }
-.cc-remark {
-  display: flex; gap: 6px; margin-top: 8px;
-  font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; min-height: 34px;
-}
-.cc-remark.none { color: var(--text-tertiary); }
-.remark-flag { width: 11px; height: 11px; flex-shrink: 0; margin-top: 2px; color: var(--text-tertiary); }
-.remark-text {
+/* 需求主体：卡片的核心信息 */
+.cc-need { background: var(--primary-light); border-radius: 10px; padding: 9px 11px; }
+.cc-need.empty { background: transparent; border: 1px dashed var(--border-glass); }
+.cc-need-label { font-size: 10px; font-weight: 700; color: var(--primary); letter-spacing: 0.5px; margin-bottom: 3px; }
+.cc-need.empty .cc-need-label { color: var(--text-tertiary); }
+.cc-need-text {
+  font-size: 13px; line-height: 1.55; color: var(--text-primary);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-all;
 }
-.cc-foot {
-  display: flex; align-items: center; gap: 6px; margin-top: 7px;
-  font-size: 10.5px; font-weight: 600;
+.cc-need.empty .cc-need-text { color: var(--text-tertiary); font-size: 12px; }
+/* 备注独立次要行：只在有内容时渲染 */
+.cc-remark-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); min-width: 0; }
+.cc-remark-tag {
+  flex-shrink: 0; font-size: 10px; font-weight: 700; color: var(--text-tertiary);
+  background: var(--bg-primary); border-radius: 5px; padding: 1px 6px;
 }
-.visit-dot { width: 7px; height: 7px; border-radius: 50%; }
-.success .visit-dot { background: var(--success); }
-.warning .visit-dot { background: var(--warning); }
-.danger .visit-dot { background: var(--danger); }
-.success .cc-foot { color: var(--success); }
-.warning .cc-foot { color: var(--warning); }
-.danger .cc-foot { color: var(--danger); }
+.cc-remark-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── 搜索结果 ── */
 .results-section { margin-top: 4px; }
