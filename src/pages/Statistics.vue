@@ -287,6 +287,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import api from '../utils/api'
 import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
+import { leadDateShort } from '../utils/constants'
 import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 import BaseChart from '../components/BaseChart.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -600,11 +601,11 @@ async function loadMonthData() {
     ])
     monthDeals.value = (Array.isArray(dealsRes) ? dealsRes : []).map((d) => ({
       ...d,
-      lead_date_short: d.lead_date ? d.lead_date.slice(3).replace(/-/g, '') : '',
+      lead_date_short: leadDateShort(d.lead_date),
     }))
     monthVisits.value = (Array.isArray(visitsRes) ? visitsRes : []).map((v) => ({
       ...v,
-      lead_date_short: v.lead_date ? v.lead_date.slice(3).replace(/-/g, '') : '',
+      lead_date_short: leadDateShort(v.lead_date),
     }))
   } catch (e) {
     showToast(e.message || '加载明细失败')

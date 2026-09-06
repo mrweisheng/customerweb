@@ -303,7 +303,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import api from '../utils/api'
-import { calcVisitStatus } from '../utils/constants'
+import { calcVisitStatus, leadDateShort } from '../utils/constants'
 import { useToast } from '../composables/useToast'
 import ConfirmDialog from './ConfirmDialog.vue'
 
@@ -357,7 +357,7 @@ function today() {
 
 const customerName = computed(() => {
   const c = props.customer || {}
-  const lead = c.lead_date_short || (c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '')
+  const lead = c.lead_date_short || leadDateShort(c.lead_date)
   return lead ? `${lead}/${c.customer_name}` : (c.customer_name || '')
 })
 const visit = computed(() => calcVisitStatus(props.customer?.last_visit_at))

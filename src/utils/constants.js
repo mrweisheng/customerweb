@@ -12,6 +12,13 @@ export function getAvatarColor(name) {
   return AVATAR_COLORS[index]
 }
 
+// 线索日期缩写：兼容 YYYY-MM-DD / YY-MM-DD 等格式，取月日，如 2026-04-04 → "0404"
+export function leadDateShort(leadDate) {
+  if (!leadDate) return ''
+  const m = String(leadDate).match(/(\d{1,2})-(\d{1,2})\s*$/)
+  return m ? `${m[1]}${m[2]}` : ''
+}
+
 export function calcVisitStatus(lastVisitDate) {
   if (!lastVisitDate) return { text: '未回訪', class: 'danger' }
   const now = new Date()

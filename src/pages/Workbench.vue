@@ -118,10 +118,7 @@
           @click="onCardTap(c)"
         >
           <div class="cc-head">
-            <div class="cc-avatar" :style="{ background: c.avatarColor.bg, color: c.avatarColor.color }">
-              {{ c.customer_name?.charAt(0) || '?' }}
-            </div>
-            <div class="cc-name">{{ c.customer_name }}<span class="cc-lead" v-if="c.lead_date_short">{{ c.lead_date_short }}</span></div>
+            <div class="cc-name"><span class="cc-lead" v-if="c.lead_date_short">{{ c.lead_date_short }}/</span>{{ c.customer_name }}</div>
             <span class="cc-visit" :class="c.visitStatus.class">{{ c.visitStatus.text }}</span>
             <span
               class="cc-copy"
@@ -174,7 +171,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../utils/api'
-import { AVATAR_COLORS, calcVisitStatus } from '../utils/constants'
+import { AVATAR_COLORS, calcVisitStatus, leadDateShort } from '../utils/constants'
 import { useDevice } from '../composables/useDevice'
 import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
@@ -232,7 +229,7 @@ async function loadAll() {
     const listRes = await api.get('/customers/priority', { params: scopeParams() })
     priorityCustomers.value = (Array.isArray(listRes) ? listRes : []).map((c, idx) => ({
       ...c,
-      lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '',
+      lead_date_short: leadDateShort(c.lead_date),
       avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
       visitStatus: calcVisitStatus(c.last_visit_at),
     }))
@@ -272,7 +269,7 @@ async function doSearch() {
     const res = await api.get('/customers/search', { params: { keyword: query, ...scopeParams() } })
     searchResults.value = (Array.isArray(res) ? res : []).map((c, idx) => ({
       ...c,
-      lead_date_short: c.lead_date ? c.lead_date.slice(3).replace(/-/g, '') : '',
+      lead_date_short: leadDateShort(c.lead_date),
       avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
       visitStatus: calcVisitStatus(c.last_visit_at),
     }))
@@ -517,20 +514,11 @@ onUnmounted(() => {
 }
 .cust-card:active { transform: scale(0.985); }
 .cc-head { display: flex; align-items: center; gap: 9px; }
-.cc-avatar {
-  width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 700;
-}
 .cc-name {
   font-size: 14.5px; font-weight: 700; color: var(--text-primary);
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.cc-lead {
-  font-size: 10px; font-weight: 700; color: var(--text-tertiary);
-  background: var(--bg-primary); border-radius: 5px; padding: 1px 6px;
-  vertical-align: 1px; margin-left: 5px;
-}
+.cc-lead { font-size: 11px; font-weight: 600; color: var(--text-tertiary); margin-right: 2px; }
 .cc-visit {
   margin-left: auto; flex-shrink: 0;
   font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
