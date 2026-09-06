@@ -118,7 +118,7 @@
           @click="onCardTap(c)"
         >
           <div class="cc-head">
-            <div class="cc-name"><span class="cc-lead" v-if="c.lead_date_short">{{ c.lead_date_short }}/</span>{{ c.customer_name }}</div>
+            <div class="cc-name">{{ c.lead_date_short ? c.lead_date_short + '/' : '' }}{{ c.customer_name }}</div>
             <span class="cc-visit" :class="c.visitStatus.class">{{ c.visitStatus.text }}</span>
             <span
               class="cc-copy"
@@ -518,7 +518,6 @@ onUnmounted(() => {
   font-size: 14.5px; font-weight: 700; color: var(--text-primary);
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.cc-lead { font-size: 11px; font-weight: 600; color: var(--text-tertiary); margin-right: 2px; }
 .cc-visit {
   margin-left: auto; flex-shrink: 0;
   font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
