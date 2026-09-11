@@ -129,6 +129,6 @@ const existingCount = computed(() => props.contacts.filter((c) => c.exists).leng
 }
 .btn-confirm:disabled, .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (min-width: 1024px) {
-  .confirm-card { margin: 0 80px 12px; }
+  .confirm-card { margin: 0 20px 12px; }
 }
 </style>

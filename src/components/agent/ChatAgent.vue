@@ -8,7 +8,7 @@
         <div class="chat-empty-title">嗨，我是客资助手</div>
         <div class="chat-empty-desc">
           发我一张微信截图，我来识别联系人并准备导入。<br/>
-          也可以直接 <span class="kbd">Ctrl</span> + <span class="kbd">V</span> 粘贴截图。
+          支持 <span class="kbd">Ctrl</span> + <span class="kbd">V</span> 粘贴或直接拖拽到输入栏。
         </div>
         <div class="chat-empty-hints">
           <button class="hint-chip" @click="onHint('请识别这张截图')">📷 我有截图要识别</button>
@@ -279,6 +279,6 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 @media (min-width: 1024px) {
-  .chat-scroll { padding: 28px 80px; gap: 18px; }
+  .chat-scroll { padding: 20px 32px; gap: 16px; }
 }
 </style>

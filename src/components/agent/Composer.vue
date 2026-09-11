@@ -1,5 +1,11 @@
 <template>
-  <div class="composer">
+  <div
+    class="composer"
+    :class="{ 'composer-drop': dragging }"
+    @dragover.prevent="dragging = true"
+    @dragleave.prevent="dragging = false"
+    @drop.prevent="onDrop"
+  >
     <div v-if="image" class="composer-image-chip">
       <img :src="image.preview" class="chip-thumb" />
       <button class="chip-remove" @click="clearImage" title="移除图片">×</button>
@@ -30,6 +36,7 @@
         </svg>
       </button>
     </div>
+    <div v-if="dragging" class="composer-drop-hint">松开以添加截图</div>
     <div v-if="imageError" class="composer-error">{{ imageError }}</div>
   </div>
 </template>
@@ -46,6 +53,7 @@ const emit = defineEmits(['send', 'update-text'])
 const text = ref(props.initialText || '')
 const image = ref(null) // { base64, preview, file }
 const imageError = ref('')
+const dragging = ref(false)
 const inputRef = ref(null)
 const fileRef = ref(null)
 
@@ -80,6 +88,17 @@ function onPaste(e) {
   const file = item.getAsFile()
   if (file) setImage(file)
 }
+// PC 端拖拽截图到输入栏直接添加
+function onDrop(e) {
+  dragging.value = false
+  if (props.busy) return
+  const file = [...(e.dataTransfer?.files || [])].find((f) => f.type?.startsWith('image/'))
+  if (!file) {
+    imageError.value = '请拖入图片文件（JPEG/PNG）'
+    return
+  }
+  setImage(file)
+}
 async function setImage(file) {
   imageError.value = ''
   try {
@@ -104,7 +123,26 @@ onBeforeUnmount(() => clearImage())
   padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--border-glass);
   background: var(--surface);
+  position: relative;
 }
+.composer-drop {
+  outline: 2px dashed var(--primary);
+  outline-offset: -6px;
+  background: var(--primary-light);
+}
+.composer-drop-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+:root.dark .composer-drop-hint { background: rgba(0, 0, 0, 0.55); }
 .composer-image-chip {
   position: relative;
   display: inline-block;
@@ -192,6 +230,6 @@ onBeforeUnmount(() => clearImage())
   color: #FF3B30;
 }
 @media (min-width: 1024px) {
-  .composer { padding: 14px 80px calc(16px + env(safe-area-inset-bottom)); }
+  .composer { padding: 12px 20px 16px; }
 }
 </style>
