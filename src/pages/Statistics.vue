@@ -85,9 +85,18 @@
         <div class="card-header">
           <div class="card-title"><span class="title-chip ti-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>客户趋势</div>
           <div class="trend-pills">
-            <div class="pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
-            <div class="pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
-            <div class="pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">30天</div>
+            <div class="pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">
+              <span>7天</span>
+              <span class="pill-range">{{ trendRangeOptions[7] }}</span>
+            </div>
+            <div class="pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">
+              <span>15天</span>
+              <span class="pill-range">{{ trendRangeOptions[15] }}</span>
+            </div>
+            <div class="pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">
+              <span>30天</span>
+              <span class="pill-range">{{ trendRangeOptions[30] }}</span>
+            </div>
           </div>
         </div>
         <div class="legend">
@@ -327,6 +336,18 @@ function fmtRange(arr) {
   return `${f(arr[0])} ~ ${f(arr[arr.length - 1])}`
 }
 
+// 三个周期档位各自的日期区间（与后端口径一致：截止昨天），供切换按钮即时显示
+const trendRangeOptions = computed(() => {
+  const fmt = (d) => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+  const out = {}
+  for (const n of [7, 15, 30]) {
+    const end = new Date(); end.setHours(0, 0, 0, 0); end.setDate(end.getDate() - 1)
+    const start = new Date(end); start.setDate(start.getDate() - (n - 1))
+    out[n] = `${fmt(start)} ~ ${fmt(end)}`
+  }
+  return out
+})
+
 const trendChartHeight = computed(() => (isPC.value ? '170px' : '120px'))
 const dealChartHeight = computed(() => (isPC.value ? '150px' : '120px'))
 
@@ -361,10 +382,12 @@ function axisTooltip(dates, unit) {
   }
 }
 
-// 客户趋势：本期/上期双折线
+// 客户趋势：本期/上期双折线（渐变面积 + 辉光线条 + 峰值标记）
 const trendOption = computed(() => ({
-  grid: { left: 6, right: 12, top: 14, bottom: 2, containLabel: true },
+  grid: { left: 6, right: 12, top: 26, bottom: 2, containLabel: true },
   tooltip: axisTooltip(trendDates.value, '位'),
+  animationDuration: 600,
+  animationEasing: 'cubicOut',
   xAxis: {
     type: 'category',
     boundaryGap: false,
@@ -384,32 +407,49 @@ const trendOption = computed(() => ({
       name: '上期',
       type: 'line',
       smooth: true,
+      smoothMonotone: 'x',
       data: trendPrevCounts.value,
       showSymbol: false,
       symbol: 'circle',
       symbolSize: 6,
-      lineStyle: { width: 2, color: '#C7C7CC' },
+      lineStyle: { width: 2, color: '#C7C7CC', type: 'dashed' },
       itemStyle: { color: '#C7C7CC' },
-      areaStyle: { color: 'rgba(199,199,204,0.10)' },
+      areaStyle: { color: 'rgba(199,199,204,0.08)' },
+      emphasis: { focus: 'series' },
     },
     {
       name: '本期',
       type: 'line',
       smooth: true,
+      smoothMonotone: 'x',
       data: trendCounts.value,
       showSymbol: false,
       symbol: 'circle',
-      symbolSize: 6,
-      lineStyle: { width: 2, color: '#007AFF' },
-      itemStyle: { color: '#007AFF' },
+      symbolSize: 7,
+      lineStyle: {
+        width: 3, color: '#007AFF',
+        shadowColor: 'rgba(0,122,255,0.45)', shadowBlur: 10, shadowOffsetY: 4,
+      },
+      itemStyle: { color: '#007AFF', borderColor: isDark.value ? '#1C1C1E' : '#fff', borderWidth: 2 },
+      emphasis: { focus: 'series', scale: 1.6 },
       areaStyle: {
         color: {
           type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(0,122,255,0.16)' },
+            { offset: 0, color: 'rgba(0,122,255,0.28)' },
             { offset: 1, color: 'rgba(0,122,255,0)' },
           ],
         },
+      },
+      markPoint: {
+        symbol: 'circle',
+        symbolSize: 30,
+        itemStyle: {
+          color: isDark.value ? 'rgba(0,122,255,0.18)' : 'rgba(0,122,255,0.10)',
+          borderColor: '#007AFF', borderWidth: 1.5,
+        },
+        label: { show: true, color: isDark.value ? '#6EB8FF' : '#007AFF', fontSize: 10, fontWeight: 700 },
+        data: [{ type: 'max', name: '峰值' }],
       },
     },
   ],
@@ -960,7 +1000,13 @@ onUnmounted(() => {
 
 /* ── 趋势 ── */
 .trend-pills { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 9px; }
-.pill { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 7px; color: var(--text-secondary); cursor: pointer; }
+.pill {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2;
+  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 7px;
+  color: var(--text-secondary); cursor: pointer;
+}
+.pill .pill-range { display: none; font-size: 9px; font-weight: 600; color: var(--text-tertiary); white-space: nowrap; }
+.pill.active .pill-range { display: block; }
 .pill.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 .legend { display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
 .legend-item { display: flex; align-items: center; gap: 6px; }
