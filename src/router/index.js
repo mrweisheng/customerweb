@@ -31,10 +31,15 @@ const routes = [
     meta: { title: '登录' },
   },
   {
+    // 旧表单式录入页已由对话式智能导入替代，旧链接统一重定向
     path: '/import',
-    name: 'Import',
-    component: () => import('../pages/Import.vue'),
-    meta: { title: '录入客户' },
+    redirect: '/ai-import',
+  },
+  {
+    path: '/ai-import',
+    name: 'AiImport',
+    component: () => import('../pages/AiImport.vue'),
+    meta: { title: '智能导入' },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -58,8 +63,8 @@ router.beforeEach((to) => {
   if (to.name === 'Login' && isLoggedIn()) {
     return { path: '/index' }
   }
-  // 录入客户仅限普通用户（管理员数据只读）
-  if (to.name === 'Import' && getUserInfo()?.role === 'admin') {
+  // 智能导入（对话式 AI 录入）仅限普通用户（管理员数据只读）
+  if (to.name === 'AiImport' && getUserInfo()?.role === 'admin') {
     return { path: '/index' }
   }
 })

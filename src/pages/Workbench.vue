@@ -375,7 +375,7 @@ function goImport() {
     const files = Array.from(input.files || []).filter((f) => f && f.type && f.type.startsWith('image/'))
     if (files.length === 0) return
     setPendingImportFiles(files)
-    router.push('/import')
+    router.push('/ai-import')
   }
   input.click()
 }
