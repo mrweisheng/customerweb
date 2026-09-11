@@ -135,7 +135,7 @@
                 <span class="pa-module-count">{{ m.count }} 个</span>
               </div>
               <div class="pa-bar"><div class="pa-bar-fill" :class="'bar-' + i" :style="{ width: paBarWidth(m.count) }"></div></div>
-              <div class="pa-names" v-if="m.customers.length">{{ m.customers.join('、') }}</div>
+              <div class="pa-names" v-if="m.customers.length">{{ m.customers.map(paDisplayName).join('、') }}</div>
               <div class="pa-names empty" v-else>本周暂无</div>
             </div>
             <div class="pa-module" v-if="paData.others.count > 0">
@@ -143,7 +143,7 @@
                 <span class="pa-module-name">未归类</span>
                 <span class="pa-module-count">{{ paData.others.count }} 个</span>
               </div>
-              <div class="pa-names">{{ paData.others.customers.join('、') }}</div>
+              <div class="pa-names">{{ paData.others.customers.map(paDisplayName).join('、') }}</div>
             </div>
           </div>
         </template>
@@ -919,6 +919,11 @@ const paRate = computed(() => {
   if (!d || !d.leads) return '—'
   return Math.round((d.priority / d.leads) * 100) + '%'
 })
+// 名单显示「日期短码/姓名」（如 60908/郑泽坚），与工作台列表口径一致
+function paDisplayName(c) {
+  const lead = c?.lead_date ? leadDateShort(c.lead_date) : ''
+  return lead ? `${lead}/${c.name}` : (c?.name || '')
+}
 function paBarWidth(count) {
   const d = paData.value
   const max = d ? Math.max(1, ...d.modules.map((m) => m.count)) : 1
