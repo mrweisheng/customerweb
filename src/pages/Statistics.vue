@@ -85,23 +85,15 @@
         <div class="card-header">
           <div class="card-title"><span class="title-chip ti-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>客户趋势</div>
           <div class="trend-pills">
-            <div class="pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">
-              <span>7天</span>
-              <span class="pill-range">{{ trendRangeOptions[7] }}</span>
-            </div>
-            <div class="pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">
-              <span>15天</span>
-              <span class="pill-range">{{ trendRangeOptions[15] }}</span>
-            </div>
-            <div class="pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">
-              <span>30天</span>
-              <span class="pill-range">{{ trendRangeOptions[30] }}</span>
-            </div>
+            <div class="pill" :class="{ active: trendDays === 7 }" @click="switchTrendDays(7)">7天</div>
+            <div class="pill" :class="{ active: trendDays === 15 }" @click="switchTrendDays(15)">15天</div>
+            <div class="pill" :class="{ active: trendDays === 30 }" @click="switchTrendDays(30)">30天</div>
           </div>
         </div>
         <div class="legend">
           <div class="legend-item"><div class="legend-dot current"></div>本期</div>
           <div class="legend-item"><div class="legend-dot previous"></div>上期</div>
+          <span class="legend-range">{{ trendRangeOptions[trendDays] }}</span>
         </div>
         <BaseChart :option="trendOption" :height="trendChartHeight" />
         <div class="summary" v-if="trendSummary">
@@ -121,6 +113,40 @@
             <div class="summary-label">本期 vs 上期</div>
           </div>
         </div>
+      </div>
+
+      <!-- 本周重点分析（线索→重点转化 + AI 板块归类） -->
+      <div class="card pa-card">
+        <div class="card-header">
+          <div class="card-title"><span class="title-chip ti-orange"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>本周重点分析</div>
+          <div class="pa-range" v-if="paData">{{ paShortRange }}</div>
+        </div>
+        <div class="pa-loading" v-if="paLoading">AI 分析中，请稍候…</div>
+        <template v-if="paData">
+          <div class="pa-overview">
+            <div class="pa-cell"><div class="pa-num">{{ paData.leads }}</div><div class="pa-cap">本周线索</div></div>
+            <div class="pa-cell"><div class="pa-num">{{ paData.priority }}</div><div class="pa-cap">标记重点</div></div>
+            <div class="pa-cell"><div class="pa-num">{{ paRate }}</div><div class="pa-cap">重点转化率</div></div>
+          </div>
+          <div class="pa-modules">
+            <div class="pa-module" v-for="(m, i) in paData.modules" :key="m.key">
+              <div class="pa-module-head">
+                <span class="pa-module-name">{{ m.name }}</span>
+                <span class="pa-module-count">{{ m.count }} 个</span>
+              </div>
+              <div class="pa-bar"><div class="pa-bar-fill" :class="'bar-' + i" :style="{ width: paBarWidth(m.count) }"></div></div>
+              <div class="pa-names" v-if="m.customers.length">{{ m.customers.join('、') }}</div>
+              <div class="pa-names empty" v-else>本周暂无</div>
+            </div>
+            <div class="pa-module" v-if="paData.others.count > 0">
+              <div class="pa-module-head">
+                <span class="pa-module-name">未归类</span>
+                <span class="pa-module-count">{{ paData.others.count }} 个</span>
+              </div>
+              <div class="pa-names">{{ paData.others.customers.join('、') }}</div>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- 更新日历（自首页迁入） -->
@@ -880,9 +906,39 @@ function refreshAfterPanelUpdate() {
 // ── 生命周期 ────────────────────────────────────────────
 watch(scopeUserId, () => loadAll())
 
+// ── 本周重点分析（线索→重点转化 + AI 板块归类）──────────
+const paData = ref(null)
+const paLoading = ref(false)
+const paShortRange = computed(() => {
+  if (!paData.value) return ''
+  const f = (s) => String(s).slice(5).replace('-', '/')
+  return `${f(paData.value.start)} ~ ${f(paData.value.end)}`
+})
+const paRate = computed(() => {
+  const d = paData.value
+  if (!d || !d.leads) return '—'
+  return Math.round((d.priority / d.leads) * 100) + '%'
+})
+function paBarWidth(count) {
+  const d = paData.value
+  const max = d ? Math.max(1, ...d.modules.map((m) => m.count)) : 1
+  return Math.round((count / max) * 100) + '%'
+}
+async function loadPriorityAnalysis() {
+  paLoading.value = true
+  try {
+    paData.value = await api.get('/customers/priority-analysis', { params: scopeParams({ days: 7 }) })
+  } catch (e) {
+    showToast(e.message || '重点分析加载失败')
+  } finally {
+    paLoading.value = false
+  }
+}
+
 onMounted(() => {
 
   loadAll()
+  loadPriorityAnalysis()
   if (isAdmin.value) loadUsers()
 })
 
@@ -937,6 +993,25 @@ onUnmounted(() => {
 .title-chip.ti-blue { background: rgba(0, 122, 255, 0.12); color: #007AFF; }
 .title-chip.ti-green { background: rgba(52, 199, 89, 0.14); color: #34C759; }
 .title-chip.ti-purple { background: rgba(175, 82, 222, 0.12); color: #AF52DE; }
+.title-chip.ti-orange { background: rgba(255, 159, 10, 0.12); color: #FF9F0A; }
+
+/* ── 本周重点分析 ── */
+.pa-range { font-size: 12px; font-weight: 600; color: var(--text-tertiary); }
+.pa-loading { font-size: 13px; color: var(--text-secondary); padding: 6px 0 2px; }
+.pa-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.pa-cell { background: var(--bg-primary); border-radius: 10px; padding: 10px 12px; text-align: center; }
+.pa-num { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.pa-cap { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; font-weight: 600; }
+.pa-modules { display: grid; gap: 12px; }
+.pa-module-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.pa-module-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.pa-module-count { font-size: 12px; font-weight: 700; color: var(--primary); }
+.pa-bar { height: 8px; border-radius: 4px; background: var(--bg-primary); overflow: hidden; }
+.pa-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #5AC8FA, #007AFF); transition: width 0.5s ease; }
+.pa-bar-fill.bar-1 { background: linear-gradient(90deg, #B8A7F8, #AF52DE); }
+.pa-bar-fill.bar-2 { background: linear-gradient(90deg, #FFD488, #FF9F0A); }
+.pa-names { margin-top: 5px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; }
+.pa-names.empty { color: var(--text-tertiary); }
 .title-chip.ti-orange { background: var(--orange-light); color: var(--warning); }
 
 /* ── Bento 总览 ── */
@@ -1000,15 +1075,10 @@ onUnmounted(() => {
 
 /* ── 趋势 ── */
 .trend-pills { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 9px; }
-.pill {
-  display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2;
-  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 7px;
-  color: var(--text-secondary); cursor: pointer;
-}
-.pill .pill-range { display: none; font-size: 9px; font-weight: 600; color: var(--text-tertiary); white-space: nowrap; }
-.pill.active .pill-range { display: block; }
+.pill { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 7px; color: var(--text-secondary); cursor: pointer; }
 .pill.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 .legend { display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.legend-range { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--text-tertiary); }
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-dot { width: 11px; height: 11px; border-radius: 3px; }
 .legend-dot.current { background: var(--primary); }
