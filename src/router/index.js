@@ -39,7 +39,7 @@ const routes = [
     path: '/ai-import',
     name: 'AiImport',
     component: () => import('../pages/AiImport.vue'),
-    meta: { title: '智能导入' },
+    meta: { title: '智能导入', showTabbar: true },
   },
   {
     path: '/:pathMatch(.*)*',
