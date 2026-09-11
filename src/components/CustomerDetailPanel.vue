@@ -20,7 +20,7 @@
       <div class="cdp-body">
         <div class="cdp-col">
           <!-- ① 当前需求（重点客户：查看/更新，可同步跟进时间线） -->
-          <div class="cdp-section" v-if="customer.is_priority">
+          <div class="cdp-section" v-if="customer.is_priority || readonly">
             <div class="sec-head">
               <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>当前需求
             </div>
@@ -31,7 +31,7 @@
               <div class="need-text empty" v-else>尚未记录客户需求</div>
               <div class="need-foot">
                 <span class="need-hint">{{ currentNeeds ? '重点跟进时随时更新' : '标注重点前建议先写清需求' }}</span>
-                <button class="need-btn" @click="openNeedsEdit">{{ currentNeeds ? '更新需求' : '补充需求' }}</button>
+                <button v-if="!readonly" class="need-btn" @click="openNeedsEdit">{{ currentNeeds ? '更新需求' : '补充需求' }}</button>
               </div>
             </div>
 
@@ -94,7 +94,7 @@
               </div>
             </div>
             <div v-else class="sec-empty">暂无跟进记录</div>
-            <div class="fu-input-wrap">
+            <div class="fu-input-wrap" v-if="!readonly">
               <textarea
                 class="fu-input"
                 v-model="newFollowup"
@@ -114,7 +114,7 @@
             <div class="sec-head">
               <svg class="sec-icon ic-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>到店记录
               <span class="sec-count">{{ visits.length }}</span>
-              <button class="btn-add" @click="openVisitForm(null)">+ 登记</button>
+              <button v-if="!readonly" class="btn-add" @click="openVisitForm(null)">+ 登记</button>
             </div>
             <div class="visit-list" v-if="visits.length">
               <div class="visit-item" v-for="v in visits" :key="v.id">
@@ -130,7 +130,7 @@
                   <div class="visit-needs empty" v-else-if="!v.is_deal">（未填写需求）</div>
                   <div class="deal-remark" v-if="v.remark">{{ v.remark }}</div>
                 </div>
-                <div class="deal-ops">
+                <div class="deal-ops" v-if="!readonly">
                   <span @click="openVisitForm(v)">编辑</span>
                   <span class="danger" @click="confirmDeleteVisit(v)">删除</span>
                 </div>
@@ -145,7 +145,7 @@
               <svg class="sec-icon ic-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>成交记录
               <span class="sec-count">{{ deals.length }}</span>
               <span class="sec-total" v-if="totalAmount">累计 ¥{{ totalAmount }}</span>
-              <button class="btn-add" @click="openDealForm(null)">+ 添加</button>
+              <button v-if="!readonly" class="btn-add" @click="openDealForm(null)">+ 添加</button>
             </div>
             <div class="deal-list" v-if="deals.length">
               <div class="deal-item" v-for="d in deals" :key="d.id">
@@ -169,7 +169,7 @@
                   </div>
                   <div class="deal-remark" v-if="d.remark">{{ d.remark }}</div>
                 </div>
-                <div class="deal-ops">
+                <div class="deal-ops" v-if="!readonly">
                   <span @click="openDealForm(d)">编辑</span>
                   <span class="danger" @click="confirmDeleteDeal(d)">删除</span>
                 </div>
@@ -181,7 +181,7 @@
       </div>
 
       <!-- ⑤ 重点开关（仅重点客户显示取消；非重点客户的标注入口在「标注重点」区块） -->
-      <div class="cdp-actions" v-if="customer.is_priority">
+      <div class="cdp-actions" v-if="customer.is_priority && !readonly">
         <button class="btn-danger" @click="confirmRemovePriority">
           <svg class="btn-ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 取消重点
         </button>
@@ -334,6 +334,7 @@ const PORTS = ['深圳湾', '莲塘', '沙头角', '港珠澳']
 const props = defineProps({
   show: { type: Boolean, default: false },
   customer: { type: Object, default: () => ({}) },
+  readonly: { type: Boolean, default: false }, // 管理员只读：隐藏一切写入口
 })
 const emit = defineEmits(['update:show', 'updated'])
 

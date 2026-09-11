@@ -8,7 +8,7 @@
           共 {{ priorityCustomers.length }} 位重点客户 · {{ healthCounts.need }} 位需回访 · {{ healthCounts.none }} 位未回访
         </div>
       </div>
-      <button class="btn-import" @click="goImport">
+      <button v-if="!isAdmin" class="btn-import" @click="goImport">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
           <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
@@ -150,7 +150,7 @@
     </template>
 
     <!-- 录入入口（移动端悬浮按钮） -->
-    <button class="wb-fab" v-if="!isDesktop && !searchQuery" @click="goImport" aria-label="录入客户">
+    <button class="wb-fab" v-if="!isDesktop && !searchQuery && !isAdmin" @click="goImport" aria-label="录入客户">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
         <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
       </svg>
@@ -160,6 +160,7 @@
     <CustomerDetailPanel
       v-model:show="showDetailPanel"
       :customer="activeCustomer"
+      :readonly="isAdmin"
       @updated="onPanelUpdated"
     />
 
@@ -361,6 +362,7 @@ function onResultTap(c) { tryOpenPanel(c) }
 const showImportModal = ref(false)
 
 function goImport() {
+  if (isAdmin.value) return // 管理员只读，不开放录入
   if (isDesktop.value) {
     showImportModal.value = true
     return
