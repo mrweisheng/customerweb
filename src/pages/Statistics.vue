@@ -97,19 +97,19 @@
         <BaseChart :option="trendOption" :height="trendChartHeight" />
         <div class="summary" v-if="trendSummary">
           <div class="summary-item">
+            <div class="summary-range">{{ trendSummary.currentRange }}</div>
             <div class="summary-value">{{ trendSummary.currentTotal }}</div>
-            <div class="summary-label">本期合计</div>
-            <div class="summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
+            <div class="summary-label">本期新增</div>
           </div>
           <div class="summary-item">
+            <div class="summary-range">{{ trendSummary.prevRange }}</div>
             <div class="summary-value secondary">{{ trendSummary.prevTotal }}</div>
-            <div class="summary-label">上期合计</div>
-            <div class="summary-label">—</div>
+            <div class="summary-label">上期新增</div>
           </div>
           <div class="summary-item">
-            <div class="summary-value">{{ trendSummary.todayCount }}</div>
-            <div class="summary-label">今日新增</div>
-            <div class="summary-compare" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
+            <div class="summary-range">环比对比</div>
+            <div class="summary-value" :class="trendSummary.compareDir">{{ trendSummary.compareText }}</div>
+            <div class="summary-label">本期 vs 上期</div>
           </div>
         </div>
       </div>
@@ -317,7 +317,15 @@ const trendDays = ref(7)
 const trendDates = ref([])
 const trendCounts = ref([])
 const trendPrevCounts = ref([])
+const trendPrevDates = ref([])
 const trendSummary = ref(null)
+
+// "MM-DD" → "MM/DD"；区间显示为首尾日期，如 08/12 ~ 09/10
+function fmtRange(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return '—'
+  const f = (d) => String(d).replace('-', '/')
+  return `${f(arr[0])} ~ ${f(arr[arr.length - 1])}`
+}
 
 const trendChartHeight = computed(() => (isPC.value ? '170px' : '120px'))
 const dealChartHeight = computed(() => (isPC.value ? '150px' : '120px'))
@@ -749,7 +757,15 @@ async function loadTrend() {
     trendDates.value = dates
     trendCounts.value = counts
     trendPrevCounts.value = prevCounts
-    trendSummary.value = { currentTotal, prevTotal, todayCount: counts[counts.length - 1] || 0, compareDir, compareText }
+    trendPrevDates.value = Array.isArray(res.prev_dates) ? res.prev_dates : []
+    trendSummary.value = {
+      currentTotal,
+      prevTotal,
+      compareDir,
+      compareText,
+      currentRange: fmtRange(dates),
+      prevRange: fmtRange(trendPrevDates.value),
+    }
   } catch (e) {
     showToast(e.message || '加载趋势失败')
   }
@@ -953,8 +969,11 @@ onUnmounted(() => {
 .legend-dot.previous { background: #C7C7CC; }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
 .summary-item { background: var(--bg-primary); border-radius: 10px; padding: 10px 12px; text-align: center; }
+.summary-range { font-size: 10.5px; font-weight: 600; color: var(--text-tertiary); margin-bottom: 2px; white-space: nowrap; }
 .summary-value { font-size: 18px; font-weight: 700; color: var(--text-primary); }
 .summary-value.secondary { color: var(--text-secondary); }
+.summary-value.up { color: var(--success); }
+.summary-value.down { color: var(--danger); }
 .summary-label { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; font-weight: 600; }
 .summary-compare { font-size: 11px; font-weight: 700; margin-top: 3px; }
 .summary-compare.up { color: var(--success); }
