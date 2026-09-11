@@ -241,6 +241,7 @@ import api from '../utils/api'
 import { recognizeImage } from '../utils/aiRecognize'
 import { emitContactsImported } from '../utils/events'
 import { useToast } from '../composables/useToast'
+import { takePendingImportFiles } from '../utils/pendingImportFiles'
 
 // 录入流程主体：页面（移动端整页）与弹窗（PC 工作台内嵌）共用
 // 关闭动作（返回/完成）交给宿主处理：页面里是路由返回，弹窗里是关闭弹窗
@@ -685,6 +686,9 @@ function resetImport() {
 // ── 生命周期 ────────────────────────────────────────────
 onMounted(() => {
   document.addEventListener('paste', onPaste)
+  // 工作台「+」已代选图片：取走暂存文件，进入本页直接开始识别
+  const pending = takePendingImportFiles()
+  if (pending.length > 0) addFiles(pending)
 })
 
 onUnmounted(() => {

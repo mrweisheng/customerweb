@@ -179,6 +179,7 @@ import { onContactsImported } from '../utils/events'
 import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ImportFlow from '../components/ImportFlow.vue'
+import { setPendingImportFiles } from '../utils/pendingImportFiles'
 
 const router = useRouter()
 const { isDesktop } = useDevice()
@@ -355,12 +356,26 @@ function onCardTap(c) { tryOpenPanel(c) }
 function onResultTap(c) { tryOpenPanel(c) }
 
 // ── 录入 ────────────────────────────────────────────────
-// PC：弹窗内完成；移动端：跳整页（小屏弹窗塞不下三步流程）
+// PC：弹窗内完成；移动端：点「+」在手势内同步拉起系统选图，
+// 选完图带着文件跳录入页直接识别（取消选图则留在本页）
 const showImportModal = ref(false)
 
 function goImport() {
-  if (isDesktop.value) showImportModal.value = true
-  else router.push('/import')
+  if (isDesktop.value) {
+    showImportModal.value = true
+    return
+  }
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'image/*'
+  input.multiple = true
+  input.onchange = () => {
+    const files = Array.from(input.files || []).filter((f) => f && f.type && f.type.startsWith('image/'))
+    if (files.length === 0) return
+    setPendingImportFiles(files)
+    router.push('/import')
+  }
+  input.click()
 }
 
 function closeImportModal() {
