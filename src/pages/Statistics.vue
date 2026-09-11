@@ -946,9 +946,9 @@ onUnmounted(() => {
 .trend-pills { display: flex; gap: 3px; background: var(--bg-primary); padding: 3px; border-radius: 9px; }
 .pill { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 7px; color: var(--text-secondary); cursor: pointer; }
 .pill.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
-.legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; }
-.legend-item { display: flex; align-items: center; gap: 5px; }
-.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+.legend { display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 11px; height: 11px; border-radius: 3px; }
 .legend-dot.current { background: var(--primary); }
 .legend-dot.previous { background: #C7C7CC; }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
