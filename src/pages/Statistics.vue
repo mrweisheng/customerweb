@@ -339,10 +339,24 @@ const axisLineColor = computed(() => (isDark.value ? 'rgba(255,255,255,0.14)' : 
 const splitLineColor = computed(() => (isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'))
 const chartTitleColor = computed(() => (isDark.value ? '#F2F2F7' : '#1D1D1F'))
 
+// axis 触发的悬浮提示：首行显示完整日期（x 轴只展示 MM-DD，悬浮时补全），其后每系列一行数值
+function axisTooltip(dates, unit) {
+  return {
+    ...tooltipStyle.value,
+    formatter: (params) => {
+      const arr = Array.isArray(params) ? params : [params]
+      const first = arr[0] || {}
+      const date = (dates && dates[first.dataIndex]) || first.axisValue || ''
+      const rows = arr.map((p) => `${p.marker}${p.seriesName ? p.seriesName + '：' : ''}${p.value ?? 0} ${unit}`)
+      return `${date}<br/>${rows.join('<br/>')}`
+    },
+  }
+}
+
 // 客户趋势：本期/上期双折线
 const trendOption = computed(() => ({
   grid: { left: 6, right: 12, top: 14, bottom: 2, containLabel: true },
-  tooltip: { ...tooltipStyle.value, valueFormatter: (v) => `${v ?? 0} 位` },
+  tooltip: axisTooltip(trendDates.value, '位'),
   xAxis: {
     type: 'category',
     boundaryGap: false,
@@ -397,7 +411,7 @@ const trendOption = computed(() => ({
 const sparkCounts = computed(() => trendCounts.value.slice(-7))
 const sparkOption = computed(() => ({
   grid: { left: 2, right: 2, top: 5, bottom: 5 },
-  tooltip: { ...tooltipStyle.value, valueFormatter: (v) => `${v ?? 0} 位` },
+  tooltip: axisTooltip(trendDates.value.slice(-7), '位'),
   xAxis: { type: 'category', boundaryGap: false, data: trendDates.value.slice(-7).map((d) => d.slice(5)), show: false },
   yAxis: { type: 'value', show: false },
   series: [
@@ -426,7 +440,7 @@ const sparkOption = computed(() => ({
 // 月度成交单数柱状图
 const dealMonthlyOption = computed(() => ({
   grid: { left: 6, right: 6, top: 22, bottom: 2, containLabel: true },
-  tooltip: { ...tooltipStyle.value, valueFormatter: (v) => `${v ?? 0} 单` },
+  tooltip: axisTooltip(dealStats.value.monthly?.months || [], '单'),
   xAxis: {
     type: 'category',
     data: (dealStats.value.monthly?.months || []).map((ym) => ym.slice(5) + '月'),
