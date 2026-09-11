@@ -19,8 +19,8 @@
 
       <div class="cdp-body">
         <div class="cdp-col">
-          <!-- ① 当前需求（客户级字段，重点跟进时一键更新） -->
-          <div class="cdp-section">
+          <!-- ① 当前需求（重点客户：查看/更新，可同步跟进时间线） -->
+          <div class="cdp-section" v-if="customer.is_priority">
             <div class="sec-head">
               <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>当前需求
             </div>
@@ -57,8 +57,32 @@
             </div>
           </div>
 
-          <!-- ② 跟进记录（时间线，追加不覆盖；输入框只做一件事：记录跟进，始终可提交） -->
-          <div class="cdp-section" v-if="!panelLoading">
+          <!-- ①' 非重点客户：填写需求并标注重点（需求同步为第一条跟进），无跟进相关内容 -->
+          <div class="cdp-section" v-else>
+            <div class="sec-head">
+              <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>标注重点
+            </div>
+            <div class="need-card editing">
+              <textarea
+                class="need-input"
+                v-model="priorityNeeds"
+                rows="3"
+                placeholder="写清客户当前需求，如：黑色SUV，预算40万，GLC/X3 对比中"
+                maxlength="2000"
+              ></textarea>
+              <div class="need-foot">
+                <span class="need-hint">填写客户需求后标注重点，该需求将同步为第一条跟进</span>
+              </div>
+              <div class="need-btns">
+                <button class="btn-primary" @click="submitPriority" :disabled="loading">
+                  {{ loading ? '提交中…' : '标注为重点' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ② 跟进记录（仅重点客户；非重点客户不展示任何跟进内容） -->
+          <div class="cdp-section" v-if="customer.is_priority && !panelLoading">
             <div class="sec-head">
               <svg class="sec-icon ic-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>跟进记录
               <span class="sec-count">{{ followups.length }}</span>
@@ -156,13 +180,10 @@
         </div>
       </div>
 
-      <!-- ⑤ 重点开关 -->
-      <div class="cdp-actions">
-        <button v-if="customer.is_priority" class="btn-danger" @click="confirmRemovePriority">
+      <!-- ⑤ 重点开关（仅重点客户显示取消；非重点客户的标注入口在「标注重点」区块） -->
+      <div class="cdp-actions" v-if="customer.is_priority">
+        <button class="btn-danger" @click="confirmRemovePriority">
           <svg class="btn-ic" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 取消重点
-        </button>
-        <button v-else class="btn-primary" :disabled="loading" @click="addPriority">
-          {{ loading ? '处理中…' : '标注为重点' }}
         </button>
       </div>
 
@@ -332,6 +353,8 @@ const currentNeeds = ref('')
 const editingNeeds = ref(false)
 const needsDraft = ref('')
 const needsAlsoFollowup = ref(true)
+// 非重点客户：标注重点时的需求输入（保存后同步为第一条跟进）
+const priorityNeeds = ref('')
 
 // ── 成交表单：车辆区 / 两地牌区 各自独立，互不干扰 ──────────
 const showDealForm = ref(false)
@@ -408,6 +431,7 @@ watch(
       showDealForm.value = false
       showVisitForm.value = false
       currentNeeds.value = props.customer?.current_needs || ''
+      priorityNeeds.value = props.customer?.current_needs || ''
       // 先清空旧客户数据，避免加载期间显示上一位客户的记录
       followups.value = []
       deals.value = []
@@ -688,16 +712,25 @@ function confirmRemovePriority() {
   })
 }
 
-async function addPriority() {
+// 非重点客户：填写需求 + 标注重点，一步完成
+// 先存需求（followup=true 同步为第一条跟进），再标重点（priority 不传备注，避免重复留痕）；
+// 成功后不关闭弹窗，原地切换为重点客户的完整视图
+async function submitPriority() {
   if (loading.value) return
+  const needs = priorityNeeds.value.trim()
+  if (!needs) return showToast('请填写客户需求')
   loading.value = true
   try {
-    // 已有当前需求时随重点一起提交作为备注（后端自动追加跟进留痕）
-    const remark = currentNeeds.value || undefined
-    await api.put(`/customers/${props.customer.id}/priority`, { is_priority: true, remark })
-    showToast('已标注为重点')
-    emit('update:show', false)
+    await api.put(`/customers/${props.customer.id}/needs`, { needs, followup: true })
+    await api.put(`/customers/${props.customer.id}/priority`, { is_priority: true })
+    if (props.customer) {
+      props.customer.is_priority = true
+      props.customer.current_needs = needs
+    }
+    currentNeeds.value = needs
+    await loadData()
     emit('updated')
+    showToast('已标注为重点')
   } catch (e) {
     showToast(e.message || '操作失败')
   } finally {
