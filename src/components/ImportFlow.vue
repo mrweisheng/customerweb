@@ -1,19 +1,14 @@
 <template>
   <div class="import-flow">
-    <!-- 步骤指示器 -->
+    <!-- 步骤指示器（选图已并入识别列表，仅两步） -->
     <div class="step-indicator">
-      <div class="step" :class="{ active: currentStep === 1, completed: currentStep > 1 }">
+      <div class="step" :class="{ active: currentStep < 3, completed: currentStep > 2 }">
         <div class="step-number">1</div>
-        <div class="step-text">选择图片</div>
-      </div>
-      <div class="step-line" :class="{ active: currentStep > 1 }"></div>
-      <div class="step" :class="{ active: currentStep === 2, completed: currentStep > 2 }">
-        <div class="step-number">2</div>
-        <div class="step-text">确认信息</div>
+        <div class="step-text">选图识别</div>
       </div>
       <div class="step-line" :class="{ active: currentStep > 2 }"></div>
       <div class="step" :class="{ active: currentStep === 3 }">
-        <div class="step-number">3</div>
+        <div class="step-number">2</div>
         <div class="step-text">导入结果</div>
       </div>
     </div>
@@ -79,11 +74,32 @@
     <div v-if="currentStep === 2" class="step-content">
       <div class="confirm-header">
         <div class="confirm-title">识别结果</div>
-        <div class="confirm-subtitle">
-          共 {{ contacts.length }} 个联系人，已选 {{ validContactCount }} 个有效可导入<span v-if="duplicateCount > 0" class="dup-tag">（{{ duplicateCount }} 位重复）</span>
-        </div>
-        <div class="over-limit-hint" v-if="overLimit">联系人超过 200 条上限，请移除部分图片后分批导入</div>
+        <button class="btn-add-image" @click="chooseImage">+ 添加图片</button>
       </div>
+      <div class="confirm-subtitle">
+        共 {{ contacts.length }} 个联系人，已选 {{ validContactCount }} 个有效可导入<span v-if="duplicateCount > 0" class="dup-tag">（{{ duplicateCount }} 位重复）</span>
+      </div>
+      <div class="over-limit-hint" v-if="overLimit">联系人超过 200 条上限，请移除部分图片后分批导入</div>
+
+      <!-- 未识别完成的图片（等待/识别中/失败）继续在此显示，可重试、可移除 -->
+      <div class="image-queue" v-if="pendingQueueItems.length > 0">
+        <div v-for="item in pendingQueueItems" :key="item.id" class="queue-item" :class="item.status">
+          <img v-if="item.thumb" :src="item.thumb" class="queue-item-thumb" />
+          <div class="queue-item-info">
+            <div class="queue-item-name">{{ item.fileName }}</div>
+            <div class="queue-item-status">
+              <span v-if="item.status === 'pending'">等待处理</span>
+              <span v-else-if="item.status === 'processing'" class="processing">正在识别...</span>
+              <span v-else-if="item.status === 'error'" class="error">{{ item.errorMsg }}</span>
+            </div>
+          </div>
+          <div class="queue-item-action">
+            <button v-if="item.status === 'error'" class="btn-retry" @click="retryItem(item.id)">重试</button>
+            <button class="btn-remove" @click="removeItem(item.id)">✕</button>
+          </div>
+        </div>
+      </div>
+      <div v-if="imageQueue.length === 0" class="confirm-empty">还没有内容，点击「+ 添加图片」选择或粘贴截图</div>
 
       <div class="contacts-list">
         <div v-for="group in groupedContacts" :key="group.sourceId" class="contact-group">
@@ -122,8 +138,12 @@
 
       <div class="action-buttons">
         <button class="btn-secondary btn-plain" @click="goBack">返回</button>
-        <button class="btn-primary" :disabled="validContactCount === 0 || importing || overLimit" @click="startImport">
-          {{ importing ? '导入中...' : `开始导入（${validContactCount} 位）` }}
+        <button
+          class="btn-primary"
+          :disabled="!canProceed || validContactCount === 0 || importing || overLimit"
+          @click="startImport"
+        >
+          {{ importing ? '导入中...' : (!canProceed ? '识别中…' : `开始导入（${validContactCount} 位）`) }}
         </button>
       </div>
     </div>
@@ -282,6 +302,11 @@ const queueDoneCount = computed(() => {
   return imageQueue.value.filter(i => i.status === 'done').length
 })
 
+// 识别列表页中尚未完成识别的图片（等待 / 识别中 / 失败）
+const pendingQueueItems = computed(() => {
+  return imageQueue.value.filter(i => i.status !== 'done')
+})
+
 // 按 sourceId（图片）分组的联系人，用于确认页按图展示
 const groupedContacts = computed(() => {
   const groups = []
@@ -378,6 +403,8 @@ function addFiles(files) {
   }))
 
   imageQueue.value = [...imageQueue.value, ...newItems]
+  // 选图后直接进入识别列表（边识别边出结果），省去「下一步」手动导航
+  currentStep.value = 2
   processQueue() // 串行锁，重复调用安全
 }
 
@@ -395,9 +422,9 @@ function onDrop(e) {
   addFiles(e.dataTransfer?.files)
 }
 
-// 全局粘贴：微信截图 Ctrl+V 直接入队（仅步骤1）
+// 全局粘贴：微信截图 Ctrl+V 直接入队（选图页 / 识别列表页均可）
 function onPaste(e) {
-  if (currentStep.value !== 1) return
+  if (currentStep.value !== 1 && currentStep.value !== 2) return
   const files = e.clipboardData?.files
   if (files && files.length > 0) {
     e.preventDefault()
@@ -457,6 +484,8 @@ async function runOneItem(itemId) {
       statusMsg: '',
     })
     mergeContacts(extracted, itemId)
+    // 识别列表页常驻：每张图识别完即查重，命中项自动取消勾选
+    void checkDuplicatesFor(contacts.value)
   } catch (e) {
     // 被 abort 的错误是正常路径，吞掉、不写错误状态
     if (controller.signal.aborted) {
@@ -791,9 +820,18 @@ onUnmounted(() => {
 }
 
 /* 确认页 */
-.confirm-header { text-align: center; margin-bottom: 20px; }
-.confirm-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
-.confirm-subtitle { font-size: 14px; color: var(--text-secondary); }
+.confirm-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.confirm-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.btn-add-image {
+  padding: 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: inherit;
+  color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border-glass); cursor: pointer;
+}
+.btn-add-image:active { opacity: 0.7; }
+.confirm-empty {
+  padding: 26px 12px; text-align: center; font-size: 13.5px; color: var(--text-secondary);
+  border: 1px dashed var(--border-glass); border-radius: 12px; margin-bottom: 14px;
+}
+.confirm-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
 .over-limit-hint {
   margin-top: 10px; font-size: 12.5px; font-weight: 600;
   color: var(--danger); background: var(--red-light);
