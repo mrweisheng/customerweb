@@ -101,15 +101,15 @@
                 <input class="df-input" type="date" v-model="formVisit.visit_time" />
               </div>
               <div class="df-field">
-                <label>需求{{ editingVisit && editingVisit.is_deal ? '（选填）' : '（必填）' }}</label>
+                <label>本次到店情况{{ editingVisit && editingVisit.is_deal ? '（选填）' : '（必填）' }}</label>
                 <textarea
                   class="df-input"
                   v-model.trim="formVisit.needs"
-                  rows="2"
-                  :placeholder="formVisit.needs || currentNeeds ? '默认带入当前需求，可修改' : '客户本次说了什么需求'"
+                  rows="3"
+                  placeholder="客户说了什么、看了哪些车、本次沟通过程等，AI 会从中提取需求"
                 ></textarea>
               </div>
-              <div class="df-tab-hint" v-if="!editingVisit">保存后自动标为重点；AI 会分析本次内容，需求有变化会自动更新</div>
+              <div class="df-tab-hint" v-if="!editingVisit">保存后自动标为重点；AI 会从到店情况中提取需求快照</div>
               <div class="df-tab-hint" v-else-if="editingVisit.is_deal">该到店由成交记录自动生成，成交详情请在「成交记录」中编辑</div>
             </template>
 
@@ -133,10 +133,10 @@
             <!-- 标记重点 -->
             <template v-else-if="actionType === 'priority'">
               <div class="df-field">
-                <label>当前需求{{ currentNeeds ? '（选填，已有一份）' : '' }}</label>
-                <textarea class="df-input" v-model.trim="priorityDraft" rows="3" :placeholder="currentNeeds ? '不填则沿用现有需求' : '写清客户当前需求'" maxlength="2000"></textarea>
+                <label>情况说明{{ currentNeeds ? '（选填，已有需求）' : '（必填）' }}</label>
+                <textarea class="df-input" v-model.trim="priorityDraft" rows="3" :placeholder="currentNeeds ? '可补充本次沟通情况，AI 会判断需求是否需要更新' : '如：客户主要咨询两地牌，对深圳湾有意向；AI 会从中提取需求'" maxlength="2000"></textarea>
               </div>
-              <div class="df-tab-hint">填写的需求会同步为一条跟进记录</div>
+              <div class="df-tab-hint">填写的内容会作为一条动态记录，AI 会从中提取或更新需求</div>
             </template>
 
             <div class="df-btns">
@@ -557,8 +557,8 @@ watch(
 function resetVisitForm() {
   Object.assign(formVisit, {
     visit_time: today(),
-    // 需求默认带入当前需求，减少重复输入
-    needs: currentNeeds.value || '',
+    // 到店情况为自由描述（客户说了什么/沟通过程），需求由 AI 从中提取，不预填旧需求
+    needs: '',
     remark: '',
   })
 }
@@ -731,23 +731,36 @@ async function submitNeedsAction() {
   }
 }
 
-// ── 标记重点：可附一句需求（无需求时必填），同步为跟进 ────
+// ── 标记重点：情况说明落一条动态（标注重点：xxx），AI 从中提取/更新需求 ────
 async function submitPriorityAction() {
-  const needs = priorityDraft.value.trim()
-  if (!needs && !currentNeeds.value) return showToast('建议先写一句当前需求')
+  const note = priorityDraft.value.trim()
+  if (!note && !currentNeeds.value) return showToast('请写一句情况说明，AI 才能提取需求')
   loading.value = true
   try {
-    if (needs && needs !== currentNeeds.value) {
-      await api.put(`/customers/${props.customer.id}/needs`, { needs, followup: true })
-      currentNeeds.value = needs
-      if (props.customer) props.customer.current_needs = needs
+    const cid = props.customer.id
+    if (note) {
+      // 内容作为动态落库，随后 AI 后台提取需求（复用跟进同款轮询回填机制）
+      const maxIdBefore = followups.value.reduce((m, f) => Math.max(m, f.id), 0)
+      const needsAtSave = currentNeeds.value
+      await api.post(`/customers/${cid}/followups`, { content: `标注重点：${note}` })
+      await api.put(`/customers/${cid}/priority`, { is_priority: true })
+      if (props.customer) props.customer.is_priority = true
+      showToast('已标为重点')
+      priorityDraft.value = ''
+      closeAction()
+      await loadData()
+      emit('updated')
+      scheduleAiNeedCheck(cid, maxIdBefore, needsAtSave)
+    } else {
+      // 已有需求且未补充说明：仅打重点标记
+      await api.put(`/customers/${cid}/priority`, { is_priority: true })
+      if (props.customer) props.customer.is_priority = true
+      showToast('已标为重点')
+      priorityDraft.value = ''
+      closeAction()
+      await loadData()
+      emit('updated')
     }
-    await api.put(`/customers/${props.customer.id}/priority`, { is_priority: true })
-    if (props.customer) props.customer.is_priority = true
-    showToast('已标为重点')
-    closeAction()
-    await loadData()
-    emit('updated')
   } catch (e) {
     showToast(e.message || '操作失败')
   } finally {

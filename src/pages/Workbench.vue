@@ -50,7 +50,7 @@
             <span class="lead-date" v-if="c.lead_date_short">{{ c.lead_date_short }}/</span>{{ c.customer_name }}
             <span v-if="c.is_priority" class="priority-badge">重点</span>
           </div>
-          <div class="result-meta">{{ c.remark || c.current_needs || '—' }}</div>
+          <div class="result-meta">{{ c.current_needs || '—' }}</div>
         </div>
         <div class="result-visit" v-if="c.is_priority && c.visitStatus" :class="c.visitStatus.class">
           {{ visitBadgeText(c) }}
@@ -127,10 +127,10 @@
             <div class="cc-need-label">当前需求</div>
             <div class="cc-need-text">{{ c.current_needs || '暂无需求，点击补充' }}</div>
           </div>
-          <!-- 备注独立次要行：只在有内容时出现，不与需求互相遮挡 -->
-          <div class="cc-remark-row" v-if="c.remark">
-            <span class="cc-remark-tag">备注</span>
-            <span class="cc-remark-text">{{ c.remark }}</span>
+          <!-- 最新动态次要行：最新一条到店/跟进，只在有内容时出现 -->
+          <div class="cc-act-row" v-if="c.last_activity">
+            <span class="cc-act-tag" :class="c.last_activity.type">{{ c.last_activity.type === 'visit' ? '到店' : '跟进' }}</span>
+            <span class="cc-act-text">{{ c.last_activity.content }}</span>
           </div>
         </div>
       </div>
@@ -532,13 +532,12 @@ onUnmounted(() => {
   word-break: break-all;
 }
 .cc-need.empty .cc-need-text { color: var(--text-tertiary); font-size: 12px; }
-/* 备注独立次要行：只在有内容时渲染 */
-.cc-remark-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); min-width: 0; }
-.cc-remark-tag {
-  flex-shrink: 0; font-size: 10px; font-weight: 700; color: var(--text-tertiary);
-  background: var(--bg-primary); border-radius: 5px; padding: 1px 6px;
-}
-.cc-remark-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 最新动态次要行：最新一条到店/跟进，单行截断 */
+.cc-act-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); min-width: 0; }
+.cc-act-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; border-radius: 5px; padding: 1px 6px; }
+.cc-act-tag.visit { background: rgba(52, 199, 89, 0.14); color: #1f7a3a; }
+.cc-act-tag.followup { background: var(--blue-light); color: var(--primary); }
+.cc-act-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── 搜索结果 ── */
 .results-section { margin-top: 4px; }
