@@ -5,55 +5,80 @@
     <div class="cdp-sheet" @click.stop>
       <div class="cdp-handle"></div>
 
-      <!-- 头部：客户名 + 健康度 + 重点开关 + 关闭 -->
+      <!-- 头部：头像 + 客户名/健康度 + 重点开关 + 关闭 -->
       <div class="cdp-header">
-        <div class="cdp-title">{{ customerName }}</div>
-        <div class="cdp-health" v-if="customer.last_visit_at !== undefined">
-          <span class="health-dot" :class="visit.class"></span>
-          <span :class="visit.class">{{ visit.text }}</span>
+        <div class="cdp-avatar">{{ avatarChar }}</div>
+        <div class="cdp-titlewrap">
+          <div class="cdp-title">{{ customerName }}</div>
+          <div class="cdp-health" v-if="customer.last_visit_at !== undefined">
+            <span class="health-dot" :class="visit.class"></span>
+            <span :class="visit.class">{{ visit.text }}</span>
+          </div>
         </div>
         <button
           v-if="!readonly"
-          class="cdp-star"
+          class="cdp-star-pill"
           :class="{ on: customer.is_priority }"
           @click="onStarTap"
           :title="customer.is_priority ? '取消重点' : '标记重点'"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        </button>
+        >{{ customer.is_priority ? '★ 重点' : '☆ 重点' }}</button>
         <button class="cdp-close" @click="close">×</button>
       </div>
 
       <div class="cdp-loading" v-if="panelLoading"><span class="cdp-loading-dot"></span>加载客户数据中…</div>
 
       <div class="cdp-body" v-if="!panelLoading">
-        <div class="cdp-col">
-          <!-- 当前需求（快照）：只读展示，来源信息自动维护，可手动变更 -->
-          <div class="need-summary">
-            <div class="ns-head">
-              <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
-              <span>当前需求</span>
-              <button v-if="!readonly && customer.is_priority" class="ns-edit" @click="toggleAction('needs')">变更</button>
-            </div>
-            <div class="ns-text" :class="{ empty: !currentNeeds }">{{ currentNeeds || '暂无需求记录' }}</div>
-            <div class="ns-hint" v-if="!readonly">登记到店 / 提交跟进时自动更新，AI 会在需求变化时提示</div>
+        <!-- 当前需求（快照）：只读展示，来源信息自动维护，可手动变更 -->
+        <div class="need-summary">
+          <div class="ns-head">
+            <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            <span>当前需求</span>
+            <button v-if="!readonly && customer.is_priority" class="ns-edit" @click="toggleAction('needs')">变更</button>
           </div>
+          <div class="ns-text" :class="{ empty: !currentNeeds }">{{ currentNeeds || '暂无需求记录' }}</div>
+          <div class="ns-hint" v-if="!readonly">登记到店 / 提交跟进时自动更新，AI 会在需求变化时提示</div>
+        </div>
 
-          <!-- AI 后台分析进行中：完成后自动回填当前需求 -->
-          <div class="ai-pending" v-if="aiAnalyzing">
-            <span class="ai-pending-dot"></span>AI 正在分析本次登记，需求如有变化会自动更新…
+        <!-- AI 后台分析进行中：完成后自动回填当前需求 -->
+        <div class="ai-pending" v-if="aiAnalyzing">
+          <span class="ai-pending-dot"></span>AI 正在分析本次登记，需求如有变化会自动更新…
+        </div>
+
+        <!-- 客户概要：重点状态 / 最近到店 / 累计成交，一眼掌握 -->
+        <div class="stat-strip">
+          <div class="stat">
+            <div class="k">重点状态</div>
+            <div class="v" :class="customer.is_priority ? 'org' : 'mut'">{{ customer.is_priority ? '★ 重点客户' : '未标重点' }}</div>
           </div>
+          <div class="stat">
+            <div class="k">最近到店</div>
+            <div class="v" :class="visitStat.cls">{{ visitStat.text }}</div>
+          </div>
+          <div class="stat">
+            <div class="k">累计成交</div>
+            <div class="v" :class="totalAmount ? 'amt' : 'mut'">{{ totalAmount ? `¥${totalAmount}` : '尚未成交' }}</div>
+          </div>
+        </div>
 
-          <!-- 主操作：未重点=到店/标重点；已重点=到店/更新跟进。点击就地展开表单，不再弹层 -->
-          <div class="act-row" v-if="!readonly">
+        <!-- 主操作：未重点=到店/成交/标重点；已重点=到店/跟进/成交。点击就地展开表单，不再弹层 -->
+        <template v-if="!readonly">
+          <div class="zone-label">本次做了什么</div>
+          <div class="act-row">
             <button class="act-chip" :class="{ active: actionType === 'visit' }" @click="toggleAction('visit')">
-              <span class="act-ic">📍</span>登记到店
+              <span class="act-main"><span class="act-ic">📍</span><span class="act-t">登记到店</span></span>
+              <span class="act-sub">记录本次到店 · 自动标重点</span>
             </button>
             <button v-if="customer.is_priority" class="act-chip" :class="{ active: actionType === 'followup' }" @click="toggleAction('followup')">
-              <span class="act-ic">💬</span>更新跟进
+              <span class="act-main"><span class="act-ic">💬</span><span class="act-t">更新跟进</span></span>
+              <span class="act-sub">电话 / 微信沟通内容</span>
+            </button>
+            <button class="act-chip deal" :class="{ active: showDealForm }" @click="toggleDeal()">
+              <span class="act-main"><span class="act-ic">💰</span><span class="act-t">成交登记</span></span>
+              <span class="act-sub">车辆 / 两地牌 · 双填双记</span>
             </button>
             <button v-if="!customer.is_priority" class="act-chip star" :class="{ active: actionType === 'priority' }" @click="toggleAction('priority')">
-              <span class="act-ic">⭐</span>标记重点
+              <span class="act-main"><span class="act-ic">⭐</span><span class="act-t">标记重点</span></span>
+              <span class="act-sub">可附一句当前需求</span>
             </button>
           </div>
 
@@ -78,12 +103,8 @@
                   :placeholder="formVisit.needs || currentNeeds ? '默认带入当前需求，可修改' : '客户本次说了什么需求'"
                 ></textarea>
               </div>
-              <div class="df-field">
-                <label>备注</label>
-                <input class="df-input" v-model.trim="formVisit.remark" placeholder="选填" />
-              </div>
               <div class="df-tab-hint" v-if="!editingVisit">保存后自动标为重点；AI 会分析本次内容，需求有变化会自动更新</div>
-              <div class="df-tab-hint" v-else-if="editingVisit.is_deal">该到店由成交记录自动生成，成交详情请在下方「成交记录」中编辑</div>
+              <div class="df-tab-hint" v-else-if="editingVisit.is_deal">该到店由成交记录自动生成，成交详情请在「成交记录」中编辑</div>
             </template>
 
             <!-- 跟进 -->
@@ -122,11 +143,88 @@
             </div>
           </div>
 
-          <!-- 动态时间线：跟进 / 邀约 / 到店 / 成交到店 / 需求变更 统一倒序 -->
-          <div class="cdp-section">
-            <div class="sec-head">
-              <svg class="sec-icon ic-blue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>动态
+          <!-- 成交表单：与到店/跟进共用同一表单区，结构化字段，不交给 AI -->
+          <div class="inline-form" v-if="showDealForm" ref="dealFormRef">
+            <div class="if-title">{{ editingDeal ? '编辑成交' : '添加成交' }}
+              <button class="if-close" @click="showDealForm = false" aria-label="收起">✕</button>
             </div>
+            <div class="df-tabs" v-if="!editingDeal">
+              <button type="button" class="df-tab" :class="{ active: activeTab === 'vehicle' }" @click="activeTab = 'vehicle'">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>车辆
+              </button>
+              <button type="button" class="df-tab" :class="{ active: activeTab === 'plate' }" @click="activeTab = 'plate'">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>两地牌
+              </button>
+            </div>
+            <div class="df-tab-hint" v-if="!editingDeal">两个 Tab 都填，会同时记录两条成交</div>
+
+            <div class="df-field" v-if="activeTab === 'vehicle'" :key="'vehicle'">
+              <label>车架号</label>
+              <input class="df-input" v-model.trim="formVehicle.vin" placeholder="VIN（选填，与车辆描述至少填一项）" maxlength="32" />
+            </div>
+            <div class="df-field" v-if="activeTab === 'vehicle'">
+              <label>车辆描述</label>
+              <input class="df-input" v-model.trim="formVehicle.vehicle_desc" placeholder="如 21款霸道4000 白色" />
+            </div>
+            <div class="df-field" v-if="activeTab === 'vehicle'">
+              <label>金额</label>
+              <input class="df-input" type="number" inputmode="decimal" v-model="formVehicle.amount" placeholder="车辆金额（选填）" />
+            </div>
+            <div class="df-field" v-if="activeTab === 'vehicle'">
+              <label>成交时间</label>
+              <input class="df-input" type="date" v-model="formVehicle.deal_time" />
+            </div>
+
+            <template v-if="activeTab === 'plate'">
+              <div class="df-field">
+                <label>口岸</label>
+                <select class="df-input" v-model="formPlate.port">
+                  <option value="">选择口岸</option>
+                  <option v-for="p in PORTS" :key="p" :value="p">{{ p }}</option>
+                </select>
+              </div>
+              <div class="df-field">
+                <label>牌照</label>
+                <div class="df-seg">
+                  <button type="button" :class="{ active: formPlate.plate_kind === '期牌' }" @click="formPlate.plate_kind = '期牌'">期牌</button>
+                  <button type="button" :class="{ active: formPlate.plate_kind === '现牌' }" @click="formPlate.plate_kind = '现牌'">现牌</button>
+                </div>
+              </div>
+              <div class="df-field" v-if="formPlate.plate_kind === '现牌'">
+                <label>车牌号</label>
+                <input class="df-input" v-model.trim="formPlate.plate_number" placeholder="车牌号码" />
+              </div>
+              <div class="df-field">
+                <label>金额</label>
+                <input class="df-input" type="number" inputmode="decimal" v-model="formPlate.amount" placeholder="办牌金额（选填）" />
+              </div>
+              <div class="df-field">
+                <label>成交时间</label>
+                <input class="df-input" type="date" v-model="formPlate.deal_time" />
+              </div>
+            </template>
+
+            <div class="df-btns">
+              <button class="btn-plain" @click="showDealForm = false">取消</button>
+              <button class="btn-primary" :disabled="loading" @click="submitDeal">{{ loading ? '保存中…' : '保存' }}</button>
+            </div>
+          </div>
+        </template>
+
+        <!-- 记录 Tab：动态 / 成交记录共用同一区域，互不挤占 -->
+        <div class="record-tabs">
+          <div class="rt-bar">
+            <button class="rt-tab" :class="{ on: contentTab === 'timeline' }" @click="contentTab = 'timeline'">
+              动态 <span class="rt-cnt">{{ timeline.length }}</span>
+            </button>
+            <button class="rt-tab" :class="{ on: contentTab === 'deals' }" @click="contentTab = 'deals'">
+              成交记录 <span class="rt-cnt">{{ deals.length }}</span>
+            </button>
+            <span class="rt-total" v-if="contentTab === 'deals' && totalAmount">累计 ¥{{ totalAmount }}</span>
+          </div>
+
+          <!-- 动态时间线：跟进 / 邀约 / 到店 / 成交到店 / 需求变更 统一倒序 -->
+          <div class="rt-body" v-show="contentTab === 'timeline'">
             <div class="tl" v-if="timeline.length">
               <div class="tl-item" v-for="e in timeline" :key="e.key">
                 <span class="tl-tag" :class="e.tagClass">{{ e.tagLabel }}</span>
@@ -152,93 +250,8 @@
             </div>
             <div v-else class="sec-empty">{{ customer.is_priority ? '还没有记录，点上方「登记到店」或「更新跟进」开始' : '还没有记录，点上方「登记到店」开始，或先标记为重点' }}</div>
           </div>
-        </div>
 
-        <div class="cdp-col">
-          <!-- 成交记录（结构化数据，独立区块保留） -->
-          <div class="cdp-section sec-deals">
-            <div class="sec-head">
-              <svg class="sec-icon ic-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>成交记录
-              <span class="sec-count">{{ deals.length }}</span>
-              <span class="sec-total" v-if="totalAmount">累计 ¥{{ totalAmount }}</span>
-              <button v-if="!readonly" class="btn-add" @click="openDealForm(null)">+ 添加</button>
-            </div>
-
-            <!-- 成交内联表单：结构化字段，不交给 AI -->
-            <div class="inline-form" v-if="showDealForm" ref="dealFormRef">
-              <div class="if-title">{{ editingDeal ? '编辑成交' : '添加成交' }}
-                <button class="if-close" @click="showDealForm = false" aria-label="收起">✕</button>
-              </div>
-              <div class="df-tabs" v-if="!editingDeal">
-                <button type="button" class="df-tab" :class="{ active: activeTab === 'vehicle' }" @click="activeTab = 'vehicle'">
-                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>车辆
-                </button>
-                <button type="button" class="df-tab" :class="{ active: activeTab === 'plate' }" @click="activeTab = 'plate'">
-                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>两地牌
-                </button>
-              </div>
-              <div class="df-tab-hint" v-if="!editingDeal">两个 Tab 都填，会同时记录两条成交</div>
-
-              <div class="df-field" v-if="activeTab === 'vehicle'" :key="'vehicle'">
-                <label>车架号</label>
-                <input class="df-input" v-model.trim="formVehicle.vin" placeholder="VIN（选填）" maxlength="32" />
-              </div>
-              <div class="df-field" v-if="activeTab === 'vehicle'">
-                <label>车辆描述</label>
-                <input class="df-input" v-model.trim="formVehicle.vehicle_desc" placeholder="如 21款霸道4000 白色" />
-              </div>
-              <div class="df-field" v-if="activeTab === 'vehicle'">
-                <label>金额</label>
-                <input class="df-input" type="number" inputmode="decimal" v-model="formVehicle.amount" placeholder="车辆金额（选填）" />
-              </div>
-              <div class="df-field" v-if="activeTab === 'vehicle'">
-                <label>成交时间</label>
-                <input class="df-input" type="date" v-model="formVehicle.deal_time" />
-              </div>
-              <div class="df-field" v-if="activeTab === 'vehicle'">
-                <label>备注</label>
-                <input class="df-input" v-model.trim="formVehicle.remark" placeholder="选填" />
-              </div>
-
-              <template v-if="activeTab === 'plate'">
-                <div class="df-field">
-                  <label>口岸</label>
-                  <select class="df-input" v-model="formPlate.port">
-                    <option value="">选择口岸</option>
-                    <option v-for="p in PORTS" :key="p" :value="p">{{ p }}</option>
-                  </select>
-                </div>
-                <div class="df-field">
-                  <label>牌照</label>
-                  <div class="df-seg">
-                    <button type="button" :class="{ active: formPlate.plate_kind === '期牌' }" @click="formPlate.plate_kind = '期牌'">期牌</button>
-                    <button type="button" :class="{ active: formPlate.plate_kind === '现牌' }" @click="formPlate.plate_kind = '现牌'">现牌</button>
-                  </div>
-                </div>
-                <div class="df-field" v-if="formPlate.plate_kind === '现牌'">
-                  <label>车牌号</label>
-                  <input class="df-input" v-model.trim="formPlate.plate_number" placeholder="车牌号码" />
-                </div>
-                <div class="df-field">
-                  <label>金额</label>
-                  <input class="df-input" type="number" inputmode="decimal" v-model="formPlate.amount" placeholder="办牌金额（选填）" />
-                </div>
-                <div class="df-field">
-                  <label>成交时间</label>
-                  <input class="df-input" type="date" v-model="formPlate.deal_time" />
-                </div>
-                <div class="df-field">
-                  <label>备注</label>
-                  <input class="df-input" v-model.trim="formPlate.remark" placeholder="选填" />
-                </div>
-              </template>
-
-              <div class="df-btns">
-                <button class="btn-plain" @click="showDealForm = false">取消</button>
-                <button class="btn-primary" :disabled="loading" @click="submitDeal">{{ loading ? '保存中…' : '保存' }}</button>
-              </div>
-            </div>
-
+          <div class="rt-body" v-show="contentTab === 'deals'">
             <div class="deal-list" v-if="deals.length">
               <div class="deal-item" v-for="d in deals" :key="d.id">
                 <div class="deal-tag" :class="d.deal_type">
@@ -267,7 +280,7 @@
                 </div>
               </div>
             </div>
-            <div v-else class="sec-empty">暂无成交记录</div>
+            <div v-else class="sec-empty">{{ readonly ? '暂无成交记录' : '暂无成交记录，点上方「成交登记」录入' }}</div>
           </div>
         </div>
       </div>
@@ -341,6 +354,7 @@ const formVisit = reactive({ visit_time: today(), needs: '', remark: '' })
 const showDealForm = ref(false)
 const editingDeal = ref(null)
 const activeTab = ref('vehicle')   // 'vehicle' | 'plate'
+const contentTab = ref('timeline') // 记录区 Tab：'timeline' 动态 | 'deals' 成交记录
 const formVehicle = reactive({ vin: '', vehicle_desc: '', amount: '', deal_time: today(), remark: '' })
 const formPlate = reactive({ port: '', plate_kind: '期牌', plate_number: '', amount: '', deal_time: today(), remark: '' })
 
@@ -363,6 +377,13 @@ const visit = computed(() => calcVisitStatus(props.customer?.last_visit_at))
 const totalAmount = computed(() => {
   const sum = deals.value.reduce((s, d) => s + (Number(d.amount) || 0), 0)
   return sum > 0 ? sum.toLocaleString() : null
+})
+const avatarChar = computed(() => (props.customer?.customer_name || '?').charAt(0))
+// 概要条「最近到店」：短日期 + 回访健康度文案
+const visitStat = computed(() => {
+  const s = props.customer?.last_visit_at
+  if (!s) return { text: '未回访', cls: 'danger' }
+  return { text: `${String(s).slice(5, 10)} · ${visit.value.text}`, cls: visit.value.class }
 })
 
 // AI 需求自动更新的留痕前缀（跟进 / 到店两个来源）
@@ -424,6 +445,7 @@ function toggleAction(type) {
 }
 function openAction(type) {
   if (type === 'deal') { openDealForm(null); return }
+  showDealForm.value = false // 唯一表单区：一次只展开一个表单
   if (type === 'visit') { resetVisitForm(); editingVisit.value = null }
   if (type === 'followup') followupDraft.value = ''
   if (type === 'needs') needsDraft.value = currentNeeds.value
@@ -433,6 +455,12 @@ function openAction(type) {
 }
 function closeAction() {
   actionType.value = null
+}
+
+// 成交登记动作：再点一次收起表单
+function toggleDeal() {
+  if (showDealForm.value) { showDealForm.value = false; return }
+  openDealForm(null)
 }
 
 // 头部⭐：已重点 → 走取消确认；未重点 → 打开标记重点表单
@@ -480,6 +508,7 @@ watch(
       actionType.value = null
       showDealForm.value = false
       editingVisit.value = null
+      contentTab.value = 'timeline'
       clearAiCheck()
       aiAnalyzing.value = false
       currentNeeds.value = props.customer?.current_needs || ''
@@ -503,6 +532,7 @@ function resetVisitForm() {
 }
 
 function openVisitForm(visitRow) {
+  showDealForm.value = false // 唯一表单区：一次只展开一个表单
   resetVisitForm()
   if (visitRow) {
     editingVisit.value = visitRow
@@ -744,6 +774,8 @@ function openDealForm(deal) {
     editingDeal.value = null
     activeTab.value = 'vehicle'           // 新增：默认车辆 Tab
   }
+  actionType.value = null                 // 唯一表单区：一次只展开一个表单
+  contentTab.value = 'deals'              // 打开成交表单时切到成交记录，录入与既有成交同屏
   showDealForm.value = true
   scrollFormIntoView(true)
 }
@@ -855,9 +887,16 @@ function confirmDeleteDeal(deal) {
 .cdp-loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 22px 0 8px; font-size: 13px; color: var(--text-tertiary); }
 .cdp-loading-dot { width: 16px; height: 16px; border: 2px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: cdp-spin 0.8s linear infinite; }
 @keyframes cdp-spin { to { transform: rotate(360deg); } }
-.cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); flex: 1; min-width: 0; }
-.cdp-health { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
-.health-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.cdp-avatar {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  background: var(--primary-light); color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700;
+}
+.cdp-titlewrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdp-health { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; }
+.health-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .cdp-health .success, .health-dot.success { color: #34C759; background: #34C759; }
 .cdp-health .warning, .health-dot.warning { color: var(--warning); background: var(--warning); }
 .cdp-health .danger, .health-dot.danger { color: var(--danger); background: var(--danger); }
@@ -868,24 +907,19 @@ function confirmDeleteDeal(deal) {
   transition: transform 0.15s, opacity 0.15s;
 }
 .cdp-close:active { transform: scale(0.9); opacity: 0.7; }
-.cdp-star {
-  width: 34px; height: 34px; border: 1px solid var(--border-glass); background: var(--bg-primary);
-  border-radius: 50%; color: var(--text-tertiary); cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+/* 重点开关：带文字胶囊，状态显性化 */
+.cdp-star-pill {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
+  padding: 7px 13px; border-radius: 99px; font-size: 12.5px; font-weight: 700; font-family: inherit;
+  background: var(--bg-primary); color: var(--text-tertiary);
+  border: 1px solid var(--border-glass); cursor: pointer;
+  transition: all 0.15s;
 }
-.cdp-star svg { width: 17px; height: 17px; }
-.cdp-star.on { background: var(--orange-light); border-color: rgba(255, 149, 0, 0.4); color: var(--warning); }
-.cdp-star:active { transform: scale(0.9); }
+.cdp-star-pill.on { background: var(--orange-light); border-color: rgba(255, 149, 0, 0.4); color: #EA580C; }
+.cdp-star-pill:active { transform: scale(0.95); }
 
-.cdp-section { border-top: 1px solid var(--border-glass); padding: 14px 0; }
-.sec-head { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
 .sec-icon { width: 15px; height: 15px; flex-shrink: 0; }
 .ic-danger { color: var(--danger); }
-.ic-blue { color: var(--primary); }
-.ic-green { color: var(--success); }
-.sec-count { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
-.sec-total { margin-left: auto; font-size: 13px; font-weight: 600; color: #EA580C; }
-.btn-add { margin-left: 8px; padding: 5px 12px; border-radius: 16px; background: var(--primary); color: #fff; font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
 .sec-empty { font-size: 13px; color: var(--text-tertiary); padding: 6px 0; line-height: 1.6; }
 
 /* ── 当前需求摘要卡 ── */
@@ -920,21 +954,53 @@ function confirmDeleteDeal(deal) {
   border-radius: 50%; animation: cdp-spin 0.8s linear infinite;
 }
 
-/* ── 三大主操作按钮行 ── */
+/* ── 客户概要条：重点状态 / 最近到店 / 累计成交 ── */
+.stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.stat { background: var(--bg-primary); border-radius: 11px; padding: 8px 11px; min-width: 0; }
+.stat .k { font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); }
+.stat .v { font-size: 12.5px; font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .v.org { color: #EA580C; }
+.stat .v.amt { color: #EA580C; }
+.stat .v.success { color: #1f7a3a; }
+.stat .v.warning { color: var(--warning); }
+.stat .v.danger { color: var(--danger); }
+.stat .v.mut { color: var(--text-tertiary); }
+
+/* ── 动作区：主操作按钮（移动端紧凑 chips，PC 展示副标题卡片）── */
+.zone-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 2px; margin: 2px 0 9px; }
 .act-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .act-chip {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
-  padding: 12px 6px; border-radius: 13px; border: 1.5px solid rgba(0, 122, 255, 0.4);
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 10px 4px; border-radius: 13px; border: 1.5px solid rgba(0, 122, 255, 0.4);
   background: var(--primary-light); color: var(--primary);
-  font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
-  transition: all 0.15s; min-width: 0;
+  font-family: inherit; cursor: pointer;
+  transition: all 0.15s;
 }
+.act-main { display: flex; align-items: center; gap: 5px; }
 .act-chip .act-ic { font-size: 15px; line-height: 1; }
+.act-chip .act-t { font-size: 13.5px; font-weight: 700; }
+.act-chip .act-sub { display: none; font-size: 10.5px; font-weight: 600; color: var(--text-tertiary); line-height: 1.3; text-align: center; }
 .act-chip:active { transform: scale(0.96); opacity: 0.8; }
 .act-chip.star { border-color: rgba(255, 149, 0, 0.45); background: var(--orange-light); color: #EA580C; }
 /* 展开状态：当前正打开的表单对应按钮高亮 */
 .act-chip.active { background: var(--primary); color: #fff; border-color: transparent; }
 .act-chip.star.active { background: var(--warning); color: #fff; border-color: transparent; }
+.act-chip.active .act-sub { color: rgba(255, 255, 255, 0.78); }
+
+/* ── 记录 Tab：动态 / 成交记录 ── */
+.record-tabs { border-top: 1px solid var(--border-glass); padding-top: 12px; }
+.rt-bar { display: flex; align-items: center; gap: 20px; border-bottom: 1.5px solid var(--border-glass); padding: 0 2px; }
+.rt-tab {
+  position: relative; display: flex; align-items: center; gap: 6px;
+  padding: 6px 2px 10px; border: none; background: none;
+  font-size: 14px; font-weight: 700; color: var(--text-secondary); font-family: inherit; cursor: pointer;
+}
+.rt-cnt { font-size: 11px; font-weight: 700; background: var(--bg-primary); color: var(--text-secondary); border-radius: 99px; padding: 1px 8px; }
+.rt-tab.on { color: var(--primary); }
+.rt-tab.on .rt-cnt { background: var(--primary-light); color: var(--primary); }
+.rt-tab.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1.5px; height: 3px; border-radius: 3px; background: var(--primary); }
+.rt-total { margin-left: auto; font-size: 13px; font-weight: 600; color: #EA580C; }
+.rt-body { padding-top: 12px; }
 
 /* ── 动态时间线 ── */
 .tl { display: flex; flex-direction: column; gap: 10px; }
@@ -1029,13 +1095,13 @@ function confirmDeleteDeal(deal) {
 .btn-plain { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border-glass); }
 .btn-submit:disabled, .df-btns button:disabled { opacity: 0.5; }
 
-/* PC：居中自适应大弹窗 —— 宽度 min(1160px, 94vw)，屏幕越小相对越宽；
-   内容分双列（需求+动态 | 成交），头部固定，内容区滚动 */
+/* PC：单列居中弹窗 —— 宽度 min(880px, 94vw)，信息按一条主轴排布（需求 → 概要 →
+   动作 → 唯一表单区 → 记录 Tab），无左右分栏、无空白列；头部固定，内容区滚动 */
 @media (min-width: 1024px) {
   .cdp-mask { align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.45); }
   .cdp-sheet {
-    width: min(1160px, 94vw);
-    max-height: min(880px, 92vh);
+    width: min(880px, 94vw);
+    max-height: min(900px, 92vh);
     height: auto;
     border-radius: 20px;
     padding: 0;
@@ -1045,7 +1111,7 @@ function confirmDeleteDeal(deal) {
   }
   .cdp-handle { display: none; }
 
-  /* PC 无滚动抽屉，头部不需要吸顶/分隔线，保持原静态布局 */
+  /* PC 无滚动抽屉，头部静态即可 */
   .cdp-header {
     position: static; top: auto;
     background: transparent; border-bottom: 1px solid var(--border-glass); box-shadow: none;
@@ -1053,34 +1119,43 @@ function confirmDeleteDeal(deal) {
     flex-shrink: 0;
   }
   .cdp-title { font-size: 19px; }
+  .cdp-health { font-size: 12px; }
   .cdp-loading { padding: 16px 28px 6px; }
 
   .cdp-body {
     flex: 1;
     min-height: 0;
-    display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    column-gap: 30px;
-    padding: 0 28px;
     overflow-y: auto;
-    align-items: start;
+    padding: 16px 28px 26px;
   }
-  .cdp-col { min-width: 0; }
-  .cdp-col .cdp-section { border-top: none; border-bottom: 1px solid var(--border-glass); padding: 6px 0 16px; }
-  .cdp-col .cdp-section:last-child { border-bottom: none; }
-  .need-summary { margin-top: 14px; }
 
-  .btn-add:hover { filter: brightness(1.08); }
-  .need-btn:hover, .ns-edit:hover { filter: brightness(0.97); }
+  /* 概要条 PC 加大 */
+  .stat-strip { gap: 10px; margin-bottom: 14px; }
+  .stat { padding: 10px 14px; border-radius: 12px; }
+  .stat .k { font-size: 11px; }
+  .stat .v { font-size: 14px; font-weight: 800; }
+
+  /* 动作卡：PC 展示副标题 */
+  .act-chip { padding: 13px 6px 12px; border-radius: 14px; gap: 3px; }
+  .act-chip .act-t { font-size: 14.5px; }
+  .act-chip .act-sub { display: block; }
+
+  /* 记录 Tab */
+  .rt-tab { font-size: 14.5px; }
+
+  /* 内联表单：输入框在浅底卡片上，改为白底提升对比 */
+  .inline-form { background: var(--surface); border-color: var(--border-glass); box-shadow: 0 8px 20px -12px rgba(15, 23, 42, 0.15); scroll-margin-top: 8px; }
+  .df-field { margin-bottom: 10px; }
+  .df-btns { margin-top: 2px; }
+
+  .ns-edit:hover { filter: brightness(0.97); }
   .deal-ops span:hover { color: var(--primary); }
   .deal-ops span.danger:hover { color: var(--danger); }
   .tl-ops span:hover { color: var(--primary); }
   .tl-ops span.danger:hover { color: var(--danger); }
   .act-chip:hover { border-color: var(--primary); filter: brightness(1.02); }
-
-  /* 内联表单：输入框在浅底卡片上，改为白底提升对比 */
-  .inline-form { background: var(--surface); border-color: var(--border-glass); box-shadow: 0 8px 20px -12px rgba(15, 23, 42, 0.15); }
-  .df-field { margin-bottom: 10px; }
-  .df-btns { margin-top: 2px; }
+  .act-chip.star:hover { border-color: var(--warning); }
+  .rt-tab:hover { color: var(--primary); }
+  .cdp-star-pill:hover { filter: brightness(0.97); }
 }
 </style>
