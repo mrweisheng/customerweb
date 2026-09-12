@@ -33,7 +33,7 @@
             <div class="ns-head">
               <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
               <span>当前需求</span>
-              <button v-if="!readonly" class="ns-edit" @click="openNeedsEntry">变更</button>
+              <button v-if="!readonly && customer.is_priority" class="ns-edit" @click="toggleAction('needs')">变更</button>
             </div>
             <div class="ns-text" :class="{ empty: !currentNeeds }">{{ currentNeeds || '暂无需求记录' }}</div>
             <div class="ns-hint" v-if="!readonly">登记到店 / 提交跟进时自动更新，AI 会在需求变化时提示</div>
@@ -44,17 +44,82 @@
             <span class="ai-pending-dot"></span>AI 正在分析本次登记，需求如有变化会自动更新…
           </div>
 
-          <!-- 三大主操作：直接可见，无需二级菜单（成交走下方成交记录区） -->
+          <!-- 主操作：未重点=到店/标重点；已重点=到店/更新跟进。点击就地展开表单，不再弹层 -->
           <div class="act-row" v-if="!readonly">
-            <button class="act-chip" @click="openVisitEntry">
+            <button class="act-chip" :class="{ active: actionType === 'visit' }" @click="toggleAction('visit')">
               <span class="act-ic">📍</span>登记到店
             </button>
-            <button class="act-chip" @click="openFollowupEntry">
+            <button v-if="customer.is_priority" class="act-chip" :class="{ active: actionType === 'followup' }" @click="toggleAction('followup')">
               <span class="act-ic">💬</span>更新跟进
             </button>
-            <button v-if="!customer.is_priority" class="act-chip star" @click="openPriorityEntry">
+            <button v-if="!customer.is_priority" class="act-chip star" :class="{ active: actionType === 'priority' }" @click="toggleAction('priority')">
               <span class="act-ic">⭐</span>标记重点
             </button>
+          </div>
+
+          <!-- 内联操作区：在面板内就地展开，不弹二级弹层 -->
+          <div class="inline-form" v-if="actionType && actionType !== 'deal'" ref="inlineFormRef">
+            <div class="if-title">{{ actionType === 'visit' && editingVisit ? '编辑到店' : (formTitles[actionType] || '') }}
+              <button class="if-close" @click="closeAction" aria-label="收起">✕</button>
+            </div>
+
+            <!-- 到店（登记/编辑） -->
+            <template v-if="actionType === 'visit'">
+              <div class="df-field">
+                <label>到店时间</label>
+                <input class="df-input" type="date" v-model="formVisit.visit_time" />
+              </div>
+              <div class="df-field">
+                <label>需求{{ editingVisit && editingVisit.is_deal ? '（选填）' : '（必填）' }}</label>
+                <textarea
+                  class="df-input"
+                  v-model.trim="formVisit.needs"
+                  rows="2"
+                  :placeholder="formVisit.needs || currentNeeds ? '默认带入当前需求，可修改' : '客户本次说了什么需求'"
+                ></textarea>
+              </div>
+              <div class="df-field">
+                <label>备注</label>
+                <input class="df-input" v-model.trim="formVisit.remark" placeholder="选填" />
+              </div>
+              <div class="df-tab-hint" v-if="!editingVisit">保存后自动标为重点；AI 会分析本次内容，需求有变化会自动更新</div>
+              <div class="df-tab-hint" v-else-if="editingVisit.is_deal">该到店由成交记录自动生成，成交详情请在下方「成交记录」中编辑</div>
+            </template>
+
+            <!-- 跟进 -->
+            <template v-else-if="actionType === 'followup'">
+              <div class="df-field">
+                <label>本次沟通内容</label>
+                <textarea class="df-input" v-model.trim="followupDraft" rows="3" placeholder="做了什么 / 客户说了什么，如：电话聊了，预算从40万降到30万，想看X3"></textarea>
+              </div>
+              <div class="df-tab-hint">保存后 AI 在后台分析本次跟进，需求有变化会自动更新并提示</div>
+            </template>
+
+            <!-- 需求变更 -->
+            <template v-else-if="actionType === 'needs'">
+              <div class="df-field">
+                <label>当前需求</label>
+                <textarea class="df-input" v-model.trim="needsDraft" rows="3" placeholder="客户当前关注点，如：黑色SUV，预算40万，GLC/X3 对比中" maxlength="2000"></textarea>
+              </div>
+            </template>
+
+            <!-- 标记重点 -->
+            <template v-else-if="actionType === 'priority'">
+              <div class="df-field">
+                <label>当前需求{{ currentNeeds ? '（选填，已有一份）' : '' }}</label>
+                <textarea class="df-input" v-model.trim="priorityDraft" rows="3" :placeholder="currentNeeds ? '不填则沿用现有需求' : '写清客户当前需求'" maxlength="2000"></textarea>
+              </div>
+              <div class="df-tab-hint">填写的需求会同步为一条跟进记录</div>
+            </template>
+
+            <div class="df-btns">
+              <button class="btn-plain" @click="closeAction">取消</button>
+              <button
+                class="btn-primary"
+                :disabled="loading"
+                @click="actionType === 'visit' ? submitVisit() : actionType === 'followup' ? submitFollowupAction() : actionType === 'needs' ? submitNeedsAction() : submitPriorityAction()"
+              >{{ loading ? '保存中…' : '保存' }}</button>
+            </div>
           </div>
 
           <!-- 动态时间线：跟进 / 邀约 / 到店 / 成交到店 / 需求变更 统一倒序 -->
@@ -98,6 +163,82 @@
               <span class="sec-total" v-if="totalAmount">累计 ¥{{ totalAmount }}</span>
               <button v-if="!readonly" class="btn-add" @click="openDealForm(null)">+ 添加</button>
             </div>
+
+            <!-- 成交内联表单：结构化字段，不交给 AI -->
+            <div class="inline-form" v-if="showDealForm" ref="dealFormRef">
+              <div class="if-title">{{ editingDeal ? '编辑成交' : '添加成交' }}
+                <button class="if-close" @click="showDealForm = false" aria-label="收起">✕</button>
+              </div>
+              <div class="df-tabs" v-if="!editingDeal">
+                <button type="button" class="df-tab" :class="{ active: activeTab === 'vehicle' }" @click="activeTab = 'vehicle'">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>车辆
+                </button>
+                <button type="button" class="df-tab" :class="{ active: activeTab === 'plate' }" @click="activeTab = 'plate'">
+                  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>两地牌
+                </button>
+              </div>
+              <div class="df-tab-hint" v-if="!editingDeal">两个 Tab 都填，会同时记录两条成交</div>
+
+              <div class="df-field" v-if="activeTab === 'vehicle'" :key="'vehicle'">
+                <label>车架号</label>
+                <input class="df-input" v-model.trim="formVehicle.vin" placeholder="VIN（选填）" maxlength="32" />
+              </div>
+              <div class="df-field" v-if="activeTab === 'vehicle'">
+                <label>车辆描述</label>
+                <input class="df-input" v-model.trim="formVehicle.vehicle_desc" placeholder="如 21款霸道4000 白色" />
+              </div>
+              <div class="df-field" v-if="activeTab === 'vehicle'">
+                <label>金额</label>
+                <input class="df-input" type="number" inputmode="decimal" v-model="formVehicle.amount" placeholder="车辆金额（选填）" />
+              </div>
+              <div class="df-field" v-if="activeTab === 'vehicle'">
+                <label>成交时间</label>
+                <input class="df-input" type="date" v-model="formVehicle.deal_time" />
+              </div>
+              <div class="df-field" v-if="activeTab === 'vehicle'">
+                <label>备注</label>
+                <input class="df-input" v-model.trim="formVehicle.remark" placeholder="选填" />
+              </div>
+
+              <template v-if="activeTab === 'plate'">
+                <div class="df-field">
+                  <label>口岸</label>
+                  <select class="df-input" v-model="formPlate.port">
+                    <option value="">选择口岸</option>
+                    <option v-for="p in PORTS" :key="p" :value="p">{{ p }}</option>
+                  </select>
+                </div>
+                <div class="df-field">
+                  <label>牌照</label>
+                  <div class="df-seg">
+                    <button type="button" :class="{ active: formPlate.plate_kind === '期牌' }" @click="formPlate.plate_kind = '期牌'">期牌</button>
+                    <button type="button" :class="{ active: formPlate.plate_kind === '现牌' }" @click="formPlate.plate_kind = '现牌'">现牌</button>
+                  </div>
+                </div>
+                <div class="df-field" v-if="formPlate.plate_kind === '现牌'">
+                  <label>车牌号</label>
+                  <input class="df-input" v-model.trim="formPlate.plate_number" placeholder="车牌号码" />
+                </div>
+                <div class="df-field">
+                  <label>金额</label>
+                  <input class="df-input" type="number" inputmode="decimal" v-model="formPlate.amount" placeholder="办牌金额（选填）" />
+                </div>
+                <div class="df-field">
+                  <label>成交时间</label>
+                  <input class="df-input" type="date" v-model="formPlate.deal_time" />
+                </div>
+                <div class="df-field">
+                  <label>备注</label>
+                  <input class="df-input" v-model.trim="formPlate.remark" placeholder="选填" />
+                </div>
+              </template>
+
+              <div class="df-btns">
+                <button class="btn-plain" @click="showDealForm = false">取消</button>
+                <button class="btn-primary" :disabled="loading" @click="submitDeal">{{ loading ? '保存中…' : '保存' }}</button>
+              </div>
+            </div>
+
             <div class="deal-list" v-if="deals.length">
               <div class="deal-item" v-for="d in deals" :key="d.id">
                 <div class="deal-tag" :class="d.deal_type">
@@ -131,174 +272,6 @@
         </div>
       </div>
 
-      <!-- ── 到店（登记 / 编辑共用）：needs 必填，自动标重点 + 同步当前需求 + 生成第一条跟进 ── -->
-      <div class="df-mask" v-if="actionType === 'visit'" @click="closeAction">
-        <div class="df-sheet" @click.stop>
-          <div class="df-handle"></div>
-          <div class="df-title">{{ customerName }}<span class="df-title-sub"> · {{ editingVisit ? '编辑到店' : '登记到店' }}</span></div>
-          <div class="df-block">
-            <div class="df-field">
-              <label>到店时间</label>
-              <input class="df-input" type="date" v-model="formVisit.visit_time" />
-            </div>
-            <div class="df-field df-field-wide">
-              <label>需求{{ editingVisit && editingVisit.is_deal ? '（选填）' : '（必填）' }}</label>
-              <textarea
-                class="df-input"
-                v-model.trim="formVisit.needs"
-                rows="2"
-                :placeholder="formVisit.needs || currentNeeds ? '默认带入当前需求，可修改' : '客户本次说了什么需求'"
-              ></textarea>
-            </div>
-            <div class="df-field df-field-wide">
-              <label>备注</label>
-              <input class="df-input" v-model.trim="formVisit.remark" placeholder="选填" />
-            </div>
-          </div>
-          <div class="df-tab-hint" v-if="!editingVisit">本次将记录：到店 · {{ formVisit.visit_time }}，自动标为重点；AI 会分析本次内容，需求有变化会自动更新</div>
-          <div class="df-tab-hint" v-if="editingVisit && editingVisit.is_deal">该到店由成交记录自动生成，成交详情请在「成交记录」中编辑</div>
-          <div class="df-btns">
-            <button class="btn-plain" @click="closeAction">取消</button>
-            <button class="btn-primary" :disabled="loading" @click="submitVisit">{{ loading ? '保存中…' : '保存' }}</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 跟进：一句话内容，AI 自动判断是否需要更新当前需求 -->
-      <div class="df-mask" v-if="actionType === 'followup'" @click="closeAction">
-        <div class="df-sheet" @click.stop>
-          <div class="df-handle"></div>
-          <div class="df-title">{{ customerName }}<span class="df-title-sub"> · 跟进</span></div>
-          <div class="df-block">
-            <div class="df-field df-field-wide">
-              <label>本次沟通内容</label>
-              <textarea class="df-input" v-model.trim="followupDraft" rows="3" placeholder="做了什么 / 客户说了什么，如：电话聊了，预算从40万降到30万，想看X3"></textarea>
-            </div>
-          </div>
-          <div class="df-tab-hint">保存后 AI 在后台分析本次跟进，需求有变化会自动更新并提示</div>
-          <div class="df-btns">
-            <button class="btn-plain" @click="closeAction">取消</button>
-            <button class="btn-primary" :disabled="loading" @click="submitFollowupAction">{{ loading ? '保存中…' : '保存' }}</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 需求变更：直接改当前需求快照，留痕到时间线 -->
-      <div class="df-mask" v-if="actionType === 'needs'" @click="closeAction">
-        <div class="df-sheet" @click.stop>
-          <div class="df-handle"></div>
-          <div class="df-title">{{ customerName }}<span class="df-title-sub"> · 需求变更</span></div>
-          <div class="df-block">
-            <div class="df-field df-field-wide">
-              <label>当前需求</label>
-              <textarea class="df-input" v-model.trim="needsDraft" rows="3" placeholder="客户当前关注点，如：黑色SUV，预算40万，GLC/X3 对比中" maxlength="2000"></textarea>
-            </div>
-          </div>
-          <div class="df-btns">
-            <button class="btn-plain" @click="closeAction">取消</button>
-            <button class="btn-primary" :disabled="loading" @click="submitNeedsAction">{{ loading ? '保存中…' : '保存' }}</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 标记重点：建议带一句需求（无需求时必填） -->
-      <div class="df-mask" v-if="actionType === 'priority'" @click="closeAction">
-        <div class="df-sheet" @click.stop>
-          <div class="df-handle"></div>
-          <div class="df-title">{{ customerName }}<span class="df-title-sub"> · 标记重点</span></div>
-          <div class="df-block">
-            <div class="df-field df-field-wide">
-              <label>当前需求{{ currentNeeds ? '（选填，已有一份）' : '' }}</label>
-              <textarea class="df-input" v-model.trim="priorityDraft" rows="3" :placeholder="currentNeeds ? '不填则沿用现有需求' : '写清客户当前需求'" maxlength="2000"></textarea>
-            </div>
-          </div>
-          <div class="df-tab-hint">填写的需求会同步为一条跟进记录</div>
-          <div class="df-btns">
-            <button class="btn-plain" @click="closeAction">取消</button>
-            <button class="btn-primary" :disabled="loading" @click="submitPriorityAction">{{ loading ? '保存中…' : '标为重点' }}</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 成交表单（结构化字段，不由 AI 拆解）：车辆区与两地牌区同时显示、互不干扰 -->
-      <div class="df-mask" v-if="showDealForm" @click="showDealForm = false">
-        <div class="df-sheet" @click.stop>
-          <div class="df-handle"></div>
-          <div class="df-title">{{ customerName }}<span class="df-title-sub"> · {{ editingDeal ? '编辑成交' : '添加成交' }}</span></div>
-
-          <div class="df-tabs" v-if="!editingDeal">
-            <button type="button" class="df-tab" :class="{ active: activeTab === 'vehicle' }" @click="activeTab = 'vehicle'">
-              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>车辆
-            </button>
-            <button type="button" class="df-tab" :class="{ active: activeTab === 'plate' }" @click="activeTab = 'plate'">
-              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>两地牌
-            </button>
-          </div>
-          <div class="df-tab-hint" v-if="!editingDeal">两个 Tab 都填，会同时记录两条成交</div>
-
-          <div class="df-block" v-if="activeTab === 'vehicle'" :key="'vehicle'">
-            <div class="df-field">
-              <label>车架号</label>
-              <input class="df-input" v-model.trim="formVehicle.vin" placeholder="VIN（选填）" maxlength="32" />
-            </div>
-            <div class="df-field">
-              <label>车辆描述</label>
-              <input class="df-input" v-model.trim="formVehicle.vehicle_desc" placeholder="如 21款霸道4000 白色" />
-            </div>
-            <div class="df-field">
-              <label>金额</label>
-              <input class="df-input" type="number" inputmode="decimal" v-model="formVehicle.amount" placeholder="车辆金额（选填）" />
-            </div>
-            <div class="df-field">
-              <label>成交时间</label>
-              <input class="df-input" type="date" v-model="formVehicle.deal_time" />
-            </div>
-            <div class="df-field df-field-wide">
-              <label>备注</label>
-              <input class="df-input" v-model.trim="formVehicle.remark" placeholder="选填" />
-            </div>
-          </div>
-
-          <div class="df-block" v-else :key="'plate'">
-            <div class="df-field">
-              <label>口岸</label>
-              <select class="df-input" v-model="formPlate.port">
-                <option value="">选择口岸</option>
-                <option v-for="p in PORTS" :key="p" :value="p">{{ p }}</option>
-              </select>
-            </div>
-            <div class="df-field">
-              <label>牌照</label>
-              <div class="df-seg">
-                <button type="button" :class="{ active: formPlate.plate_kind === '期牌' }" @click="formPlate.plate_kind = '期牌'">期牌</button>
-                <button type="button" :class="{ active: formPlate.plate_kind === '现牌' }" @click="formPlate.plate_kind = '现牌'">现牌</button>
-              </div>
-            </div>
-            <div class="df-field" v-if="formPlate.plate_kind === '现牌'">
-              <label>车牌号</label>
-              <input class="df-input" v-model.trim="formPlate.plate_number" placeholder="车牌号码" />
-            </div>
-            <div class="df-field">
-              <label>金额</label>
-              <input class="df-input" type="number" inputmode="decimal" v-model="formPlate.amount" placeholder="办牌金额（选填）" />
-            </div>
-            <div class="df-field">
-              <label>成交时间</label>
-              <input class="df-input" type="date" v-model="formPlate.deal_time" />
-            </div>
-            <div class="df-field">
-              <label>备注</label>
-              <input class="df-input" v-model.trim="formPlate.remark" placeholder="选填" />
-            </div>
-          </div>
-
-          <div class="df-btns">
-            <button class="btn-plain" @click="showDealForm = false">取消</button>
-            <button class="btn-primary" :disabled="loading" @click="submitDeal">{{ loading ? '保存中…' : '保存' }}</button>
-          </div>
-        </div>
-      </div>
-
       <!-- 确认弹窗（取消重点 / 删除） -->
       <ConfirmDialog
         :show="confirm.show"
@@ -317,7 +290,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import api from '../utils/api'
 import { calcVisitStatus, leadDateShort } from '../utils/constants'
 import { useToast } from '../composables/useToast'
@@ -433,23 +406,29 @@ function formatAmount(n) {
   return Number(n).toLocaleString()
 }
 
-// ── 动作入口：三大操作 + 需求变更，直接开对应表单 ──────────
-function openVisitEntry() {
-  resetVisitForm()
-  editingVisit.value = null
-  actionType.value = 'visit'
+// ── 动作入口：表单在面板内就地展开，不弹二级弹层 ──────────
+const formTitles = { visit: '登记到店', followup: '更新跟进', needs: '变更需求', priority: '标记重点' }
+const inlineFormRef = ref(null)
+const dealFormRef = ref(null)
+
+function scrollFormIntoView(deal = false) {
+  nextTick(() => {
+    (deal ? dealFormRef.value : inlineFormRef.value)?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+  })
 }
-function openFollowupEntry() {
-  followupDraft.value = ''
-  actionType.value = 'followup'
+
+function toggleAction(type) {
+  if (actionType.value === type) { closeAction(); return }
+  openAction(type)
 }
-function openNeedsEntry() {
-  needsDraft.value = currentNeeds.value
-  actionType.value = 'needs'
-}
-function openPriorityEntry() {
-  priorityDraft.value = ''
-  actionType.value = 'priority'
+function openAction(type) {
+  if (type === 'deal') { openDealForm(null); return }
+  if (type === 'visit') { resetVisitForm(); editingVisit.value = null }
+  if (type === 'followup') followupDraft.value = ''
+  if (type === 'needs') needsDraft.value = currentNeeds.value
+  if (type === 'priority') priorityDraft.value = ''
+  actionType.value = type
+  scrollFormIntoView(false)
 }
 function closeAction() {
   actionType.value = null
@@ -535,6 +514,7 @@ function openVisitForm(visitRow) {
     editingVisit.value = null
   }
   actionType.value = 'visit'
+  scrollFormIntoView(false)
 }
 
 async function submitVisit() {
@@ -764,6 +744,7 @@ function openDealForm(deal) {
     activeTab.value = 'vehicle'           // 新增：默认车辆 Tab
   }
   showDealForm.value = true
+  scrollFormIntoView(true)
 }
 
 async function submitDeal() {
@@ -995,31 +976,33 @@ function confirmDeleteDeal(deal) {
 .deal-ops span:active { opacity: 0.5; }
 .deal-ops .danger { color: var(--danger); }
 
-/* ── 表单覆盖层（动作表单 / 成交表单共用）── */
-.df-mask {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4);
-  display: flex; align-items: flex-end; justify-content: center; z-index: var(--z-overlay);
+/* ── 内联操作表单（面板内就地展开，不弹二级弹层）── */
+.inline-form {
+  background: var(--bg-primary);
+  border: 1.5px solid rgba(0, 122, 255, 0.35);
+  border-radius: 14px;
+  padding: 13px 14px;
+  margin-bottom: 12px;
 }
-.df-sheet {
-  width: 100%; background: var(--surface); border-radius: 20px 20px 0 0;
-  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
-  max-height: 96vh; overflow-y: auto;
+.if-title {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 11px;
 }
-.df-handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); margin: 0 auto 14px; }
-.df-title { font-size: 19px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
-.df-title-sub { font-size: 15px; font-weight: 500; color: var(--text-secondary); }
+.if-close {
+  width: 26px; height: 26px; border: none; background: var(--surface);
+  border-radius: 8px; color: var(--text-secondary); font-size: 13px;
+  cursor: pointer; line-height: 1;
+}
+.if-close:active { opacity: 0.6; }
 
-.df-tabs { display: flex; gap: 4px; background: var(--bg-primary); border-radius: 13px; padding: 4px; margin-bottom: 8px; }
+.df-tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 13px; padding: 4px; margin-bottom: 8px; }
 .df-tab { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; font-family: inherit; }
 .df-tab .ic { width: 16px; height: 16px; }
 .df-tab.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .df-tab-hint { font-size: 12px; color: var(--text-tertiary); margin-bottom: 14px; }
 
-.df-block { background: var(--bg-primary); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
 .df-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .df-field:last-child { margin-bottom: 0; }
-/* PC 端 df-block 为双列网格，带此类的字段占满整行（长文本/备注类） */
-.df-field-wide { grid-column: 1 / -1; }
 .df-field > label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 .df-input {
   width: 100%; padding: 13px 14px; border: 1px solid var(--border-glass); border-radius: 12px;
@@ -1089,19 +1072,9 @@ function confirmDeleteDeal(deal) {
   .tl-ops span.danger:hover { color: var(--danger); }
   .act-chip:hover { border-color: var(--primary); filter: brightness(1.02); }
 
-  /* 内嵌表单：居中自适应，字段双列排布降低表单高度 */
-  .df-mask { align-items: center; }
-  .df-sheet {
-    width: min(720px, 94vw);
-    border-radius: 18px;
-    padding: 26px 28px;
-    max-height: calc(100vh - 72px);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-  }
-  .df-handle { display: none; }
-  .df-block { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; padding: 18px; }
-  .df-field { margin-bottom: 0; }
+  /* 内联表单：输入框在浅底卡片上，改为白底提升对比 */
+  .inline-form { background: var(--surface); border-color: var(--border-glass); box-shadow: 0 8px 20px -12px rgba(15, 23, 42, 0.15); }
+  .df-field { margin-bottom: 10px; }
   .df-btns { margin-top: 2px; }
-  /* 动作选择：PC 三列 */
 }
 </style>
