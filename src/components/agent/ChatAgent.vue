@@ -34,6 +34,7 @@
       :committing="committing"
       @confirm="onConfirm"
       @cancel="onCancelImport"
+      @end="onEndConversation"
     />
     <Composer
       :busy="state.busy"
@@ -123,11 +124,9 @@ async function onSend({ text, image }) {
           scrollToBottom()
         },
         onToolResult: (name, content) => {
-          // 需要找到与本次 tool_call 对应的 tool_call_id。recordToolCall 里
-          // 我们刚追加过一条占位 tool 消息，反向查找最近的占位填充。
-          const placeholder = [...state.messages].reverse().find(
-            (m) => m.role === 'tool' && m._pending,
-          )
+          // 工具结果按调用顺序到达，占位 tool 消息也是按调用顺序追加的：
+          // 取最早的未填充占位回填，多工具调用时才不会错配 id
+          const placeholder = state.messages.find((m) => m.role === 'tool' && m._pending)
           if (placeholder?.tool_call_id) recordToolResult(placeholder.tool_call_id, content)
           scrollToBottom()
         },
@@ -180,6 +179,18 @@ function onCancelImport() {
   clearPendingImport()
   // 用户放弃这张，队列里若还有图继续下一张
   sendNextPendingFile()
+}
+// 全部重复：无需导入，用户选择结束当前对话——
+// 与导入完成同款收尾（finalizeSession）：消息留在屏幕上，刷新即清空，
+// 后续消息不再携带本轮上下文；排队中的截图一并丢弃
+function onEndConversation() {
+  if (!state.pendingImport) return
+  clearPendingImport()
+  appendAssistantDelta('本轮识别的联系人均已存在，无需导入。对话已结束，发新截图可开始新一轮识别。')
+  finishAssistant()
+  finalizeSession()
+  setPendingImportFiles([])
+  scrollToBottom()
 }
 onBeforeUnmount(() => {
   // 离开页面丢弃未处理的队列，避免下次进来自动发陈旧图片

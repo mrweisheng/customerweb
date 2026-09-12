@@ -123,25 +123,48 @@ export async function streamAgentChat({ messages, imageBase64 }, callbacks = {})
 /**
  * 把用户当前累积的消息序列（含 user/assistant/tool）转换成发给后端的 messages 数组。
  * 后端会自己追加系统提示词，所以这里不需要 system 角色。
+ * 注意：
+ *  - recordToolCall 存的是 OpenAI 原生嵌套结构 { id, function: { name, arguments } }，
+ *    这里统一从 tc.function 取值（并兼容扁平旧结构），否则 name/arguments 会丢
+ *  - 只有存在对应 tool 响应的 tool_calls 才下发：刷新恢复后的历史只有 assistant
+ *    消息（tool 消息不持久化），悬空的 tool_calls 会被 LLM 直接拒绝
  */
 export function buildRequestMessages(messages) {
-  return messages
-    .filter((m) => ['user', 'assistant', 'tool'].includes(m.role))
-    .map((m) => {
-      if (m.role === 'tool') {
-        return { role: 'tool', tool_call_id: m.tool_call_id, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }
-      }
-      if (m.role === 'assistant' && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
-        return {
-          role: 'assistant',
-          content: m.content || null,
-          tool_calls: m.tool_calls.map((tc) => ({
+  const answered = new Set(
+    messages.filter((m) => m.role === 'tool' && m.tool_call_id).map((m) => m.tool_call_id),
+  )
+  const out = []
+  for (const m of messages) {
+    if (!['user', 'assistant', 'tool'].includes(m.role)) continue
+    if (m.role === 'tool') {
+      out.push({ role: 'tool', tool_call_id: m.tool_call_id, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) })
+      continue
+    }
+    if (m.role === 'assistant' && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
+      const toolCalls = m.tool_calls
+        .filter((tc) => answered.has(tc.id))
+        .map((tc) => {
+          const fn = tc.function || {}
+          const raw = fn.arguments ?? tc.arguments
+          return {
             id: tc.id,
             type: 'function',
-            function: { name: tc.name, arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments || {}) },
-          })),
-        }
+            function: {
+              name: fn.name || tc.name,
+              arguments: typeof raw === 'string' ? raw : JSON.stringify(raw || {}),
+            },
+          }
+        })
+      const content = typeof m.content === 'string' ? m.content : ''
+      if (toolCalls.length === 0) {
+        // tool_calls 全部悬空：降级为纯文本 assistant 消息（无文本则整条丢弃）
+        if (content) out.push({ role: 'assistant', content })
+        continue
       }
-      return { role: m.role, content: typeof m.content === 'string' ? m.content : '' }
-    })
+      out.push({ role: 'assistant', content: content || null, tool_calls: toolCalls })
+      continue
+    }
+    out.push({ role: m.role, content: typeof m.content === 'string' ? m.content : '' })
+  }
+  return out
 }

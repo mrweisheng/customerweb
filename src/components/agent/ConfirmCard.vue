@@ -1,5 +1,5 @@
 <template>
-  <div class="confirm-card">
+  <div class="confirm-card" :class="{ 'all-dup': allDuplicates }">
     <div class="confirm-header">
       <div class="confirm-title">识别结果 · 待确认</div>
       <div class="confirm-stats">
@@ -8,6 +8,12 @@
         <span v-if="existingCount > 0" class="stat-exists">{{ existingCount }} 已存在</span>
       </div>
     </div>
+
+    <!-- 全部重复：无可导入项，不展示提交按钮，改为询问是否结束对话 -->
+    <div v-if="allDuplicates" class="all-dup-notice">
+      识别到的 {{ contacts.length }} 位联系人均已存在，无需重复导入。是否结束当前对话？
+    </div>
+
     <div class="confirm-list">
       <div v-for="(c, i) in contacts" :key="i" class="confirm-row" :class="{ exists: c.exists }">
         <span class="row-date">{{ c.date }}</span>
@@ -18,12 +24,24 @@
         </span>
       </div>
     </div>
+
+    <!-- 部分重复：提示已存在项的处理方式，导入流程保持不变 -->
+    <div v-if="!allDuplicates && existingCount > 0" class="dup-hint">
+      已存在的 {{ existingCount }} 位将自动跳过，不会重复入库
+    </div>
+
     <div class="confirm-actions">
-      <button class="btn-cancel" :disabled="committing" @click="$emit('cancel')">取消</button>
-      <button class="btn-confirm" :disabled="committing" @click="$emit('confirm')">
-        <span v-if="committing">导入中…</span>
-        <span v-else>✓ 确认导入 {{ newCount > 0 ? newCount : '' }} 位新客户</span>
-      </button>
+      <template v-if="allDuplicates">
+        <button class="btn-cancel" :disabled="committing" @click="$emit('cancel')">继续对话</button>
+        <button class="btn-end" :disabled="committing" @click="$emit('end')">✓ 结束当前对话</button>
+      </template>
+      <template v-else>
+        <button class="btn-cancel" :disabled="committing" @click="$emit('cancel')">取消</button>
+        <button class="btn-confirm" :disabled="committing" @click="$emit('confirm')">
+          <span v-if="committing">导入中…</span>
+          <span v-else>✓ 确认导入 {{ newCount > 0 ? newCount : '' }} 位新客户</span>
+        </button>
+      </template>
     </div>
   </div>
 </template>
@@ -33,9 +51,10 @@ const props = defineProps({
   contacts: { type: Array, required: true },
   committing: { type: Boolean, default: false },
 })
-defineEmits(['confirm', 'cancel'])
+defineEmits(['confirm', 'cancel', 'end'])
 const newCount = computed(() => props.contacts.filter((c) => !c.exists).length)
 const existingCount = computed(() => props.contacts.filter((c) => c.exists).length)
+const allDuplicates = computed(() => props.contacts.length > 0 && newCount.value === 0)
 </script>
 <style scoped>
 .confirm-card {
@@ -45,6 +64,22 @@ const existingCount = computed(() => props.contacts.filter((c) => c.exists).leng
   background: var(--surface);
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 122, 255, 0.10);
+}
+/* 全部重复：整卡转警示色，弱化"待确认"感 */
+.confirm-card.all-dup {
+  border-color: rgba(255, 149, 0, 0.55);
+  box-shadow: 0 8px 24px rgba(255, 149, 0, 0.10);
+}
+.confirm-card.all-dup .confirm-header { background: var(--orange-light); }
+.confirm-card.all-dup .confirm-title { color: var(--warning); }
+.all-dup-notice {
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--warning);
+  background: var(--orange-light);
+  border-bottom: 1px solid var(--border-glass);
 }
 .confirm-header {
   display: flex;
@@ -100,7 +135,15 @@ const existingCount = computed(() => props.contacts.filter((c) => c.exists).leng
   letter-spacing: 0.3px;
 }
 .tag-new { background: rgba(52, 199, 89, 0.15); color: #1f7a3a; }
-.tag-exists { background: var(--bg-primary); color: var(--text-tertiary); }
+/* 已存在：警示橙底橙字，比置灰更醒目，配合整行 opacity 表达"不可导入" */
+.tag-exists { background: var(--orange-light); color: var(--warning); border: 1px solid rgba(255, 149, 0, 0.35); }
+.dup-hint {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border-top: 1px dashed var(--border-glass);
+}
 .confirm-actions {
   display: flex;
   gap: 8px;
@@ -127,7 +170,12 @@ const existingCount = computed(() => props.contacts.filter((c) => c.exists).leng
   background: var(--primary);
   color: #fff;
 }
-.btn-confirm:disabled, .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+/* 全部重复时的"结束对话"按钮：警示橙 */
+.btn-end {
+  background: var(--warning);
+  color: #fff;
+}
+.btn-confirm:disabled, .btn-cancel:disabled, .btn-end:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (min-width: 1024px) {
   .confirm-card { margin: 0 20px 12px; }
 }
