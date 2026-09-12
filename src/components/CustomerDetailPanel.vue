@@ -39,6 +39,11 @@
             <div class="ns-hint" v-if="!readonly">登记到店 / 提交跟进时自动更新，AI 会在需求变化时提示</div>
           </div>
 
+          <!-- AI 后台分析进行中：完成后自动回填当前需求 -->
+          <div class="ai-pending" v-if="aiAnalyzing">
+            <span class="ai-pending-dot"></span>AI 正在分析本次跟进，需求如有变化会自动更新…
+          </div>
+
           <!-- 三大主操作：直接可见，无需二级菜单（成交走下方成交记录区） -->
           <div class="act-row" v-if="!readonly">
             <button class="act-chip" @click="openVisitEntry">
@@ -170,7 +175,7 @@
               <textarea class="df-input" v-model.trim="followupDraft" rows="3" placeholder="做了什么 / 客户说了什么，如：电话聊了，预算从40万降到30万，想看X3"></textarea>
             </div>
           </div>
-          <div class="df-tab-hint">保存后 AI 会与当前需求比对，需求变化时自动更新并提示</div>
+          <div class="df-tab-hint">保存后 AI 在后台分析本次跟进，需求有变化会自动更新并提示</div>
           <div class="df-btns">
             <button class="btn-plain" @click="closeAction">取消</button>
             <button class="btn-primary" :disabled="loading" @click="submitFollowupAction">{{ loading ? '保存中…' : '保存' }}</button>
@@ -341,6 +346,14 @@ let loadSeq = 0
 // 当前需求快照（面板内展示 + 保存后本地同步）
 const currentNeeds = ref('')
 
+// AI 后台分析状态：提交跟进后为 true，分析结束（或面板关闭/切换客户）后复位
+const aiAnalyzing = ref(false)
+let aiCheckTimers = []
+function clearAiCheck() {
+  aiCheckTimers.forEach(clearTimeout)
+  aiCheckTimers = []
+}
+
 // ── 动作表单状态：visit/followup/needs/priority 四类（deal 直接开成交表单）──
 const actionType = ref(null)
 const followupDraft = ref('')
@@ -445,25 +458,35 @@ function onStarTap() {
   else openAction('priority')
 }
 
-async function loadData() {
+async function loadData(silent = false) {
   const id = props.customer?.id
   if (!id) return
   const seq = ++loadSeq
-  panelLoading.value = true
+  if (!silent) panelLoading.value = true
   try {
-    const [f, d, v] = await Promise.all([
+    const [f, d, v, c] = await Promise.all([
       api.get(`/customers/${id}/followups`),
       api.get(`/customers/${id}/deals`),
       api.get(`/customers/${id}/visits`),
+      api.get(`/customers/${id}`),
     ])
     if (seq !== loadSeq) return // 已切换到其他客户，丢弃过期响应
     followups.value = f || []
     deals.value = d || []
     visits.value = v || []
+    // 同步客户最新状态：当前需求/重点标记可能已被 AI 后台分析或其他端更新
+    if (c) {
+      currentNeeds.value = c.current_needs || ''
+      if (props.customer && props.customer.id === id) {
+        props.customer.current_needs = c.current_needs || ''
+        props.customer.is_priority = !!c.is_priority
+        if (c.last_visit_at) props.customer.last_visit_at = c.last_visit_at
+      }
+    }
   } catch (e) {
     if (seq === loadSeq) showToast(e.message || '加载失败')
   } finally {
-    if (seq === loadSeq) panelLoading.value = false
+    if (!silent && seq === loadSeq) panelLoading.value = false
   }
 }
 
@@ -474,6 +497,8 @@ watch(
       actionType.value = null
       showDealForm.value = false
       editingVisit.value = null
+      clearAiCheck()
+      aiAnalyzing.value = false
       currentNeeds.value = props.customer?.current_needs || ''
       // 先清空旧客户数据，避免加载期间显示上一位客户的记录
       followups.value = []
@@ -579,24 +604,52 @@ function confirmDeleteVisit(visitRow) {
   })
 }
 
-// ── 跟进：一句话内容，AI 自动比对需求快照 ────────────────
+// ── 跟进：保存立即完成；AI 在后台静默分析，完成后自动回填当前需求 ──
 async function submitFollowupAction() {
   const content = followupDraft.value.trim()
   if (!content) return showToast('请填写跟进内容')
   loading.value = true
   try {
-    const res = await api.post(`/customers/${props.customer.id}/followups`, { content })
-    if (res?.needs_updated) {
-      currentNeeds.value = res.needs_updated.current_needs
-      if (props.customer) props.customer.current_needs = res.needs_updated.current_needs
-      showToast(`检测到需求变化，已自动更新${res.needs_updated.reason ? '：' + res.needs_updated.reason : ''}`)
-    } else {
-      showToast('跟进已记录')
-    }
+    const cid = props.customer.id
+    const maxIdBefore = followups.value.reduce((m, f) => Math.max(m, f.id), 0)
+    const needsAtSave = currentNeeds.value
+    await api.post(`/customers/${cid}/followups`, { content })
+    showToast('跟进已记录')
     followupDraft.value = ''
     closeAction()
     await loadData()
     emit('updated')
+    // AI 后台分析中：面板给出进行中提示，稍后静默复查并回填结果。
+    // 服务端 AI 超时上限 30s，这里在 5s / 15s / 32s 静默复查三次
+    aiAnalyzing.value = true
+    clearAiCheck()
+    let notified = false
+    aiCheckTimers = [5000, 15000, 32000].map((ms) => setTimeout(async () => {
+      // 面板已关或已切换客户：停止复查（数据后台照常落库，下次打开即最新）
+      if (!props.show || props.customer?.id !== cid) {
+        clearAiCheck()
+        aiAnalyzing.value = false
+        return
+      }
+      await loadData(true)
+      const trace = followups.value.find((f) => f.id > maxIdBefore && /^需求已随跟进自动更新：/.test(f.content))
+      if (trace) {
+        const newNeeds = trace.content.replace(/^需求已随跟进自动更新：/, '').trim()
+        if (newNeeds) {
+          currentNeeds.value = newNeeds
+          if (props.customer) props.customer.current_needs = newNeeds
+        }
+        aiAnalyzing.value = false
+        clearAiCheck()
+        if (!notified) {
+          notified = true
+          showToast('AI 检测到需求变化，已自动更新')
+        }
+      } else if (ms === 32000) {
+        // 最后一查仍无结论（AI 超时或判定无冲突）：静默结束
+        aiAnalyzing.value = false
+      }
+    }, ms))
   } catch (e) {
     showToast(e.message || '保存失败')
   } finally {
@@ -861,6 +914,19 @@ function confirmDeleteDeal(deal) {
 .ns-text { font-size: 14px; line-height: 1.65; color: var(--text-primary); word-break: break-all; margin-top: 8px; }
 .ns-text.empty { color: var(--text-tertiary); }
 .ns-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 8px; }
+
+/* ── AI 后台分析进行中 ── */
+.ai-pending {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--primary);
+  background: var(--primary-light); border-radius: 10px;
+  padding: 8px 12px; margin-bottom: 12px;
+}
+.ai-pending-dot {
+  width: 12px; height: 12px; flex-shrink: 0;
+  border: 2px solid rgba(0, 122, 255, 0.25); border-top-color: var(--primary);
+  border-radius: 50%; animation: cdp-spin 0.8s linear infinite;
+}
 
 /* ── 三大主操作按钮行 ── */
 .act-row { display: flex; gap: 8px; margin-bottom: 12px; }
