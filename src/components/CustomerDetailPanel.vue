@@ -403,7 +403,7 @@ const timeline = computed(() => {
       visit: v,
     })
   }
-  return entries.sort((a, b) => String(b.ts).localeCompare(String(a.ts)))
+  return entries.sort((a, b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 3) // 默认只展示最新 3 条
 })
 
 function close() {
