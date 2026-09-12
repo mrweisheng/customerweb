@@ -1,5 +1,6 @@
-// 移动端「点 + 直接选图」的文件中转区：
-// File 对象无法通过路由参数传递，选完图后先暂存这里，录入页挂载时取走并直接开始识别
+// 智能导入的多图队列中转区：
+// 同一轮要发多张截图时，第一张立刻识别，其余暂存这里，
+// 每次导入确认/取消后由 ChatAgent 取走下一张
 let pending = []
 
 export function setPendingImportFiles(files) {

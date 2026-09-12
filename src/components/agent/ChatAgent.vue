@@ -69,8 +69,7 @@ function scrollToBottom() {
 }
 onMounted(() => {
   scrollToBottom()
-  // 工作台「+ 选图」会把 File 暂存到 pendingImportFiles 再跳到本页：
-  // 挂载时自动发出第一张，其余排队，每次导入确认后接着发下一张
+  // 取出队列中剩余的待识别截图继续发（多图时第一张已发，其余排队在此）
   sendNextPendingFile()
   // 焦点不在输入框时的整页粘贴（Ctrl+V 常见）：直接发送识别
   document.addEventListener('paste', onDocPaste)
@@ -89,7 +88,7 @@ function onDocPaste(e) {
   }
 }
 // 发送图片（可多张）：第一张立刻识别，其余入队，导入确认/取消后自动接续。
-// 工作台「+ 选图」、整页拖拽、整页粘贴共用这条通路
+// 整页拖拽、整页粘贴共用这条通路
 async function sendImageFiles(fileList) {
   const incoming = Array.from(fileList || []).filter((f) => f?.type?.startsWith('image/'))
   if (incoming.length === 0) return

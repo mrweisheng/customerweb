@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
-// 与 CSS 中的断点保持一致：>= 1024 视为 PC
-export const PC_BREAKPOINT = 1024
+// 与 CSS 中的断点保持一致：>= 1024 视为 PC（仅本模块内部使用）
+const PC_BREAKPOINT = 1024
 
 const isDesktop = ref(typeof window !== 'undefined' && window.innerWidth >= PC_BREAKPOINT)
 
@@ -18,5 +18,5 @@ if (typeof window !== 'undefined') {
 }
 
 export function useDevice() {
-  return { isDesktop, PC_BREAKPOINT }
+  return { isDesktop }
 }

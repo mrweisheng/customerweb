@@ -37,7 +37,6 @@ const state = reactive({
   busy: false, // 正在等后端 SSE 流
   error: null,
   lastUserText: initial?.lastUserText || '',
-  sessionStart: Date.now(),
   // 导入成功后上下文即清理：contextStart 之前的消息不再发给后端，
   // contextCleared = true 后不再持久化（刷新页面即全部消失）
   contextStart: 0,
@@ -137,7 +136,6 @@ function clearSession() {
   state.pendingImport = null
   state.error = null
   state.lastUserText = ''
-  state.sessionStart = Date.now()
   state.contextStart = 0
   state.contextCleared = false
   try { localStorage.removeItem(STORAGE_KEY) } catch (_) {}

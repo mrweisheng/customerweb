@@ -1,1 +1,0 @@
-var e=[];function t(t){e=Array.isArray(t)?t:[]}function n(){let t=e;return e=[],t}export{n,t};

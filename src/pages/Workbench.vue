@@ -1,6 +1,6 @@
 <template>
   <div class="page wb-page">
-    <!-- 顶部：标题 + 唯一录入入口（PC） -->
+    <!-- 顶部：标题 + 录入入口（PC）——录入统一走对话式智能导入，这里只是快捷跳转 -->
     <header class="wb-top">
       <div class="wb-top-info">
         <h1 class="wb-title">工作台</h1>
@@ -15,19 +15,6 @@
         录入客户
       </button>
     </header>
-
-    <!-- 录入客户弹窗（PC）：选图/识别/提交在弹窗内完成，不再跳页 -->
-    <div class="imp-modal-mask" v-if="showImportModal" @click.self="closeImportModal">
-      <div class="imp-modal-box">
-        <div class="imp-modal-head">
-          <div class="imp-modal-title">录入客户</div>
-          <button class="imp-modal-close" @click="closeImportModal" aria-label="关闭">✕</button>
-        </div>
-        <div class="imp-modal-body">
-          <ImportFlow ref="importFlowRef" @close="closeImportModal" />
-        </div>
-      </div>
-    </div>
 
     <!-- 搜索框（原搜索页 + 重点页内嵌搜索合一，附搜索历史） -->
     <div class="searchbar">
@@ -149,7 +136,7 @@
       </div>
     </template>
 
-    <!-- 录入入口（移动端悬浮按钮） -->
+    <!-- 录入入口（移动端悬浮按钮）：直接进入对话式智能导入 -->
     <button class="wb-fab" v-if="!isDesktop && !searchQuery && !isAdmin" @click="goImport" aria-label="录入客户">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
         <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
@@ -176,11 +163,8 @@ import { AVATAR_COLORS, calcVisitStatus, leadDateShort } from '../utils/constant
 import { useDevice } from '../composables/useDevice'
 import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
-import { onContactsImported } from '../utils/events'
 import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 import EmptyState from '../components/EmptyState.vue'
-import ImportFlow from '../components/ImportFlow.vue'
-import { setPendingImportFiles } from '../utils/pendingImportFiles'
 
 const router = useRouter()
 const { isDesktop } = useDevice()
@@ -357,31 +341,11 @@ function onCardTap(c) { tryOpenPanel(c) }
 function onResultTap(c) { tryOpenPanel(c) }
 
 // ── 录入 ────────────────────────────────────────────────
-// PC：弹窗内完成；移动端：点「+」在手势内同步拉起系统选图，
-// 选完图带着文件跳录入页直接识别（取消选图则留在本页）
-const showImportModal = ref(false)
-
+// 录入统一走对话式智能导入页，这里只是导航快捷入口；
+// 移动端 TabBar 没有「智能导入」tab，悬浮「+」是移动端唯一入口，不能删
 function goImport() {
   if (isAdmin.value) return // 管理员只读，不开放录入
-  if (isDesktop.value) {
-    showImportModal.value = true
-    return
-  }
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'image/*'
-  input.multiple = true
-  input.onchange = () => {
-    const files = Array.from(input.files || []).filter((f) => f && f.type && f.type.startsWith('image/'))
-    if (files.length === 0) return
-    setPendingImportFiles(files)
-    router.push('/ai-import')
-  }
-  input.click()
-}
-
-function closeImportModal() {
-  showImportModal.value = false
+  router.push('/ai-import')
 }
 
 // ── Ctrl+K 聚焦搜索（PC）───────────────────────────────
@@ -393,19 +357,15 @@ function onGlobalKeydown(e) {
 }
 
 // ── 生命周期 ────────────────────────────────────────────
-let offImported = null
 onMounted(() => {
   loadAll()
   if (isAdmin.value) loadUsers()
   window.addEventListener('keydown', onGlobalKeydown)
-  // 导入流程完成后联动刷新列表
-  offImported = onContactsImported(() => loadAll())
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown)
   if (searchTimer) clearTimeout(searchTimer)
-  if (offImported) offImported()
 })
 </script>
 
@@ -639,44 +599,6 @@ onUnmounted(() => {
 @media (min-width: 768px) {
   .cust-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 }
-
-/* ── 录入客户弹窗（仅 PC 使用）── */
-.imp-modal-mask {
-  position: fixed; inset: 0; z-index: var(--z-modal);
-  background: rgba(15, 23, 42, 0.45);
-  display: flex; align-items: center; justify-content: center;
-  animation: imp-fade 0.18s ease;
-}
-.imp-modal-box {
-  width: 760px; max-width: calc(100vw - 48px);
-  max-height: calc(100vh - 64px);
-  background: var(--surface);
-  border-radius: 16px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-  display: flex; flex-direction: column;
-  overflow: hidden;
-  animation: imp-pop 0.2s ease;
-}
-.imp-modal-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px 10px;
-  border-bottom: 1px solid var(--border-glass);
-  flex-shrink: 0;
-}
-.imp-modal-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
-.imp-modal-close {
-  width: 28px; height: 28px; border-radius: 8px; border: none;
-  background: var(--bg-primary); color: var(--text-secondary);
-  font-size: 13px; cursor: pointer; font-family: inherit;
-}
-.imp-modal-close:hover { background: var(--bg-hover); }
-.imp-modal-body {
-  flex: 1; min-height: 0;
-  padding: 14px 18px 18px;
-  overflow-y: auto;
-}
-@keyframes imp-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes imp-pop { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: scale(1); } }
 
 /* ── PC ── */
 @media (min-width: 1024px) {
