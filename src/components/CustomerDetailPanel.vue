@@ -12,9 +12,9 @@
         </div>
         <div class="cdp-titlewrap">
           <div class="cdp-title">{{ customerName }}</div>
-          <div class="cdp-health" v-if="customer.last_visit_at !== undefined">
-            <span class="health-dot" :class="visit.class"></span>
-            <span :class="visit.class">{{ visit.text }}</span>
+          <div class="cdp-tags">
+            <span class="cdp-tag" :class="visit.class">{{ customer.last_visit_at ? `${visit.text}到店` : '未到店' }}</span>
+            <span class="cdp-tag deal" v-if="deals.length">已成交</span>
           </div>
         </div>
         <button
@@ -44,22 +44,6 @@
         <!-- AI 后台分析进行中：完成后自动回填当前需求 -->
         <div class="ai-pending" v-if="aiAnalyzing">
           <span class="ai-pending-dot"></span>AI 正在分析本次登记，需求如有变化会自动更新…
-        </div>
-
-        <!-- 客户概要：重点状态 / 最近到店 / 累计成交，一眼掌握 -->
-        <div class="stat-strip">
-          <div class="stat">
-            <div class="k">重点状态</div>
-            <div class="v" :class="customer.is_priority ? 'org' : 'mut'">{{ customer.is_priority ? '★ 重点客户' : '未标重点' }}</div>
-          </div>
-          <div class="stat">
-            <div class="k">最近到店</div>
-            <div class="v" :class="visitStat.cls">{{ visitStat.text }}</div>
-          </div>
-          <div class="stat">
-            <div class="k">累计成交</div>
-            <div class="v" :class="totalAmount ? 'amt' : 'mut'">{{ totalAmount ? `¥${totalAmount}` : '尚未成交' }}</div>
-          </div>
         </div>
 
         <!-- 主操作：未重点=到店/成交/标重点；已重点=到店/跟进/成交。点击就地展开表单，不再弹层 -->
@@ -384,13 +368,6 @@ const totalAmount = computed(() => {
   const sum = deals.value.reduce((s, d) => s + (Number(d.amount) || 0), 0)
   return sum > 0 ? sum.toLocaleString() : null
 })
-// 概要条「最近到店」：短日期 + 回访健康度文案
-const visitStat = computed(() => {
-  const s = props.customer?.last_visit_at
-  if (!s) return { text: '未回访', cls: 'danger' }
-  return { text: `${String(s).slice(5, 10)} · ${visit.value.text}`, cls: visit.value.class }
-})
-
 // AI 需求自动更新的留痕前缀（跟进 / 到店两个来源）
 const aiTraceRe = /^(需求已随跟进自动更新：|需求已自动更新：)/
 
@@ -940,12 +917,13 @@ function confirmDeleteDeal(deal) {
 .cdp-avatar svg { width: 21px; height: 21px; }
 .cdp-titlewrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cdp-health { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; }
-.health-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.cdp-health .success, .health-dot.success { color: #34C759; background: #34C759; }
-.cdp-health .warning, .health-dot.warning { color: var(--warning); background: var(--warning); }
-.cdp-health .danger, .health-dot.danger { color: var(--danger); background: var(--danger); }
-.cdp-health .success, .cdp-health .warning, .cdp-health .danger { background: none; }
+/* 状态标签行：到店/成交。重点状态由右侧「★ 重点」胶囊表达，不在此重复 */
+.cdp-tags { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
+.cdp-tag { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px; }
+.cdp-tag.success { background: var(--green-light); color: var(--success); }
+.cdp-tag.warning { background: var(--orange-light); color: var(--warning); }
+.cdp-tag.danger { background: var(--red-light); color: var(--danger); }
+.cdp-tag.deal { background: var(--green-light); color: var(--success); }
 .cdp-close {
   width: 34px; height: 34px; border: none; background: var(--bg-primary); border-radius: 50%;
   font-size: 20px; color: var(--text-secondary); cursor: pointer; line-height: 1; flex-shrink: 0;
@@ -998,18 +976,6 @@ function confirmDeleteDeal(deal) {
   border: 2px solid rgba(0, 122, 255, 0.25); border-top-color: var(--primary);
   border-radius: 50%; animation: cdp-spin 0.8s linear infinite;
 }
-
-/* ── 客户概要条：重点状态 / 最近到店 / 累计成交 ── */
-.stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-.stat { background: var(--bg-primary); border-radius: 11px; padding: 8px 11px; min-width: 0; }
-.stat .k { font-size: 10.5px; font-weight: 700; color: var(--text-tertiary); }
-.stat .v { font-size: 12.5px; font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stat .v.org { color: #EA580C; }
-.stat .v.amt { color: #EA580C; }
-.stat .v.success { color: #1f7a3a; }
-.stat .v.warning { color: var(--warning); }
-.stat .v.danger { color: var(--danger); }
-.stat .v.mut { color: var(--text-tertiary); }
 
 /* ── 动作区：主操作按钮（移动端紧凑 chips，PC 展示副标题卡片）── */
 .zone-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 2px; margin: 2px 0 9px; }
@@ -1167,7 +1133,6 @@ function confirmDeleteDeal(deal) {
     flex-shrink: 0;
   }
   .cdp-title { font-size: 19px; }
-  .cdp-health { font-size: 12px; }
   .cdp-loading { padding: 16px 28px 6px; }
 
   .cdp-body {
@@ -1177,11 +1142,8 @@ function confirmDeleteDeal(deal) {
     padding: 16px 28px 26px;
   }
 
-  /* 概要条 PC 加大 */
-  .stat-strip { gap: 10px; margin-bottom: 14px; }
-  .stat { padding: 10px 14px; border-radius: 12px; }
-  .stat .k { font-size: 11px; }
-  .stat .v { font-size: 14px; font-weight: 800; }
+  /* 状态标签 PC 稍大 */
+  .cdp-tag { font-size: 12px; }
 
   /* 动作卡：PC 展示副标题，单行不换行 */
   .act-row { flex-wrap: nowrap; }
