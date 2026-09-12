@@ -41,7 +41,7 @@
 
           <!-- AI 后台分析进行中：完成后自动回填当前需求 -->
           <div class="ai-pending" v-if="aiAnalyzing">
-            <span class="ai-pending-dot"></span>AI 正在分析本次跟进，需求如有变化会自动更新…
+            <span class="ai-pending-dot"></span>AI 正在分析本次登记，需求如有变化会自动更新…
           </div>
 
           <!-- 三大主操作：直接可见，无需二级菜单（成交走下方成交记录区） -->
@@ -155,7 +155,7 @@
               <input class="df-input" v-model.trim="formVisit.remark" placeholder="选填" />
             </div>
           </div>
-          <div class="df-tab-hint" v-if="!editingVisit">本次将记录：到店 · {{ formVisit.visit_time }}，自动标为重点并更新当前需求</div>
+          <div class="df-tab-hint" v-if="!editingVisit">本次将记录：到店 · {{ formVisit.visit_time }}，自动标为重点；AI 会分析本次内容，需求有变化会自动更新</div>
           <div class="df-tab-hint" v-if="editingVisit && editingVisit.is_deal">该到店由成交记录自动生成，成交详情请在「成交记录」中编辑</div>
           <div class="df-btns">
             <button class="btn-plain" @click="closeAction">取消</button>
@@ -392,6 +392,9 @@ const totalAmount = computed(() => {
   return sum > 0 ? sum.toLocaleString() : null
 })
 
+// AI 需求自动更新的留痕前缀（跟进 / 到店两个来源）
+const aiTraceRe = /^(需求已随跟进自动更新：|需求已自动更新：)/
+
 // ── 动态时间线：跟进（邀约/需求/重点留痕）+ 到店（含成交到店）合并倒序 ──
 // 到店自动生成的跟进留痕（"到店：xxx"）由到店条目代表，不重复展示
 const timeline = computed(() => {
@@ -400,7 +403,7 @@ const timeline = computed(() => {
     if (/^到店(:|：|未成交：)/.test(f.content)) continue
     let tagLabel = '跟进', tagClass = 't-followup'
     if (/^更新需求：/.test(f.content)) { tagLabel = '需求'; tagClass = 't-needs' }
-    else if (/^需求已随跟进自动更新：/.test(f.content)) { tagLabel = '需求'; tagClass = 't-needs-auto' }
+    else if (aiTraceRe.test(f.content)) { tagLabel = '需求'; tagClass = 't-needs-auto' }
     else if (/^邀约到店：/.test(f.content)) { tagLabel = '邀约'; tagClass = 't-invite' }
     else if (/^(标注重点|取消重点)：/.test(f.content)) { tagLabel = '重点'; tagClass = 't-priority' }
     entries.push({
@@ -543,6 +546,8 @@ async function submitVisit() {
   if (!isDealVisit && !needs) return showToast('请填写需求')
   loading.value = true
   try {
+    const maxIdBefore = followups.value.reduce((m, f) => Math.max(m, f.id), 0)
+    const needsAtSave = currentNeeds.value
     if (editingVisit.value) {
       await api.put(`/customers/${cid}/visits/${editingVisit.value.id}`, {
         visit_time: formVisit.visit_time,
@@ -559,14 +564,16 @@ async function submitVisit() {
       showToast('到店已记录，已自动标为重点')
     }
     closeAction()
-    // 新增到店后端会自动标重点并同步当前需求快照，本地同步保持界面即时
+    // 新增到店后端会自动标重点；当前需求不由到店内容直接覆盖，
+    // 由 AI 后台分析本次到店内容后决定是否更新（与跟进同款流程）
     if (!editingVisit.value && props.customer) {
       props.customer.is_priority = true
-      if (needs) props.customer.current_needs = needs
-      currentNeeds.value = needs || currentNeeds.value
     }
     await loadData()
     emit('updated')
+    if (!editingVisit.value) {
+      scheduleAiNeedCheck(cid, maxIdBefore, needsAtSave)
+    }
   } catch (e) {
     showToast(e.message || '保存失败')
   } finally {
@@ -604,6 +611,39 @@ function confirmDeleteVisit(visitRow) {
   })
 }
 
+// ── AI 后台分析公共逻辑：面板提示进行中，5s/15s/32s 静默复查回填结果 ──
+// （服务端 AI 超时上限 30s；面板关闭/切换客户即停止复查，数据后台照常落库）
+function scheduleAiNeedCheck(cid, maxIdBefore, needsAtSave) {
+  aiAnalyzing.value = true
+  clearAiCheck()
+  let notified = false
+  aiCheckTimers = [5000, 15000, 32000].map((ms) => setTimeout(async () => {
+    if (!props.show || props.customer?.id !== cid) {
+      clearAiCheck()
+      aiAnalyzing.value = false
+      return
+    }
+    await loadData(true)
+    const trace = followups.value.find((f) => f.id > maxIdBefore && aiTraceRe.test(f.content))
+    if (trace) {
+      const newNeeds = trace.content.replace(aiTraceRe, '').trim()
+      if (newNeeds) {
+        currentNeeds.value = newNeeds
+        if (props.customer) props.customer.current_needs = newNeeds
+      }
+      aiAnalyzing.value = false
+      clearAiCheck()
+      if (!notified) {
+        notified = true
+        showToast('AI 检测到需求变化，已自动更新')
+      }
+    } else if (ms === 32000) {
+      // 最后一查仍无结论（AI 超时或判定无变更）：静默结束，需求保持原样
+      aiAnalyzing.value = false
+    }
+  }, ms))
+}
+
 // ── 跟进：保存立即完成；AI 在后台静默分析，完成后自动回填当前需求 ──
 async function submitFollowupAction() {
   const content = followupDraft.value.trim()
@@ -619,37 +659,7 @@ async function submitFollowupAction() {
     closeAction()
     await loadData()
     emit('updated')
-    // AI 后台分析中：面板给出进行中提示，稍后静默复查并回填结果。
-    // 服务端 AI 超时上限 30s，这里在 5s / 15s / 32s 静默复查三次
-    aiAnalyzing.value = true
-    clearAiCheck()
-    let notified = false
-    aiCheckTimers = [5000, 15000, 32000].map((ms) => setTimeout(async () => {
-      // 面板已关或已切换客户：停止复查（数据后台照常落库，下次打开即最新）
-      if (!props.show || props.customer?.id !== cid) {
-        clearAiCheck()
-        aiAnalyzing.value = false
-        return
-      }
-      await loadData(true)
-      const trace = followups.value.find((f) => f.id > maxIdBefore && /^需求已随跟进自动更新：/.test(f.content))
-      if (trace) {
-        const newNeeds = trace.content.replace(/^需求已随跟进自动更新：/, '').trim()
-        if (newNeeds) {
-          currentNeeds.value = newNeeds
-          if (props.customer) props.customer.current_needs = newNeeds
-        }
-        aiAnalyzing.value = false
-        clearAiCheck()
-        if (!notified) {
-          notified = true
-          showToast('AI 检测到需求变化，已自动更新')
-        }
-      } else if (ms === 32000) {
-        // 最后一查仍无结论（AI 超时或判定无冲突）：静默结束
-        aiAnalyzing.value = false
-      }
-    }, ms))
+    scheduleAiNeedCheck(cid, maxIdBefore, needsAtSave)
   } catch (e) {
     showToast(e.message || '保存失败')
   } finally {
