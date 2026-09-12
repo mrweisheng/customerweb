@@ -72,26 +72,51 @@ onMounted(() => {
   // 工作台「+ 选图」会把 File 暂存到 pendingImportFiles 再跳到本页：
   // 挂载时自动发出第一张，其余排队，每次导入确认后接着发下一张
   sendNextPendingFile()
+  // 焦点不在输入框时的整页粘贴（Ctrl+V 常见）：直接发送识别
+  document.addEventListener('paste', onDocPaste)
 })
 watch(() => state.messages.length, scrollToBottom)
 watch(() => state.busy, scrollToBottom)
-// 从工作台队列里取出下一张图自动发送；没有则什么都不做
-async function sendNextPendingFile() {
-  const files = takePendingImportFiles()
-  if (!files.length || state.busy) {
-    if (files.length) setPendingImportFiles(files)
+// 焦点在输入框/输入类元素上时交给 Composer 自己的 @paste 处理（附加到输入栏可先补文字），
+// 否则整页任意位置粘贴截图直接发送
+function onDocPaste(e) {
+  const t = e.target
+  if (t && typeof t.closest === 'function' && t.closest('textarea, input')) return
+  const files = e.clipboardData?.files
+  if (files && files.length > 0) {
+    e.preventDefault()
+    void sendImageFiles(files)
+  }
+}
+// 发送图片（可多张）：第一张立刻识别，其余入队，导入确认/取消后自动接续。
+// 工作台「+ 选图」、整页拖拽、整页粘贴共用这条通路
+async function sendImageFiles(fileList) {
+  const incoming = Array.from(fileList || []).filter((f) => f?.type?.startsWith('image/'))
+  if (incoming.length === 0) return
+  if (state.busy) {
+    // 助手正在回复：先入队，本轮结束后由确认/取消动作接续
+    setPendingImportFiles([...takePendingImportFiles(), ...incoming])
     return
   }
-  const [next, ...rest] = files
-  setPendingImportFiles(rest)
+  const [first, ...rest] = incoming
+  const queuedBefore = takePendingImportFiles()
+  setPendingImportFiles([...rest, ...queuedBefore])
   try {
-    const image = await prepareAgentImage(next)
-    const hint = rest.length > 0 ? `请识别这张截图（还有 ${rest.length} 张排队中）` : '请识别这张截图'
+    const image = await prepareAgentImage(first)
+    const queued = rest.length + queuedBefore.length
+    const hint = queued > 0 ? `请识别这张截图（还有 ${queued} 张排队中）` : '请识别这张截图'
     await onSend({ text: hint, image })
   } catch (e) {
     setError(e.message || '图片处理失败')
   }
 }
+// 从队列取出下一张自动发送；队列空则什么都不做
+function sendNextPendingFile() {
+  return sendImageFiles(takePendingImportFiles())
+}
+
+// 供宿主页面（整页拖拽落图）调用
+defineExpose({ sendImageFiles })
 // 点击开场白芯片：把文本同步到 Composer 输入框（Composer 监听 initial-text 变化）
 function onHint(text) {
   state.lastUserText = text
@@ -195,6 +220,7 @@ function onEndConversation() {
 onBeforeUnmount(() => {
   // 离开页面丢弃未处理的队列，避免下次进来自动发陈旧图片
   setPendingImportFiles([])
+  document.removeEventListener('paste', onDocPaste)
 })
 </script>
 <style scoped>

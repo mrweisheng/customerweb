@@ -1,11 +1,5 @@
 <template>
-  <div
-    class="composer"
-    :class="{ 'composer-drop': dragging }"
-    @dragover.prevent="dragging = true"
-    @dragleave.prevent="dragging = false"
-    @drop.prevent="onDrop"
-  >
+  <div class="composer">
     <div v-if="image" class="composer-image-chip">
       <img :src="image.preview" class="chip-thumb" />
       <button class="chip-remove" @click="clearImage" title="移除图片">×</button>
@@ -24,7 +18,7 @@
         class="composer-input"
         v-model="text"
         rows="1"
-        :placeholder="busy ? '客资助手正在回复…' : '发截图或输入问题，Ctrl+V 可直接粘贴截图'"
+        :placeholder="busy ? '客资助手正在回复…' : '发截图或输入问题，回车发送'"
         :disabled="busy"
         @keydown.enter.exact.prevent="submit"
         @paste="onPaste"
@@ -36,7 +30,6 @@
         </svg>
       </button>
     </div>
-    <div v-if="dragging" class="composer-drop-hint">松开以添加截图</div>
     <div v-if="imageError" class="composer-error">{{ imageError }}</div>
   </div>
 </template>
@@ -53,7 +46,6 @@ const emit = defineEmits(['send', 'update-text'])
 const text = ref(props.initialText || '')
 const image = ref(null) // { base64, preview, file }
 const imageError = ref('')
-const dragging = ref(false)
 const inputRef = ref(null)
 const fileRef = ref(null)
 
@@ -99,12 +91,14 @@ function onDrop(e) {
   }
   setImage(file)
 }
+// 附件就绪后把焦点拉回输入框：回车即可直接发送（图片可单独发，也可补文字一起发）
 async function setImage(file) {
   imageError.value = ''
   try {
     clearImage()
     const { base64, preview } = await prepareAgentImage(file)
     image.value = { base64, preview, file }
+    inputRef.value?.focus()
   } catch (err) {
     imageError.value = err.message || '图片处理失败'
   }
@@ -125,24 +119,6 @@ onBeforeUnmount(() => clearImage())
   background: var(--surface);
   position: relative;
 }
-.composer-drop {
-  outline: 2px dashed var(--primary);
-  outline-offset: -6px;
-  background: var(--primary-light);
-}
-.composer-drop-hint {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary);
-  background: rgba(255, 255, 255, 0.75);
-  pointer-events: none;
-}
-:root.dark .composer-drop-hint { background: rgba(0, 0, 0, 0.55); }
 .composer-image-chip {
   position: relative;
   display: inline-block;
