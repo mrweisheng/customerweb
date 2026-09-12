@@ -5,25 +5,22 @@
     <div class="cdp-sheet" ref="sheetRef" @click.stop @touchmove="onSheetTouchMove">
       <div class="cdp-handle"></div>
 
-      <!-- 头部：头像 + 客户名/健康度 + 重点开关 + 关闭 -->
+      <!-- 头部：头像 + 客户名 + 阶段徽标（已成交/已到店/重点）+ 关闭 -->
       <div class="cdp-header">
         <div class="cdp-avatar" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <div class="cdp-titlewrap">
           <div class="cdp-title">{{ customerName }}</div>
-          <div class="cdp-tags">
-            <span class="cdp-tag" :class="visit.class">{{ customer.last_visit_at ? `${visit.text}到店` : '未到店' }}</span>
-            <span class="cdp-tag deal" v-if="deals.length">已成交</span>
-          </div>
         </div>
-        <button
-          v-if="!readonly"
+        <!-- 阶段徽标：已成交 > 已到店 > ★重点 > ☆标重点（快捷入口），单一位置表达客户当前阶段 -->
+        <span
+          v-if="stagePill"
           class="cdp-star-pill"
-          :class="{ on: customer.is_priority }"
-          @click="onStarTap"
-          :title="customer.is_priority ? '取消重点' : '标记重点'"
-        >{{ customer.is_priority ? '★ 重点' : '☆ 重点' }}</button>
+          :class="[stagePill.key, { clickable: stagePill.clickable && !readonly }]"
+          :title="stagePill.title"
+          @click="onPillTap"
+        >{{ stagePill.text }}</span>
         <button class="cdp-close" @click="close">×</button>
       </div>
 
@@ -295,7 +292,7 @@
 <script setup>
 import { ref, reactive, computed, watch, nextTick, onUnmounted } from 'vue'
 import api from '../utils/api'
-import { calcVisitStatus, leadDateShort } from '../utils/constants'
+import { leadDateShort } from '../utils/constants'
 import { useToast } from '../composables/useToast'
 import ConfirmDialog from './ConfirmDialog.vue'
 
@@ -363,7 +360,6 @@ const customerName = computed(() => {
   const lead = c.lead_date_short || leadDateShort(c.lead_date)
   return lead ? `${lead}/${c.customer_name}` : (c.customer_name || '')
 })
-const visit = computed(() => calcVisitStatus(props.customer?.last_visit_at))
 const totalAmount = computed(() => {
   const sum = deals.value.reduce((s, d) => s + (Number(d.amount) || 0), 0)
   return sum > 0 ? sum.toLocaleString() : null
@@ -371,15 +367,16 @@ const totalAmount = computed(() => {
 // AI 需求自动更新的留痕前缀（跟进 / 到店两个来源）
 const aiTraceRe = /^(需求已随跟进自动更新：|需求已自动更新：)/
 
-// ── 动态时间线：跟进（邀约/需求/重点留痕）+ 到店（含成交到店）合并倒序 ──
-// 到店自动生成的跟进留痕（"到店：xxx"）由到店条目代表，不重复展示
+// ── 动态时间线：跟进（邀约/重点/手动需求变更）+ 到店（含成交到店）合并倒序 ──
+// 只展示用户自己录入的记录：到店自动生成的跟进由到店条目代表，
+// AI 需求留痕（需求已自动更新等）不属于用户录入的动态，不展示（需求体现在快照卡）
 const timeline = computed(() => {
   const entries = []
   for (const f of followups.value) {
     if (/^到店(:|：|未成交：)/.test(f.content)) continue
+    if (aiTraceRe.test(f.content)) continue
     let tagLabel = '跟进', tagClass = 't-followup'
     if (/^更新需求：/.test(f.content)) { tagLabel = '需求'; tagClass = 't-needs' }
-    else if (aiTraceRe.test(f.content)) { tagLabel = '需求'; tagClass = 't-needs-auto' }
     else if (/^邀约到店：/.test(f.content)) { tagLabel = '邀约'; tagClass = 't-invite' }
     else if (/^(标注重点|取消重点)：/.test(f.content)) { tagLabel = '重点'; tagClass = 't-priority' }
     entries.push({
@@ -472,10 +469,20 @@ function toggleDeal() {
   openDealForm(null)
 }
 
-// 头部⭐：已重点 → 走取消确认；未重点 → 打开标记重点表单
-function onStarTap() {
-  if (props.customer.is_priority) confirmRemovePriority()
-  else openAction('priority')
+// 头部阶段徽标：已成交 > 已到店 > ★重点 > ☆标重点（快捷入口）
+// 只展示客户当前所处的最高阶段；★重点可点击取消（二次确认）、☆标重点打开标记表单
+const stagePill = computed(() => {
+  if (deals.value.length) return { key: 'deal', text: '已成交' }
+  if (props.customer?.last_visit_at) return { key: 'visited', text: '已到店' }
+  if (props.customer?.is_priority) return { key: 'priority', text: '★ 重点', clickable: true, title: '点击取消重点' }
+  if (!props.readonly) return { key: 'none', text: '☆ 标重点', clickable: true, title: '标记为重点客户' }
+  return null
+})
+function onPillTap() {
+  if (props.readonly) return
+  const key = stagePill.value?.key
+  if (key === 'priority') confirmRemovePriority()
+  else if (key === 'none') openAction('priority')
 }
 
 async function loadData(silent = false) {
@@ -917,29 +924,26 @@ function confirmDeleteDeal(deal) {
 .cdp-avatar svg { width: 21px; height: 21px; }
 .cdp-titlewrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* 状态标签行：到店/成交。重点状态由右侧「★ 重点」胶囊表达，不在此重复 */
-.cdp-tags { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
-.cdp-tag { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 99px; }
-.cdp-tag.success { background: var(--green-light); color: var(--success); }
-.cdp-tag.warning { background: var(--orange-light); color: var(--warning); }
-.cdp-tag.danger { background: var(--red-light); color: var(--danger); }
-.cdp-tag.deal { background: var(--green-light); color: var(--success); }
+/* 头部阶段徽标：已成交/已到店/重点，单一位置表达客户当前阶段 */
+.cdp-star-pill.clickable { cursor: pointer; }
+.cdp-star-pill.clickable:active { transform: scale(0.95); }
+/* 阶段色：重点=橙 / 已到店=蓝 / 已成交=绿；默认灰=非重点快捷标重点入口 */
+.cdp-star-pill.priority { background: var(--orange-light); border-color: rgba(255, 149, 0, 0.4); color: #EA580C; }
+.cdp-star-pill.visited { background: var(--blue-light); border-color: rgba(0, 122, 255, 0.35); color: var(--primary); }
+.cdp-star-pill.deal { background: var(--green-light); border-color: rgba(52, 199, 89, 0.35); color: var(--success); }
 .cdp-close {
   width: 34px; height: 34px; border: none; background: var(--bg-primary); border-radius: 50%;
   font-size: 20px; color: var(--text-secondary); cursor: pointer; line-height: 1; flex-shrink: 0;
   transition: transform 0.15s, opacity 0.15s;
 }
 .cdp-close:active { transform: scale(0.9); opacity: 0.7; }
-/* 重点开关：带文字胶囊，状态显性化 */
 .cdp-star-pill {
   flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
   padding: 7px 13px; border-radius: 99px; font-size: 12.5px; font-weight: 700; font-family: inherit;
   background: var(--bg-primary); color: var(--text-tertiary);
-  border: 1px solid var(--border-glass); cursor: pointer;
+  border: 1px solid var(--border-glass);
   transition: all 0.15s;
 }
-.cdp-star-pill.on { background: var(--orange-light); border-color: rgba(255, 149, 0, 0.4); color: #EA580C; }
-.cdp-star-pill:active { transform: scale(0.95); }
 
 .sec-icon { width: 15px; height: 15px; flex-shrink: 0; }
 .ic-danger { color: var(--danger); }
@@ -1025,8 +1029,7 @@ function confirmDeleteDeal(deal) {
 }
 .t-followup { background: var(--blue-light, var(--primary-light)); color: var(--primary); }
 .t-invite { background: var(--purple-light, rgba(175, 82, 222, 0.12)); color: var(--purple, #AF52DE); }
-.t-needs, .t-needs-auto { background: var(--orange-light); color: var(--warning); }
-.t-needs-auto { border: 1px dashed rgba(255, 149, 0, 0.4); }
+.t-needs { background: var(--orange-light); color: var(--warning); }
 .t-priority { background: var(--orange-light); color: #EA580C; }
 .t-visit { background: rgba(52, 199, 89, 0.12); color: #1f7a3a; }
 .t-deal { background: var(--green-light, rgba(52, 199, 89, 0.15)); color: var(--success); }
@@ -1143,7 +1146,7 @@ function confirmDeleteDeal(deal) {
   }
 
   /* 状态标签 PC 稍大 */
-  .cdp-tag { font-size: 12px; }
+  .cdp-star-pill.clickable:hover { filter: brightness(0.97); }
 
   /* 动作卡：PC 展示副标题，单行不换行 */
   .act-row { flex-wrap: nowrap; }
