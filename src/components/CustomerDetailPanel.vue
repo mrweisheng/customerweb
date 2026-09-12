@@ -33,17 +33,24 @@
             <div class="ns-head">
               <svg class="sec-icon ic-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
               <span>当前需求</span>
-              <button v-if="!readonly" class="ns-edit" @click="openAction('needs')">变更</button>
+              <button v-if="!readonly" class="ns-edit" @click="openNeedsEntry">变更</button>
             </div>
             <div class="ns-text" :class="{ empty: !currentNeeds }">{{ currentNeeds || '暂无需求记录' }}</div>
             <div class="ns-hint" v-if="!readonly">登记到店 / 提交跟进时自动更新，AI 会在需求变化时提示</div>
           </div>
 
-          <!-- 唯一录入入口：本次做了什么 -->
-          <button v-if="!readonly" class="add-entry" @click="showActionPick = true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            记录本次
-          </button>
+          <!-- 三大主操作：直接可见，无需二级菜单（成交走下方成交记录区） -->
+          <div class="act-row" v-if="!readonly">
+            <button class="act-chip" @click="openVisitEntry">
+              <span class="act-ic">📍</span>登记到店
+            </button>
+            <button class="act-chip" @click="openFollowupEntry">
+              <span class="act-ic">💬</span>更新跟进
+            </button>
+            <button v-if="!customer.is_priority" class="act-chip star" @click="openPriorityEntry">
+              <span class="act-ic">⭐</span>标记重点
+            </button>
+          </div>
 
           <!-- 动态时间线：跟进 / 邀约 / 到店 / 成交到店 / 需求变更 统一倒序 -->
           <div class="cdp-section">
@@ -73,7 +80,7 @@
                 </div>
               </div>
             </div>
-            <div v-else class="sec-empty">还没有记录，点上方「记录本次」开始</div>
+            <div v-else class="sec-empty">还没有记录，点上方「登记到店」或「更新跟进」开始</div>
           </div>
         </div>
 
@@ -119,35 +126,7 @@
         </div>
       </div>
 
-      <!-- ── 动作选择：本次做了什么？── -->
-      <div class="df-mask" v-if="showActionPick" @click="showActionPick = false">
-        <div class="df-sheet act-sheet" @click.stop>
-          <div class="df-handle"></div>
-          <div class="df-title">本次做了什么？</div>
-          <div class="act-grid">
-            <button type="button" class="act-btn" @click="openAction('visit')">
-              <span class="act-icon">📍</span>登记到店<span class="act-desc">人来了，记当次需求</span>
-            </button>
-            <button type="button" class="act-btn" @click="openAction('followup')">
-              <span class="act-icon">💬</span>跟进<span class="act-desc">电话 / 微信沟通</span>
-            </button>
-            <button type="button" class="act-btn" @click="openAction('invite')">
-              <span class="act-icon">📞</span>邀约到店<span class="act-desc">约人，来了再登记</span>
-            </button>
-            <button type="button" class="act-btn" @click="openAction('needs')">
-              <span class="act-icon">✏️</span>需求变更<span class="act-desc">直接改当前需求</span>
-            </button>
-            <button type="button" class="act-btn" @click="openAction('priority')">
-              <span class="act-icon">⭐</span>标记重点<span class="act-desc">纳入重点跟进</span>
-            </button>
-            <button type="button" class="act-btn" @click="openAction('deal')">
-              <span class="act-icon">🚗</span>已成交<span class="act-desc">登记车辆 / 两地牌</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 到店（登记 / 编辑共用）：needs 必填，自动标重点 + 同步当前需求 -->
+      <!-- ── 到店（登记 / 编辑共用）：needs 必填，自动标重点 + 同步当前需求 + 生成第一条跟进 ── -->
       <div class="df-mask" v-if="actionType === 'visit'" @click="closeAction">
         <div class="df-sheet" @click.stop>
           <div class="df-handle"></div>
@@ -195,25 +174,6 @@
           <div class="df-btns">
             <button class="btn-plain" @click="closeAction">取消</button>
             <button class="btn-primary" :disabled="loading" @click="submitFollowupAction">{{ loading ? '保存中…' : '保存' }}</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 邀约到店：记一条跟进，客户来了再"登记到店" -->
-      <div class="df-mask" v-if="actionType === 'invite'" @click="closeAction">
-        <div class="df-sheet" @click.stop>
-          <div class="df-handle"></div>
-          <div class="df-title">{{ customerName }}<span class="df-title-sub"> · 邀约到店</span></div>
-          <div class="df-block">
-            <div class="df-field df-field-wide">
-              <label>邀约内容</label>
-              <textarea class="df-input" v-model.trim="inviteDraft" rows="2" placeholder="约了几号、沟通了什么"></textarea>
-            </div>
-          </div>
-          <div class="df-tab-hint">客户到店后，再点「记录本次 → 登记到店」衔接</div>
-          <div class="df-btns">
-            <button class="btn-plain" @click="closeAction">取消</button>
-            <button class="btn-primary" :disabled="loading" @click="submitInviteAction">{{ loading ? '保存中…' : '保存' }}</button>
           </div>
         </div>
       </div>
@@ -381,11 +341,9 @@ let loadSeq = 0
 // 当前需求快照（面板内展示 + 保存后本地同步）
 const currentNeeds = ref('')
 
-// ── 动作弹层：null=关闭；visit/followup/invite/needs/priority 为表单，deal 直接开成交表单 ──
-const showActionPick = ref(false)
+// ── 动作表单状态：visit/followup/needs/priority 四类（deal 直接开成交表单）──
 const actionType = ref(null)
 const followupDraft = ref('')
-const inviteDraft = ref('')
 const needsDraft = ref('')
 const priorityDraft = ref('')
 
@@ -421,10 +379,12 @@ const totalAmount = computed(() => {
   return sum > 0 ? sum.toLocaleString() : null
 })
 
-// ── 动态时间线：跟进（含邀约/需求留痕）+ 到店（含成交到店）合并倒序 ──
+// ── 动态时间线：跟进（邀约/需求/重点留痕）+ 到店（含成交到店）合并倒序 ──
+// 到店自动生成的跟进留痕（"到店：xxx"）由到店条目代表，不重复展示
 const timeline = computed(() => {
   const entries = []
   for (const f of followups.value) {
+    if (/^到店(:|：|未成交：)/.test(f.content)) continue
     let tagLabel = '跟进', tagClass = 't-followup'
     if (/^更新需求：/.test(f.content)) { tagLabel = '需求'; tagClass = 't-needs' }
     else if (/^需求已随跟进自动更新：/.test(f.content)) { tagLabel = '需求'; tagClass = 't-needs-auto' }
@@ -457,16 +417,23 @@ function formatAmount(n) {
   return Number(n).toLocaleString()
 }
 
-// ── 动作入口 ────────────────────────────────────────────
-function openAction(type) {
-  showActionPick.value = false
-  if (type === 'deal') { openDealForm(null); return }
-  actionType.value = type
-  if (type === 'visit') { resetVisitForm(); editingVisit.value = null }
-  if (type === 'followup') followupDraft.value = ''
-  if (type === 'invite') inviteDraft.value = ''
-  if (type === 'needs') needsDraft.value = currentNeeds.value
-  if (type === 'priority') priorityDraft.value = ''
+// ── 动作入口：三大操作 + 需求变更，直接开对应表单 ──────────
+function openVisitEntry() {
+  resetVisitForm()
+  editingVisit.value = null
+  actionType.value = 'visit'
+}
+function openFollowupEntry() {
+  followupDraft.value = ''
+  actionType.value = 'followup'
+}
+function openNeedsEntry() {
+  needsDraft.value = currentNeeds.value
+  actionType.value = 'needs'
+}
+function openPriorityEntry() {
+  priorityDraft.value = ''
+  actionType.value = 'priority'
 }
 function closeAction() {
   actionType.value = null
@@ -505,7 +472,6 @@ watch(
   ([isShow]) => {
     if (isShow) {
       actionType.value = null
-      showActionPick.value = false
       showDealForm.value = false
       editingVisit.value = null
       currentNeeds.value = props.customer?.current_needs || ''
@@ -628,25 +594,6 @@ async function submitFollowupAction() {
       showToast('跟进已记录')
     }
     followupDraft.value = ''
-    closeAction()
-    await loadData()
-    emit('updated')
-  } catch (e) {
-    showToast(e.message || '保存失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// ── 邀约：一条跟进留痕，客户来了再登记到店 ───────────────
-async function submitInviteAction() {
-  const content = inviteDraft.value.trim()
-  if (!content) return showToast('请填写邀约内容')
-  loading.value = true
-  try {
-    await api.post(`/customers/${props.customer.id}/followups`, { content: `邀约到店：${content}` })
-    showToast('邀约已记录')
-    inviteDraft.value = ''
     closeAction()
     await loadData()
     emit('updated')
@@ -915,16 +862,18 @@ function confirmDeleteDeal(deal) {
 .ns-text.empty { color: var(--text-tertiary); }
 .ns-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 8px; }
 
-/* ── 记录本次入口 ── */
-.add-entry {
-  width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 14px; border-radius: 14px; border: 1.5px dashed rgba(0, 122, 255, 0.45);
+/* ── 三大主操作按钮行 ── */
+.act-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.act-chip {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 12px 6px; border-radius: 13px; border: 1.5px solid rgba(0, 122, 255, 0.4);
   background: var(--primary-light); color: var(--primary);
-  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
-  transition: all 0.15s;
+  font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+  transition: all 0.15s; min-width: 0;
 }
-.add-entry svg { width: 16px; height: 16px; }
-.add-entry:active { transform: scale(0.98); opacity: 0.8; }
+.act-chip .act-ic { font-size: 15px; line-height: 1; }
+.act-chip:active { transform: scale(0.96); opacity: 0.8; }
+.act-chip.star { border-color: rgba(255, 149, 0, 0.45); background: var(--orange-light); color: #EA580C; }
 
 /* ── 动态时间线 ── */
 .tl { display: flex; flex-direction: column; gap: 10px; }
@@ -983,19 +932,6 @@ function confirmDeleteDeal(deal) {
 .df-handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); margin: 0 auto 14px; }
 .df-title { font-size: 19px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
 .df-title-sub { font-size: 15px; font-weight: 500; color: var(--text-secondary); }
-
-/* 动作选择网格 */
-.act-sheet { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
-.act-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.act-btn {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
-  padding: 13px 14px; border-radius: 14px; border: 1px solid var(--border-glass);
-  background: var(--bg-primary); cursor: pointer; font-family: inherit; text-align: left;
-  font-size: 15px; font-weight: 700; color: var(--text-primary); transition: all 0.15s;
-}
-.act-btn:active { transform: scale(0.97); border-color: var(--primary); background: var(--primary-light); }
-.act-icon { font-size: 20px; line-height: 1; }
-.act-desc { font-size: 11px; font-weight: 500; color: var(--text-tertiary); }
 
 .df-tabs { display: flex; gap: 4px; background: var(--bg-primary); border-radius: 13px; padding: 4px; margin-bottom: 8px; }
 .df-tab { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; font-family: inherit; }
@@ -1075,8 +1011,7 @@ function confirmDeleteDeal(deal) {
   .deal-ops span.danger:hover { color: var(--danger); }
   .tl-ops span:hover { color: var(--primary); }
   .tl-ops span.danger:hover { color: var(--danger); }
-  .add-entry:hover { border-color: var(--primary); }
-  .act-btn:hover { border-color: var(--primary); background: var(--primary-light); }
+  .act-chip:hover { border-color: var(--primary); filter: brightness(1.02); }
 
   /* 内嵌表单：居中自适应，字段双列排布降低表单高度 */
   .df-mask { align-items: center; }
@@ -1092,6 +1027,5 @@ function confirmDeleteDeal(deal) {
   .df-field { margin-bottom: 0; }
   .df-btns { margin-top: 2px; }
   /* 动作选择：PC 三列 */
-  .act-grid { grid-template-columns: repeat(3, 1fr); }
 }
 </style>
