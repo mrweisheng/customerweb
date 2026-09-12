@@ -150,7 +150,7 @@
                 </div>
               </div>
             </div>
-            <div v-else class="sec-empty">还没有记录，点上方「登记到店」或「更新跟进」开始</div>
+            <div v-else class="sec-empty">{{ customer.is_priority ? '还没有记录，点上方「登记到店」或「更新跟进」开始' : '还没有记录，点上方「登记到店」开始，或先标记为重点' }}</div>
           </div>
         </div>
 
@@ -413,12 +413,13 @@ const dealFormRef = ref(null)
 
 function scrollFormIntoView(deal = false) {
   nextTick(() => {
-    (deal ? dealFormRef.value : inlineFormRef.value)?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+    (deal ? dealFormRef.value : inlineFormRef.value)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
   })
 }
 
 function toggleAction(type) {
-  if (actionType.value === type) { closeAction(); return }
+  // 正在编辑某条到店时再点「登记到店」→ 切换为新的空白登记，而不是收起
+  if (actionType.value === type && !(type === 'visit' && editingVisit.value)) { closeAction(); return }
   openAction(type)
 }
 function openAction(type) {
@@ -931,6 +932,9 @@ function confirmDeleteDeal(deal) {
 .act-chip .act-ic { font-size: 15px; line-height: 1; }
 .act-chip:active { transform: scale(0.96); opacity: 0.8; }
 .act-chip.star { border-color: rgba(255, 149, 0, 0.45); background: var(--orange-light); color: #EA580C; }
+/* 展开状态：当前正打开的表单对应按钮高亮 */
+.act-chip.active { background: var(--primary); color: #fff; border-color: transparent; }
+.act-chip.star.active { background: var(--warning); color: #fff; border-color: transparent; }
 
 /* ── 动态时间线 ── */
 .tl { display: flex; flex-direction: column; gap: 10px; }
@@ -983,6 +987,8 @@ function confirmDeleteDeal(deal) {
   border-radius: 14px;
   padding: 13px 14px;
   margin-bottom: 12px;
+  /* 滚动定位时给吸顶头部留出空间，避免表单顶部被遮住 */
+  scroll-margin-top: 84px;
 }
 .if-title {
   display: flex; align-items: center; justify-content: space-between;
