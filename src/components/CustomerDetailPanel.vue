@@ -1,13 +1,15 @@
 <template>
   <!-- 客户编辑面板：销售只管"本次做了什么"（动作式录入），
        需求快照 / 跟进时间线 / 到店与成交记录由系统与 AI 自动归位 -->
-  <div class="cdp-mask" v-if="show" @click="close">
-    <div class="cdp-sheet" @click.stop>
+  <div class="cdp-mask" v-if="show" @click="close" @touchmove.self.prevent @wheel.self.prevent>
+    <div class="cdp-sheet" ref="sheetRef" @click.stop @touchmove="onSheetTouchMove">
       <div class="cdp-handle"></div>
 
       <!-- 头部：头像 + 客户名/健康度 + 重点开关 + 关闭 -->
       <div class="cdp-header">
-        <div class="cdp-avatar">{{ avatarChar }}</div>
+        <div class="cdp-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
         <div class="cdp-titlewrap">
           <div class="cdp-title">{{ customerName }}</div>
           <div class="cdp-health" v-if="customer.last_visit_at !== undefined">
@@ -75,6 +77,10 @@
             <button class="act-chip deal" :class="{ active: showDealForm }" @click="toggleDeal()">
               <span class="act-main"><span class="act-ic">💰</span><span class="act-t">成交登记</span></span>
               <span class="act-sub">车辆 / 两地牌 · 双填双记</span>
+            </button>
+            <button v-if="customer.is_priority" class="act-chip plain" @click="confirmRemovePriority">
+              <span class="act-main"><span class="act-ic">☆</span><span class="act-t">取消重点</span></span>
+              <span class="act-sub">移出重点客户列表</span>
             </button>
             <button v-if="!customer.is_priority" class="act-chip star" :class="{ active: actionType === 'priority' }" @click="toggleAction('priority')">
               <span class="act-main"><span class="act-ic">⭐</span><span class="act-t">标记重点</span></span>
@@ -303,7 +309,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, nextTick } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onUnmounted } from 'vue'
 import api from '../utils/api'
 import { calcVisitStatus, leadDateShort } from '../utils/constants'
 import { useToast } from '../composables/useToast'
@@ -378,7 +384,6 @@ const totalAmount = computed(() => {
   const sum = deals.value.reduce((s, d) => s + (Number(d.amount) || 0), 0)
   return sum > 0 ? sum.toLocaleString() : null
 })
-const avatarChar = computed(() => (props.customer?.customer_name || '?').charAt(0))
 // 概要条「最近到店」：短日期 + 回访健康度文案
 const visitStat = computed(() => {
   const s = props.customer?.last_visit_at
@@ -431,6 +436,33 @@ function formatAmount(n) {
 const formTitles = { visit: '登记到店', followup: '更新跟进', needs: '变更需求', priority: '标记重点' }
 const inlineFormRef = ref(null)
 const dealFormRef = ref(null)
+const sheetRef = ref(null)
+
+// ── 背景滚动锁定：弹窗打开期间锁住页面滚动，防手机端触摸/PC 滚轮穿透遮罩 ──
+function onSheetTouchMove(e) {
+  // 内容不足一屏时弹窗本身不可滚，不拦截的话触摸会穿透滚动背后的页面
+  const el = sheetRef.value
+  if (el && el.scrollHeight <= el.clientHeight) e.preventDefault()
+}
+
+watch(() => props.show, (open) => {
+  const html = document.documentElement
+  if (open) {
+    // 补偿 PC 端滚动条消失造成的布局跳动
+    const gap = window.innerWidth - html.clientWidth
+    html.classList.add('cdp-lock')
+    if (gap > 0) html.style.paddingRight = `${gap}px`
+  } else {
+    html.classList.remove('cdp-lock')
+    html.style.paddingRight = ''
+  }
+})
+
+onUnmounted(() => {
+  document.documentElement.classList.remove('cdp-lock')
+  document.documentElement.style.paddingRight = ''
+  clearAiCheck()
+})
 
 function scrollFormIntoView(deal = false) {
   nextTick(() => {
@@ -891,8 +923,8 @@ function confirmDeleteDeal(deal) {
   width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   background: var(--primary-light); color: var(--primary);
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 700;
 }
+.cdp-avatar svg { width: 21px; height: 21px; }
 .cdp-titlewrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cdp-health { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; }
@@ -968,9 +1000,10 @@ function confirmDeleteDeal(deal) {
 
 /* ── 动作区：主操作按钮（移动端紧凑 chips，PC 展示副标题卡片）── */
 .zone-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); letter-spacing: 2px; margin: 2px 0 9px; }
-.act-row { display: flex; gap: 8px; margin-bottom: 12px; }
+/* 可换行：重点客户有 4 个动作（含取消重点），窄屏放不下时第 4 个独占一行 */
+.act-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .act-chip {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  flex: 1 1 calc(33.33% - 6px); min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   padding: 10px 4px; border-radius: 13px; border: 1.5px solid rgba(0, 122, 255, 0.4);
   background: var(--primary-light); color: var(--primary);
   font-family: inherit; cursor: pointer;
@@ -978,10 +1011,12 @@ function confirmDeleteDeal(deal) {
 }
 .act-main { display: flex; align-items: center; gap: 5px; }
 .act-chip .act-ic { font-size: 15px; line-height: 1; }
-.act-chip .act-t { font-size: 13.5px; font-weight: 700; }
+.act-chip .act-t { font-size: 13.5px; font-weight: 700; white-space: nowrap; }
 .act-chip .act-sub { display: none; font-size: 10.5px; font-weight: 600; color: var(--text-tertiary); line-height: 1.3; text-align: center; }
 .act-chip:active { transform: scale(0.96); opacity: 0.8; }
 .act-chip.star { border-color: rgba(255, 149, 0, 0.45); background: var(--orange-light); color: #EA580C; }
+/* 取消重点：中性底、悬停示警，与主操作区分 */
+.act-chip.plain { border-color: var(--border-glass); background: var(--bg-primary); color: var(--text-secondary); }
 /* 展开状态：当前正打开的表单对应按钮高亮 */
 .act-chip.active { background: var(--primary); color: #fff; border-color: transparent; }
 .act-chip.star.active { background: var(--warning); color: #fff; border-color: transparent; }
@@ -1135,10 +1170,12 @@ function confirmDeleteDeal(deal) {
   .stat .k { font-size: 11px; }
   .stat .v { font-size: 14px; font-weight: 800; }
 
-  /* 动作卡：PC 展示副标题 */
-  .act-chip { padding: 13px 6px 12px; border-radius: 14px; gap: 3px; }
+  /* 动作卡：PC 展示副标题，单行不换行 */
+  .act-row { flex-wrap: nowrap; }
+  .act-chip { flex: 1 1 auto; padding: 13px 6px 12px; border-radius: 14px; gap: 3px; }
   .act-chip .act-t { font-size: 14.5px; }
   .act-chip .act-sub { display: block; }
+  .act-chip.plain:hover { border-color: var(--danger); color: var(--danger); }
 
   /* 记录 Tab */
   .rt-tab { font-size: 14.5px; }
