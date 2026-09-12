@@ -53,7 +53,7 @@
           <div class="result-meta">{{ c.remark || c.current_needs || '—' }}</div>
         </div>
         <div class="result-visit" v-if="c.is_priority && c.visitStatus" :class="c.visitStatus.class">
-          {{ c.visitStatus.text }}
+          {{ visitBadgeText(c) }}
         </div>
         <span class="action-arrow">›</span>
       </div>
@@ -106,7 +106,7 @@
         >
           <div class="cc-head">
             <div class="cc-name">{{ c.lead_date_short ? c.lead_date_short + '/' : '' }}{{ c.customer_name }}</div>
-            <span class="cc-visit" :class="c.visitStatus.class">{{ c.visitStatus.text }}</span>
+            <span class="cc-visit" :class="c.visitStatus.class">{{ visitBadgeText(c) }}</span>
             <span
               class="cc-copy"
               :class="{ copied: copiedId === c.id }"
@@ -209,16 +209,27 @@ const filteredCustomers = computed(() => {
 // /priority 返回顺序即「最久未回访优先」（last_visit_at IS NULL 最前、其后 ASC）
 const loadFailed = ref(false)
 
+// 列表卡片统一装饰：线索日期缩写 / 头像色 / 回访健康度 / 最近到店短日期（MM-DD）
+function decorateCustomer(c, idx) {
+  return {
+    ...c,
+    lead_date_short: leadDateShort(c.lead_date),
+    avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
+    visitStatus: calcVisitStatus(c.last_visit_at),
+    visitDay: c.last_visit_at ? String(c.last_visit_at).slice(5, 10) : '',
+  }
+}
+
+// 回访徽标文案：有到店记录时带上来店日期，如「09-09 · 3天前」；无记录为「未回访」
+function visitBadgeText(c) {
+  return c.visitDay ? `${c.visitDay} · ${c.visitStatus.text}` : c.visitStatus.text
+}
+
 async function loadAll() {
   loadFailed.value = false
   try {
     const listRes = await api.get('/customers/priority', { params: scopeParams() })
-    priorityCustomers.value = (Array.isArray(listRes) ? listRes : []).map((c, idx) => ({
-      ...c,
-      lead_date_short: leadDateShort(c.lead_date),
-      avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-      visitStatus: calcVisitStatus(c.last_visit_at),
-    }))
+    priorityCustomers.value = (Array.isArray(listRes) ? listRes : []).map(decorateCustomer)
   } catch (e) {
     loadFailed.value = true
     showToast(e.message || '加载失败')
@@ -253,12 +264,7 @@ async function doSearch() {
   if (!query) return
   try {
     const res = await api.get('/customers/search', { params: { keyword: query, ...scopeParams() } })
-    searchResults.value = (Array.isArray(res) ? res : []).map((c, idx) => ({
-      ...c,
-      lead_date_short: leadDateShort(c.lead_date),
-      avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
-      visitStatus: calcVisitStatus(c.last_visit_at),
-    }))
+    searchResults.value = (Array.isArray(res) ? res : []).map(decorateCustomer)
     hasSearched.value = true
     saveHistory(query)
   } catch (e) {
@@ -472,10 +478,12 @@ onUnmounted(() => {
 /* ── 客户卡片 ── */
 .cust-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0,1fr)：锁死等宽列宽，长内容在卡片内部截断，而不是把列撑宽 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 .cust-card {
+  min-width: 0;
   background: var(--bg-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -496,7 +504,7 @@ onUnmounted(() => {
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cc-visit {
-  margin-left: auto; flex-shrink: 0;
+  margin-left: auto; flex-shrink: 0; white-space: nowrap;
   font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
 }
 .cc-visit.success { background: var(--green-light); color: var(--success); }
@@ -597,7 +605,7 @@ onUnmounted(() => {
 
 /* ── 平板 ── */
 @media (min-width: 768px) {
-  .cust-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .cust-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 }
 
 /* ── PC ── */
@@ -627,7 +635,7 @@ onUnmounted(() => {
     transform: translateY(-2px);
     box-shadow: 0 10px 26px -8px rgba(15, 23, 42, 0.18);
   }
-  .cust-grid { grid-template-columns: repeat(3, 1fr); gap: 13px; }
+  .cust-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
   .wb-fab { display: none; }
   .result-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1); }
   .f-chip:hover { border-color: var(--text-tertiary); }
@@ -636,6 +644,6 @@ onUnmounted(() => {
 
 /* ── 超宽屏 ── */
 @media (min-width: 1440px) {
-  .cust-grid { grid-template-columns: repeat(4, 1fr); }
+  .cust-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 </style>

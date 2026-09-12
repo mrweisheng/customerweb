@@ -20,7 +20,7 @@ export function leadDateShort(leadDate) {
 }
 
 export function calcVisitStatus(lastVisitDate) {
-  if (!lastVisitDate) return { text: '未回訪', class: 'danger' }
+  if (!lastVisitDate) return { text: '未回访', class: 'danger' }
   const now = new Date()
   const last = new Date(lastVisitDate)
   const diffDays = Math.floor((now - last) / (1000 * 60 * 60 * 24))
