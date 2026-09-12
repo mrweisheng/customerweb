@@ -748,11 +748,23 @@ async function submitPriority() {
 .cdp-sheet {
   width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px;
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  max-height: 96vh; overflow-y: auto; position: relative;
+  max-height: 92vh; overflow-y: auto; position: relative;
+  /* 滚动到底不连带拖动底层页面，避免"越滚越乱"的失控感 */
+  overscroll-behavior: contain;
 }
-.cdp-handle { width: 36px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); margin: 0 auto 14px; }
+/* 抽屉把手 + 头部吸顶：内容再长、滚到多深，客户名和关闭按钮始终可见可点。
+   把手 top:12 / 头部 top:30 与自然位置（padding 20 + 把手 4 + 间距 14）对齐，
+   滚动 8px 后两者同时吸附，吸住后间距与静止时一致 */
+.cdp-handle { position: sticky; top: 12px; z-index: 2; width: 36px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); margin: 0 auto 14px; }
 
-.cdp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cdp-header {
+  position: sticky; top: 30px; z-index: 3;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-glass);
+  box-shadow: 0 10px 12px -10px rgba(0, 0, 0, 0.14);
+  padding: 2px 0 10px;
+}
 .cdp-loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 22px 0 8px; font-size: 13px; color: var(--text-tertiary); }
 .cdp-loading-dot { width: 16px; height: 16px; border: 2px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: cdp-spin 0.8s linear infinite; }
 @keyframes cdp-spin { to { transform: rotate(360deg); } }
@@ -763,7 +775,12 @@ async function submitPriority() {
 .cdp-health .warning, .health-dot.warning { color: var(--warning); background: var(--warning); }
 .cdp-health .danger, .health-dot.danger { color: var(--danger); background: var(--danger); }
 .cdp-health .success, .cdp-health .warning, .cdp-health .danger { background: none; }
-.cdp-close { width: 30px; height: 30px; border: none; background: var(--bg-primary); border-radius: 50%; font-size: 20px; color: var(--text-secondary); cursor: pointer; line-height: 1; flex-shrink: 0; }
+.cdp-close {
+  width: 34px; height: 34px; border: none; background: var(--bg-primary); border-radius: 50%;
+  font-size: 20px; color: var(--text-secondary); cursor: pointer; line-height: 1; flex-shrink: 0;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.cdp-close:active { transform: scale(0.9); opacity: 0.7; }
 
 .cdp-section { border-top: 1px solid var(--border-glass); padding: 14px 0; }
 .sec-head { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
@@ -915,7 +932,12 @@ async function submitPriority() {
   }
   .cdp-handle { display: none; }
 
-  .cdp-header { padding: 20px 28px 12px; margin-bottom: 0; }
+  /* PC 无滚动抽屉，头部不需要吸顶/分隔线，保持原静态布局 */
+  .cdp-header {
+    position: static; top: auto;
+    background: transparent; border-bottom: none; box-shadow: none;
+    padding: 20px 28px 12px; margin-bottom: 0;
+  }
   .cdp-title { font-size: 19px; }
   .cdp-loading { padding: 16px 28px 6px; }
 
