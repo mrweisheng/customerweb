@@ -50,6 +50,12 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  // 各页面滚动互不影响：路由前进一律回到顶部；
+  // 浏览器前进/后退（popstate）则恢复原位置，详情页返回列表不丢滚动
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0 }
+  },
 })
 
 router.beforeEach((to) => {
