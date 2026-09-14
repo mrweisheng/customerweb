@@ -5,6 +5,9 @@
 import { reactive, computed, watch } from 'vue'
 const STORAGE_KEY = 'ai_import_chat_session_v1'
 const MAX_MESSAGES = 200
+// 会话空闲过期时长：从最后一次活动（发消息/收到回复/识别结果）起算，
+// 过期后数据清理、屏幕内容保留（刷新即消失），确认卡片点导入会被拦截提示
+export const IDLE_EXPIRE_MS = 10 * 60 * 1000
 // ── 消息工厂 ────────────────────────────────────────────
 let msgId = 0
 function nextId() {
@@ -25,6 +28,7 @@ function loadInitial() {
       messages: Array.isArray(parsed.messages) ? parsed.messages.slice(-MAX_MESSAGES) : [],
       pendingImport: null, // 不恢复待确认（确认态不能跨刷新）
       lastUserText: typeof parsed.lastUserText === 'string' ? parsed.lastUserText : '',
+      lastActivityAt: Number(parsed.lastActivityAt) || 0,
     }
   } catch (_) {
     return null
@@ -37,6 +41,11 @@ const state = reactive({
   busy: false, // 正在等后端 SSE 流
   error: null,
   lastUserText: initial?.lastUserText || '',
+  // 最后一次会话活动时间戳（持久化），用于空闲过期判定
+  lastActivityAt: initial?.lastActivityAt || 0,
+  // 空闲过期已触发：数据已清理、不再持久化（刷新即消失），
+  // 屏幕消息和确认卡片保留，点导入会被拦截提示
+  expired: false,
   // 导入成功后上下文即清理：contextStart 之前的消息不再发给后端，
   // contextCleared = true 后不再持久化（刷新页面即全部消失）
   contextStart: 0,
@@ -46,15 +55,17 @@ const state = reactive({
 watch(
   () => [state.messages, state.lastUserText],
   () => {
-    // 导入完成后会话已终结，不再持久化——刷新即清空
-    if (state.contextCleared) return
+    // 过期或导入完成后会话已终结，不再持久化——刷新即清空
+    if (state.expired || state.contextCleared) return
     try {
       const persistable = {
         messages: state.messages
+          .slice(state.contextStart)
           .filter((m) => m.role === 'user' || m.role === 'assistant')
           .filter((m) => typeof m.content === 'string')
           .slice(-MAX_MESSAGES),
         lastUserText: state.lastUserText,
+        lastActivityAt: state.lastActivityAt,
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable))
     } catch (_) {}
@@ -62,8 +73,12 @@ watch(
   { deep: true },
 )
 // ── 操作 ────────────────────────────────────────────────
-// imagePreviews 支持多图数组；兼容旧的单图字符串
+// 每次会话活动刷新空闲计时起点
+function touchActivity() {
+  state.lastActivityAt = Date.now()
+}
 function appendUserMessage(text, imagePreviews = []) {
+  touchActivity()
   const previews = Array.isArray(imagePreviews)
     ? imagePreviews.filter(Boolean)
     : imagePreviews ? [imagePreviews] : []
@@ -80,6 +95,7 @@ function ensureAssistantMessage() {
   return msg
 }
 function appendAssistantDelta(delta) {
+  touchActivity()
   const msg = ensureAssistantMessage()
   msg.content = (msg.content || '') + delta
 }
@@ -103,6 +119,7 @@ function setError(e) {
   state.error = e
 }
 function setPendingImport(contacts) {
+  touchActivity()
   state.pendingImport = contacts && contacts.length > 0
     ? { contacts, ts: Date.now() }
     : null
@@ -140,6 +157,8 @@ function clearSession() {
   state.pendingImport = null
   state.error = null
   state.lastUserText = ''
+  state.lastActivityAt = 0
+  state.expired = false
   state.contextStart = 0
   state.contextCleared = false
   try { localStorage.removeItem(STORAGE_KEY) } catch (_) {}
@@ -151,6 +170,28 @@ function finalizeSession() {
   state.contextCleared = true
   state.pendingImport = null
   try { localStorage.removeItem(STORAGE_KEY) } catch (_) {}
+}
+// 会话是否已空闲超时（lastActivityAt 距今超过 IDLE_EXPIRE_MS）
+function isSessionExpired() {
+  return !state.expired
+    && state.lastActivityAt > 0
+    && Date.now() - state.lastActivityAt > IDLE_EXPIRE_MS
+}
+// 空闲过期：识别数据/输入草稿清理，屏幕消息保留（刷新即消失）。
+// pendingImport 卡片保留在屏幕上（点导入会被拦截提示），contextStart
+// 同步前移，过期后发新消息不会带上旧上下文，且只有新消息会重新持久化
+function expireSession() {
+  if (state.expired) return
+  state.expired = true
+  state.contextStart = state.messages.length
+  state.lastUserText = ''
+  state.error = null
+  try { localStorage.removeItem(STORAGE_KEY) } catch (_) {}
+}
+// 过期后用户重新发消息：开启新一轮（旧消息只在屏幕上，不再进上下文）
+function resumeAfterExpire() {
+  state.expired = false
+  touchActivity()
 }
 const hasMessages = computed(() => state.messages.length > 0)
 export function useChatSession() {
@@ -168,5 +209,8 @@ export function useChatSession() {
     recordToolResult,
     clearSession,
     finalizeSession,
+    isSessionExpired,
+    expireSession,
+    resumeAfterExpire,
   }
 }

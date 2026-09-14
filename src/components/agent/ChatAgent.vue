@@ -58,10 +58,21 @@ const {
   appendUserMessage, appendAssistantDelta, finishAssistant,
   setBusy, setError, setPendingImport, clearPendingImport,
   recordToolCall, recordToolResult, finalizeSession,
+  isSessionExpired, expireSession, resumeAfterExpire,
 } = useChatSession()
 const scrollRef = ref(null)
 const committing = ref(false)
 const toolRunning = ref(false)
+let idleTimer = null
+// 空闲超时触发：屏幕消息保留，补一条系统提示（不再持久化，刷新即全部消失）
+function onIdleCheck() {
+  if (state.busy || !hasMessages.value || !isSessionExpired()) return
+  expireSession()
+  setPendingImportFiles([])
+  appendAssistantDelta('本次会话已超过 10 分钟未操作，识别数据已自动清理。请重新发送截图开始新一轮识别。')
+  finishAssistant()
+  scrollToBottom()
+}
 function scrollToBottom() {
   nextTick(() => {
     if (scrollRef.value) scrollRef.value.scrollTop = scrollRef.value.scrollHeight
@@ -71,6 +82,10 @@ onMounted(() => {
   scrollToBottom()
   // 取出队列中剩余的待识别截图继续发（多图时第一张已发，其余排队在此）
   sendNextPendingFile()
+  // 恢复的会话若已空闲超时：数据不再可用，直接进过期态
+  if (hasMessages.value && isSessionExpired()) expireSession()
+  // 空闲过期兜底检查：页面一直开着时由定时器触发（SSE 进行中会顺延到下一轮检查）
+  idleTimer = setInterval(onIdleCheck, 20 * 1000)
   // 焦点不在输入框时的整页粘贴（Ctrl+V 常见）：直接发送识别
   document.addEventListener('paste', onDocPaste)
 })
@@ -126,6 +141,8 @@ async function onSend({ text, images }) {
   if (state.busy) return
   // 只在发新截图时清掉上一轮确认卡片，避免用户打字误清
   if (images && images.length > 0) clearPendingImport()
+  // 过期会话来了新消息：开启新一轮（旧消息只留在屏幕上）
+  if (state.expired) resumeAfterExpire()
   setError(null)
   appendUserMessage(text, (images || []).map((img) => img.preview))
   state.lastUserText = ''
@@ -169,10 +186,19 @@ async function onSend({ text, images }) {
     toolRunning.value = false
     setBusy(false)
     scrollToBottom()
+    // 回复期间跨过 10 分钟线的话，结束后立即过期（不等定时器）
+    onIdleCheck()
   }
 }
 async function onConfirm() {
   if (!state.pendingImport || committing.value) return
+  // 会话已空闲超时：识别数据已清理，卡片只是残留在屏幕上，不允许再导入
+  if (state.expired) {
+    clearPendingImport()
+    setError('本次会话已超过 10 分钟未操作，识别数据已清理，请重新发送截图识别。')
+    scrollToBottom()
+    return
+  }
   committing.value = true
   setError(null)
   const contacts = state.pendingImport.contacts.map((c) => ({
@@ -221,6 +247,7 @@ function onEndConversation() {
 onBeforeUnmount(() => {
   // 离开页面丢弃未处理的队列，避免下次进来自动发陈旧图片
   setPendingImportFiles([])
+  if (idleTimer) clearInterval(idleTimer)
   document.removeEventListener('paste', onDocPaste)
 })
 </script>
