@@ -178,7 +178,7 @@ async function onLogin() {
   border: 1px solid var(--border-glass);
   border-radius: 12px;
   padding: 12px 14px;
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text-primary);
   transition: all 0.2s;
   font-family: inherit;

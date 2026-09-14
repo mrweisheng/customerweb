@@ -96,7 +96,7 @@ input, textarea {
 }
 
 .page {
-  padding: 0 14px 80px;
+  padding: 0 14px calc(80px + env(safe-area-inset-bottom));
   min-height: 100vh;
   background: var(--bg-primary);
 }

@@ -195,7 +195,7 @@ onMounted(() => {
 .mine-page {
   min-height: 100vh;
   background: var(--bg-primary);
-  padding: 18px 14px 80px;
+  padding: 18px 14px calc(80px + env(safe-area-inset-bottom));
 }
 
 /* Profile Card */
@@ -313,7 +313,7 @@ onMounted(() => {
   background: var(--surface);
   padding: 7px 10px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--primary);
   outline: none;

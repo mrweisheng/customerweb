@@ -20,7 +20,7 @@
         class="composer-input"
         v-model="text"
         rows="1"
-        :placeholder="busy ? '客资助手正在回复…' : '发截图或输入问题，回车发送'"
+        :placeholder="busy ? '正在回复…' : '发截图或输入问题'"
         :disabled="busy"
         @keydown.enter.exact.prevent="submit"
         @paste="onPaste"
@@ -164,10 +164,10 @@ onBeforeUnmount(() => {
 }
 .chip-remove {
   position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
+  top: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.65);
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   padding: 9px 12px;
   max-height: 120px;
@@ -234,6 +234,10 @@ onBeforeUnmount(() => {
   margin-top: 6px;
   font-size: 12px;
   color: #FF3B30;
+}
+@media (max-width: 1023px) {
+  /* 页面级已为 TabBar 留出 safe-area，这里不再叠加 */
+  .composer { padding-bottom: 12px; }
 }
 @media (min-width: 1024px) {
   .composer { padding: 12px 20px 16px; }

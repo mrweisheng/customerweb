@@ -896,7 +896,7 @@ function confirmDeleteDeal(deal) {
 .cdp-sheet {
   width: 100%; background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px;
   padding-bottom: calc(20px + env(safe-area-inset-bottom));
-  max-height: 92vh; overflow-y: auto; position: relative;
+  max-height: 92vh; max-height: 92dvh; overflow-y: auto; position: relative;
   /* 滚动到底不连带拖动底层页面，避免"越滚越乱"的失控感 */
   overscroll-behavior: contain;
 }
@@ -913,6 +913,14 @@ function confirmDeleteDeal(deal) {
   box-shadow: 0 10px 12px -10px rgba(0, 0, 0, 0.14);
   padding: 2px 0 10px;
 }
+/* 覆盖 sheet 顶部到吸顶级之间的空隙，滚动内容不再从把手两侧穿过 */
+.cdp-header::before {
+  content: '';
+  position: absolute;
+  left: -20px; right: -20px; top: -30px; height: 30px;
+  background: var(--surface);
+}
+.cdp-header > * { position: relative; }
 .cdp-loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 22px 0 8px; font-size: 13px; color: var(--text-tertiary); }
 .cdp-loading-dot { width: 16px; height: 16px; border: 2px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: cdp-spin 0.8s linear infinite; }
 @keyframes cdp-spin { to { transform: rotate(360deg); } }
@@ -1078,7 +1086,7 @@ function confirmDeleteDeal(deal) {
   font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 11px;
 }
 .if-close {
-  width: 26px; height: 26px; border: none; background: var(--surface);
+  width: 32px; height: 32px; border: none; background: var(--surface);
   border-radius: 8px; color: var(--text-secondary); font-size: 13px;
   cursor: pointer; line-height: 1;
 }

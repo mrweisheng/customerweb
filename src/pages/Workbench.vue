@@ -419,14 +419,14 @@ onUnmounted(() => {
 .search-input {
   flex: 1;
   min-width: 0;
-  font-size: 13.5px;
+  font-size: 16px;
   color: var(--text-primary);
   font-family: inherit;
   background: transparent;
 }
 .search-input::placeholder { color: var(--text-tertiary); }
 .search-clear {
-  width: 22px; height: 22px; border-radius: 50%;
+  width: 32px; height: 32px; margin-right: -8px; border-radius: 50%;
   background: var(--bg-primary); color: var(--text-secondary);
   font-size: 11px; flex-shrink: 0;
 }
@@ -590,7 +590,7 @@ onUnmounted(() => {
 .wb-fab {
   position: fixed;
   right: 16px;
-  bottom: 76px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
   width: 54px; height: 54px; border-radius: 18px;
   background: linear-gradient(135deg, #007AFF, #32ADE6);
   color: #fff;

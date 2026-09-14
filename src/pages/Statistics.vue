@@ -955,7 +955,7 @@ onUnmounted(() => {
 
 <style scoped>
 .stats-page {
-  padding: 18px 14px 80px;
+  padding: 18px 14px calc(80px + env(safe-area-inset-bottom));
   min-height: 100vh;
   background: var(--bg-primary);
 }
@@ -1089,7 +1089,7 @@ onUnmounted(() => {
 .legend-dot.current { background: var(--primary); }
 .legend-dot.previous { background: #C7C7CC; }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-.summary-item { background: var(--bg-primary); border-radius: 10px; padding: 10px 12px; text-align: center; }
+.summary-item { background: var(--bg-primary); border-radius: 10px; padding: 10px 12px; text-align: center; min-width: 0; overflow: hidden; }
 .summary-range { font-size: 10.5px; font-weight: 600; color: var(--text-tertiary); margin-bottom: 2px; white-space: nowrap; }
 .summary-value { font-size: 18px; font-weight: 700; color: var(--text-primary); }
 .summary-value.secondary { color: var(--text-secondary); }
@@ -1103,7 +1103,7 @@ onUnmounted(() => {
 /* ── 更新日历 ── */
 .cal-nav { display: flex; align-items: center; gap: 6px; }
 .cal-nav-btn {
-  width: 26px; height: 26px; border-radius: 8px;
+  width: 32px; height: 32px; border-radius: 8px;
   background: var(--bg-primary); color: var(--text-secondary);
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; cursor: pointer;
@@ -1189,7 +1189,7 @@ onUnmounted(() => {
 .dt-tab.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
 .dt-month { display: flex; align-items: center; gap: 6px; }
 .dt-month-btn {
-  width: 26px; height: 26px; border-radius: 8px;
+  width: 32px; height: 32px; border-radius: 8px;
   background: var(--bg-primary); color: var(--text-secondary);
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; cursor: pointer;
@@ -1215,6 +1215,11 @@ onUnmounted(() => {
 .dt-tag.no { background: var(--orange-light); color: var(--warning); }
 .dt-desc { flex: 1; min-width: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dt-amount { font-weight: 800; font-size: 12.5px; color: #EA580C; flex-shrink: 0; }
+
+@media (max-width: 360px) {
+  .dt-name { max-width: 76px; }
+  .deal-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* ── PC ── */
 @media (min-width: 1024px) {

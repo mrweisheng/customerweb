@@ -124,8 +124,8 @@ const allDuplicates = computed(() => props.contacts.length > 0 && newCount.value
   border-radius: 4px;
   flex-shrink: 0;
 }
-.row-name { flex: 1; color: var(--text-primary); font-weight: 600; }
-.row-remark { color: var(--text-secondary); font-size: 12px; }
+.row-name { flex: 1; min-width: 0; color: var(--text-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-remark { color: var(--text-secondary); font-size: 12px; flex-shrink: 0; max-width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-tag {
   flex-shrink: 0;
   font-size: 10.5px;
