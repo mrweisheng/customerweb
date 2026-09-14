@@ -1,18 +1,20 @@
 <template>
   <div class="composer">
-    <div v-if="image" class="composer-image-chip">
-      <img :src="image.preview" class="chip-thumb" />
-      <button class="chip-remove" @click="clearImage" title="移除图片">×</button>
+    <div v-if="images.length > 0" class="composer-image-chips">
+      <div v-for="(img, i) in images" :key="img.preview" class="composer-image-chip">
+        <img :src="img.preview" class="chip-thumb" />
+        <button class="chip-remove" @click="removeImage(i)" title="移除图片">×</button>
+      </div>
     </div>
     <div class="composer-row">
-      <button class="composer-icon" @click="pickImage" :disabled="busy" title="选择截图">
+      <button class="composer-icon" @click="pickImage" :disabled="busy" title="选择截图（可多选）">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"></rect>
           <circle cx="8.5" cy="8.5" r="1.5"></circle>
           <polyline points="21 15 16 10 5 21"></polyline>
         </svg>
       </button>
-      <input ref="fileRef" type="file" accept="image/jpeg,image/png" class="composer-file" @change="onFileChange" />
+      <input ref="fileRef" type="file" accept="image/jpeg,image/png" multiple class="composer-file" @change="onFileChange" />
       <textarea
         ref="inputRef"
         class="composer-input"
@@ -23,7 +25,7 @@
         @keydown.enter.exact.prevent="submit"
         @paste="onPaste"
       ></textarea>
-      <button class="composer-send" :disabled="busy || (!text.trim() && !image)" @click="submit" title="发送">
+      <button class="composer-send" :disabled="busy || (!text.trim() && images.length === 0)" @click="submit" title="发送">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -43,8 +45,11 @@ const props = defineProps({
 })
 const emit = defineEmits(['send', 'update-text'])
 
+// 与后端 agent.js 的 MAX_IMAGES 对齐
+const MAX_IMAGES = 9
+
 const text = ref(props.initialText || '')
-const image = ref(null) // { base64, preview, file }
+const images = ref([]) // [{ base64, preview, file }]
 const imageError = ref('')
 const inputRef = ref(null)
 const fileRef = ref(null)
@@ -54,14 +59,14 @@ watch(text, (t) => emit('update-text', t))
 watch(() => props.initialText, (t) => { text.value = t || '' })
 
 function submit() {
-  if (props.busy || (!text.value.trim() && !image.value)) return
+  if (props.busy || (!text.value.trim() && images.value.length === 0)) return
   emit('send', {
     text: text.value.trim(),
-    image: image.value ? { base64: image.value.base64, preview: image.value.preview } : null,
+    images: images.value.map((img) => ({ base64: img.base64, preview: img.preview })),
   })
   text.value = ''
   // 发送成功：preview URL 的所有权已移交给消息气泡，不能 revoke（否则裂图）
-  image.value = null
+  images.value = []
   imageError.value = ''
 }
 
@@ -69,48 +74,68 @@ function pickImage() {
   fileRef.value?.click()
 }
 function onFileChange(e) {
-  const file = e.target.files?.[0]
+  addFiles(e.target.files)
   e.target.value = ''
-  if (file) setImage(file)
 }
 function onPaste(e) {
-  const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith('image/'))
-  if (!item) return
+  const files = [...(e.clipboardData?.items || [])]
+    .filter((i) => i.type.startsWith('image/'))
+    .map((i) => i.getAsFile())
+    .filter(Boolean)
+  if (files.length === 0) return
   e.preventDefault()
-  const file = item.getAsFile()
-  if (file) setImage(file)
+  addFiles(files)
 }
 // PC 端拖拽截图到输入栏直接添加
 function onDrop(e) {
   dragging.value = false
   if (props.busy) return
-  const file = [...(e.dataTransfer?.files || [])].find((f) => f.type?.startsWith('image/'))
-  if (!file) {
+  const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type?.startsWith('image/'))
+  if (files.length === 0) {
     imageError.value = '请拖入图片文件（JPEG/PNG）'
     return
   }
-  setImage(file)
+  addFiles(files)
 }
 // 附件就绪后把焦点拉回输入框：回车即可直接发送（图片可单独发，也可补文字一起发）
-async function setImage(file) {
+async function addFiles(fileList) {
   imageError.value = ''
-  try {
-    clearImage()
-    const { base64, preview } = await prepareAgentImage(file)
-    image.value = { base64, preview, file }
-    inputRef.value?.focus()
-  } catch (err) {
-    imageError.value = err.message || '图片处理失败'
+  const files = [...(fileList || [])]
+  if (files.length === 0) return
+  const room = MAX_IMAGES - images.value.length
+  if (room <= 0) {
+    imageError.value = `一次最多 ${MAX_IMAGES} 张图片`
+    return
+  }
+  if (files.length > room) imageError.value = `一次最多 ${MAX_IMAGES} 张图片，已保留前 ${MAX_IMAGES} 张`
+  let focused = false
+  for (const file of files.slice(0, room)) {
+    try {
+      const { base64, preview } = await prepareAgentImage(file)
+      images.value.push({ base64, preview, file })
+      if (!focused) {
+        inputRef.value?.focus()
+        focused = true
+      }
+    } catch (err) {
+      imageError.value = err.message || '图片处理失败'
+    }
   }
 }
-function clearImage() {
-  if (image.value?.preview) URL.revokeObjectURL(image.value.preview)
-  image.value = null
+function removeImage(i) {
+  const img = images.value[i]
+  if (img?.preview) URL.revokeObjectURL(img.preview)
+  images.value.splice(i, 1)
 }
 onMounted(() => {
   if (inputRef.value && !props.busy) inputRef.value.focus()
 })
-onBeforeUnmount(() => clearImage())
+onBeforeUnmount(() => {
+  for (const img of images.value) {
+    if (img.preview) URL.revokeObjectURL(img.preview)
+  }
+  images.value = []
+})
 </script>
 <style scoped>
 .composer {
@@ -119,10 +144,15 @@ onBeforeUnmount(() => clearImage())
   background: var(--surface);
   position: relative;
 }
+.composer-image-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
 .composer-image-chip {
   position: relative;
   display: inline-block;
-  margin-bottom: 8px;
 }
 .chip-thumb {
   width: 64px;

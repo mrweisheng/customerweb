@@ -87,7 +87,8 @@ function onDocPaste(e) {
     void sendImageFiles(files)
   }
 }
-// 发送图片（可多张）：第一张立刻识别，其余入队，导入确认/取消后自动接续。
+// 发送图片（可多张）：一次全部发给后端识别。
+// 助手正在回复时先入队，本轮结束后由确认/取消动作接续。
 // 整页拖拽、整页粘贴共用这条通路
 async function sendImageFiles(fileList) {
   const incoming = Array.from(fileList || []).filter((f) => f?.type?.startsWith('image/'))
@@ -97,14 +98,15 @@ async function sendImageFiles(fileList) {
     setPendingImportFiles([...takePendingImportFiles(), ...incoming])
     return
   }
-  const [first, ...rest] = incoming
   const queuedBefore = takePendingImportFiles()
-  setPendingImportFiles([...rest, ...queuedBefore])
+  const all = [...incoming, ...queuedBefore]
   try {
-    const image = await prepareAgentImage(first)
-    const queued = rest.length + queuedBefore.length
-    const hint = queued > 0 ? `请识别这张截图（还有 ${queued} 张排队中）` : '请识别这张截图'
-    await onSend({ text: hint, image })
+    const images = []
+    for (const file of all) {
+      images.push(await prepareAgentImage(file))
+    }
+    const hint = images.length > 1 ? `请识别这些截图（共 ${images.length} 张）` : '请识别这张截图'
+    await onSend({ text: hint, images })
   } catch (e) {
     setError(e.message || '图片处理失败')
   }
@@ -120,12 +122,12 @@ defineExpose({ sendImageFiles })
 function onHint(text) {
   state.lastUserText = text
 }
-async function onSend({ text, image }) {
+async function onSend({ text, images }) {
   if (state.busy) return
   // 只在发新截图时清掉上一轮确认卡片，避免用户打字误清
-  if (image) clearPendingImport()
+  if (images && images.length > 0) clearPendingImport()
   setError(null)
-  appendUserMessage(text, image ? image.preview : null)
+  appendUserMessage(text, (images || []).map((img) => img.preview))
   state.lastUserText = ''
   setBusy(true)
   toolRunning.value = false
@@ -133,7 +135,7 @@ async function onSend({ text, image }) {
     // 导入完成后上下文已终结，只发送 contextStart 之后的新消息
     const reqMessages = buildRequestMessages(state.messages.slice(state.contextStart))
     await streamAgentChat(
-      { messages: reqMessages, imageBase64: image?.base64 },
+      { messages: reqMessages, imagesBase64: (images || []).map((img) => img.base64) },
       {
         onTextDelta: (delta) => { appendAssistantDelta(delta); scrollToBottom() },
         onToolCall: (calls) => {

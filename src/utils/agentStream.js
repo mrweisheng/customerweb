@@ -26,7 +26,7 @@ export async function prepareAgentImage(file) {
 /**
  * @param {Object} params
  * @param {Array}  params.messages      OpenAI 格式历史消息（不含系统提示词）
- * @param {string} [params.imageBase64] 待识别的图片 base64（不含 data: 前缀）
+ * @param {string[]} [params.imagesBase64] 待识别的图片 base64 数组（不含 data: 前缀）
  * @param {Object} callbacks
  * @param {(delta: string) => void} [callbacks.onTextDelta]
  * @param {(toolCalls: Array) => void} [callbacks.onToolCall]
@@ -36,8 +36,10 @@ export async function prepareAgentImage(file) {
  * @param {(message: string) => void} [callbacks.onError]
  * @returns {Promise<void>}
  */
-export async function streamAgentChat({ messages, imageBase64 }, callbacks = {}) {
+export async function streamAgentChat({ messages, imagesBase64 }, callbacks = {}) {
   const token = getToken()
+  const images = (Array.isArray(imagesBase64) ? imagesBase64 : imagesBase64 ? [imagesBase64] : [])
+    .filter((b) => typeof b === 'string' && b.length > 0)
   const res = await fetch(`${API_BASE}/customers/agent/chat`, {
     method: 'POST',
     headers: {
@@ -46,7 +48,7 @@ export async function streamAgentChat({ messages, imageBase64 }, callbacks = {})
     },
     body: JSON.stringify({
       messages,
-      ...(imageBase64 ? { image_base64: imageBase64 } : {}),
+      ...(images.length > 0 ? { images_base64: images } : {}),
     }),
   })
   if (!res.ok) {

@@ -62,8 +62,12 @@ watch(
   { deep: true },
 )
 // ── 操作 ────────────────────────────────────────────────
-function appendUserMessage(text, imagePreview = null) {
-  const m = makeMessage('user', text || '', { image: imagePreview })
+// imagePreviews 支持多图数组；兼容旧的单图字符串
+function appendUserMessage(text, imagePreviews = []) {
+  const previews = Array.isArray(imagePreviews)
+    ? imagePreviews.filter(Boolean)
+    : imagePreviews ? [imagePreviews] : []
+  const m = makeMessage('user', text || '', { images: previews })
   state.messages.push(m)
   return m
 }

@@ -2,7 +2,13 @@
   <div class="bubble" :class="['bubble-' + message.role, { streaming: message.streaming }]">
     <!-- 用户消息 -->
     <template v-if="message.role === 'user'">
-      <img v-if="message.image" :src="message.image" class="bubble-image" />
+      <div
+        v-if="(message.images && message.images.length > 0) || message.image"
+        class="bubble-images"
+        :class="{ multi: imageList.length > 1 }"
+      >
+        <img v-for="(src, i) in imageList" :key="i" :src="src" class="bubble-image" />
+      </div>
       <div v-if="message.content" class="bubble-text">{{ message.content }}</div>
     </template>
     <!-- 助手消息 -->
@@ -23,7 +29,13 @@
   </div>
 </template>
 <script setup>
-defineProps({ message: { type: Object, required: true } })
+import { computed } from 'vue'
+const props = defineProps({ message: { type: Object, required: true } })
+// 多图列表；兼容旧会话里存的单图 image 字段
+const imageList = computed(() => {
+  if (Array.isArray(props.message.images)) return props.message.images
+  return props.message.image ? [props.message.image] : []
+})
 </script>
 <style scoped>
 .bubble {
@@ -76,6 +88,23 @@ defineProps({ message: { type: Object, required: true } })
 }
 .bubble-assistant .bubble-text {
   border-bottom-left-radius: 4px;
+}
+.bubble-images {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.bubble-images.multi {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: min(560px, 80%);
+}
+.bubble-images.multi .bubble-image {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
 }
 .bubble-image {
   max-width: 220px;
