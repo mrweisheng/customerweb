@@ -80,6 +80,8 @@ function onDrop(e) {
 @media (max-width: 1023px) {
   .ai-import-page {
     height: 100dvh;
+    /* 移动端底部 TabBar（60px + 安全区）为固定定位，给内容留出空间 */
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
   }
 }
 .ai-card {

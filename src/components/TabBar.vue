@@ -19,6 +19,11 @@
           <line x1="12" y1="20" x2="12" y2="4"></line>
           <line x1="6" y1="20" x2="6" y2="14"></line>
         </svg>
+        <svg v-else-if="tab.name === 'AiImport'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
         <svg v-else-if="tab.name === 'Mine'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
@@ -38,6 +43,7 @@ const route = useRoute()
 
 const tabs = [
   { name: 'Workbench', path: '/index', text: '工作台' },
+  { name: 'AiImport', path: '/ai-import', text: '导入' },
   { name: 'Statistics', path: '/statistics', text: '统计' },
   { name: 'Mine', path: '/mine', text: '我的' },
 ]
