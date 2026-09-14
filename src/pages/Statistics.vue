@@ -1196,6 +1196,17 @@ onUnmounted(() => {
 }
 .dt-month-btn.disabled { opacity: 0.3; }
 .dt-month-text { font-size: 12px; font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+/* ── 移动端：明细头部单行布局 ──
+   分段切换（成交/到店）拉通占满剩余宽度、等分且文字不换行，
+   月份切换器紧凑化靠右，两者同一行，不再上下堆叠 */
+@media (max-width: 1023px) {
+  .detail-card .card-header { flex-wrap: nowrap; gap: 10px; }
+  .dt-tabs { flex: 1; min-width: 0; }
+  .dt-tab { flex: 1; text-align: center; padding: 7px 0; font-size: 12.5px; white-space: nowrap; }
+  .dt-month { flex-shrink: 0; gap: 4px; }
+  .dt-month-btn { width: 30px; height: 30px; }
+  .dt-month-text { min-width: 62px; text-align: center; }
+}
 .dt-list { display: flex; flex-direction: column; }
 .dt-row {
   display: flex; align-items: center; gap: 9px;
