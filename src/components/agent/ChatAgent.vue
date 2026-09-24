@@ -135,7 +135,8 @@ watch(
   () => [state.messages.length, state.lastUserText],
   ([len, text], [prevLen, prevText]) => {
     if (finalizedCountdown.value === null) return
-    if (len > prevLen || (text && text !== prevText)) cancelCountdown()
+    // 仅在用户主动输入时取消（系统内部追加 assistant 消息、messages.length 短暂增减都不算）
+    if (text && text !== prevText) cancelCountdown()
   },
 )
 // 焦点在输入框/输入类元素上时交给 Composer 自己的 @paste 处理（附加到输入栏可先补文字），
@@ -155,6 +156,8 @@ function onDocPaste(e) {
 async function sendImageFiles(fileList) {
   const incoming = Array.from(fileList || []).filter((f) => f?.type?.startsWith('image/'))
   if (incoming.length === 0) return
+  // 用户发了新截图 → 终止上一轮结束对话的倒计时清理
+  cancelCountdown()
   if (state.busy) {
     // 助手正在回复：先入队，本轮结束后由确认/取消动作接续
     setPendingImportFiles([...takePendingImportFiles(), ...incoming])
