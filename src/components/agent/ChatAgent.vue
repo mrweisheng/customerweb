@@ -10,10 +10,6 @@
           发我一张微信截图，我来识别联系人并准备导入。<br/>
           支持 <span class="kbd">Ctrl</span> + <span class="kbd">V</span> 粘贴或直接拖拽到输入栏。
         </div>
-        <div class="chat-empty-hints">
-          <button class="hint-chip" @click="onHint('请识别这张截图')">📷 我有截图要识别</button>
-          <button class="hint-chip" @click="onHint('怎么用？')">❓ 怎么用</button>
-        </div>
       </div>
       <MessageBubble
         v-for="msg in state.messages"
@@ -184,10 +180,6 @@ function sendNextPendingFile() {
 
 // 供宿主页面（整页拖拽落图）调用
 defineExpose({ sendImageFiles })
-// 点击开场白芯片：把文本同步到 Composer 输入框（Composer 监听 initial-text 变化）
-function onHint(text) {
-  state.lastUserText = text
-}
 async function onSend({ text, images }) {
   if (state.busy) return
   // 只在发新截图时清掉上一轮确认卡片，避免用户打字误清
@@ -341,7 +333,7 @@ onBeforeUnmount(() => {
 }
 .chat-empty-avatar svg { width: 28px; height: 28px; }
 .chat-empty-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.chat-empty-desc { font-size: 13px; line-height: 1.7; margin-bottom: 16px; }
+.chat-empty-desc { font-size: 13px; line-height: 1.7; }
 .kbd {
   display: inline-block;
   padding: 1px 6px;
@@ -352,18 +344,6 @@ onBeforeUnmount(() => {
   font-size: 11px;
   color: var(--text-primary);
 }
-.chat-empty-hints { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-.hint-chip {
-  padding: 7px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border-glass);
-  background: var(--surface);
-  font-family: inherit;
-  font-size: 12.5px;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-.hint-chip:hover { background: var(--primary-light); color: var(--primary); }
 .chat-typing {
   align-self: flex-start;
   display: inline-flex;
