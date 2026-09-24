@@ -1,6 +1,6 @@
 <template>
   <div class="page wb-page">
-    <!-- 顶部：标题 + 录入入口（PC）——录入统一走对话式智能导入，这里只是快捷跳转 -->
+    <!-- 顶部：标题（录入入口走 TabBar/侧栏的智能导入，不在页面内嵌快捷按钮） -->
     <header class="wb-top">
       <div class="wb-top-info">
         <h1 class="wb-title">工作台</h1>
@@ -8,12 +8,6 @@
           共 {{ priorityCustomers.length }} 位重点客户 · {{ healthCounts.need }} 位需回访 · {{ healthCounts.none }} 位未回访
         </div>
       </div>
-      <button v-if="!isAdmin" class="btn-import" @click="goImport">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        录入客户
-      </button>
     </header>
 
     <!-- 搜索框（原搜索页 + 重点页内嵌搜索合一，附搜索历史） -->
@@ -136,13 +130,6 @@
       </div>
     </template>
 
-    <!-- 录入入口（移动端悬浮按钮）：直接进入对话式智能导入 -->
-    <button class="wb-fab" v-if="!isDesktop && !searchQuery && !isAdmin" @click="goImport" aria-label="录入客户">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-      </svg>
-    </button>
-
     <!-- 客户编辑面板（跟进 / 需求 / 到店 / 成交 / 重点） -->
     <CustomerDetailPanel
       v-model:show="showDetailPanel"
@@ -157,7 +144,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import api from '../utils/api'
 import { AVATAR_COLORS, calcVisitStatus, leadDateShort } from '../utils/constants'
 import { useDevice } from '../composables/useDevice'
@@ -165,8 +151,6 @@ import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
 import CustomerDetailPanel from '../components/CustomerDetailPanel.vue'
 import EmptyState from '../components/EmptyState.vue'
-
-const router = useRouter()
 const { isDesktop } = useDevice()
 const { toast, showToast } = useToast()
 const { scopeUserId, isAdmin, scopeParams, loadUsers } = useScope()
@@ -346,14 +330,6 @@ function tryOpenPanel(c) {
 function onCardTap(c) { tryOpenPanel(c) }
 function onResultTap(c) { tryOpenPanel(c) }
 
-// ── 录入 ────────────────────────────────────────────────
-// 录入统一走对话式智能导入页，这里只是导航快捷入口；
-// 移动端 TabBar 没有「智能导入」tab，悬浮「+」是移动端唯一入口，不能删
-function goImport() {
-  if (isAdmin.value) return // 管理员只读，不开放录入
-  router.push('/ai-import')
-}
-
 // ── Ctrl+K 聚焦搜索（PC）───────────────────────────────
 function onGlobalKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
@@ -382,10 +358,6 @@ onUnmounted(() => {
 
 /* ── 顶部 ── */
 .wb-top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
   margin-bottom: 14px;
 }
 .wb-title {
@@ -399,9 +371,6 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--text-secondary);
   margin-top: 3px;
-}
-.btn-import {
-  display: none;
 }
 
 /* ── 搜索 ── */
@@ -586,22 +555,6 @@ onUnmounted(() => {
   border: none; cursor: pointer;
 }
 
-/* ── 移动端 FAB ── */
-.wb-fab {
-  position: fixed;
-  right: 16px;
-  bottom: calc(76px + env(safe-area-inset-bottom));
-  width: 54px; height: 54px; border-radius: 18px;
-  background: linear-gradient(135deg, #007AFF, #32ADE6);
-  color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 10px 24px rgba(0, 122, 255, 0.45);
-  z-index: var(--z-nav);
-  cursor: pointer;
-}
-.wb-fab:active { transform: scale(0.94); }
-.wb-fab svg { width: 24px; height: 24px; }
-
 /* ── 平板 ── */
 @media (min-width: 768px) {
   .cust-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -612,22 +565,6 @@ onUnmounted(() => {
   .wb-page { padding-top: 24px; }
   .wb-top { margin-bottom: 18px; }
   .wb-title { font-size: 26px; }
-  .btn-import {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 11px 20px;
-    border-radius: 12px;
-    background: var(--primary);
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: inherit;
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.28);
-    cursor: pointer;
-  }
-  .btn-import:hover { filter: brightness(1.05); }
-  .btn-import svg { width: 15px; height: 15px; }
   .searchbar { padding: 12px 16px; }
   .search-kbd { display: inline-block; }
   .cust-card:hover {
@@ -635,7 +572,6 @@ onUnmounted(() => {
     box-shadow: 0 10px 26px -8px rgba(15, 23, 42, 0.18);
   }
   .cust-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
-  .wb-fab { display: none; }
   .result-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1); }
   .f-chip:hover { border-color: var(--text-tertiary); }
   .hist-chip:hover { filter: brightness(0.96); }
