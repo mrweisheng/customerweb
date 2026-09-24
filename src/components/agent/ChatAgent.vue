@@ -28,6 +28,18 @@
         ⚠️ {{ state.error }}
       </div>
     </div>
+
+    <!-- 任务完成 banner：导入成功后 5 秒倒计时，时间到自动清屏；可保留或立即清理 -->
+    <div v-if="finalizedCountdown !== null" class="finalize-banner" role="status" aria-live="polite">
+      <span class="finalize-check" aria-hidden="true">✓</span>
+      <div class="finalize-text">
+        <div class="finalize-title">本次任务已完成</div>
+        <div class="finalize-sub">{{ finalizedCountdown }} 秒后自动清理本次对话</div>
+      </div>
+      <button class="finalize-btn" type="button" @click="onKeep">保留对话</button>
+      <button class="finalize-btn primary" type="button" @click="onClearNow">立即清理</button>
+    </div>
+
     <ConfirmCard
       v-if="state.pendingImport && !state.busy"
       :contacts="state.pendingImport.contacts"
@@ -57,13 +69,44 @@ const {
   state, hasMessages,
   appendUserMessage, appendAssistantDelta, finishAssistant,
   setBusy, setError, setPendingImport, clearPendingImport,
-  recordToolCall, recordToolResult, finalizeSession,
+  recordToolCall, recordToolResult, finalizeSession, clearSession,
   isSessionExpired, expireSession, resumeAfterExpire,
 } = useChatSession()
 const scrollRef = ref(null)
 const committing = ref(false)
 const toolRunning = ref(false)
 let idleTimer = null
+
+// ── 任务完成后的自动清理倒计时 ────────────────────────────────
+// 导入成功后 5 秒自动清屏（不叫"删除"，文案"任务完成·自动清理"）。
+// 用户可点"保留"取消定时器，或点"立即清理"立刻清屏。
+// 用户发新消息 / 输入框有草稿时自动放弃倒计时（视作继续对话）
+const FINALIZE_COUNTDOWN_SEC = 5
+const finalizedCountdown = ref(null)
+let countdownTimer = null
+function cancelCountdown() {
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
+  finalizedCountdown.value = null
+}
+function startFinalizeCountdown() {
+  cancelCountdown()
+  finalizedCountdown.value = FINALIZE_COUNTDOWN_SEC
+  countdownTimer = setInterval(() => {
+    if (finalizedCountdown.value === null) return
+    finalizedCountdown.value -= 1
+    if (finalizedCountdown.value <= 0) {
+      cancelCountdown()
+      clearSession()
+    }
+  }, 1000)
+}
+function onKeep() {
+  cancelCountdown()
+}
+function onClearNow() {
+  cancelCountdown()
+  clearSession()
+}
 // 空闲超时触发：屏幕消息保留，补一条系统提示（不再持久化，刷新即全部消失）
 function onIdleCheck() {
   if (state.busy || !hasMessages.value || !isSessionExpired()) return
@@ -91,6 +134,14 @@ onMounted(() => {
 })
 watch(() => state.messages.length, scrollToBottom)
 watch(() => state.busy, scrollToBottom)
+// 倒计时期间用户发了新消息或输入草稿：视作继续对话，放弃自动清理
+watch(
+  () => [state.messages.length, state.lastUserText],
+  ([len, text], [prevLen, prevText]) => {
+    if (finalizedCountdown.value === null) return
+    if (len > prevLen || (text && text !== prevText)) cancelCountdown()
+  },
+)
 // 焦点在输入框/输入类元素上时交给 Composer 自己的 @paste 处理（附加到输入栏可先补文字），
 // 否则整页任意位置粘贴截图直接发送
 function onDocPaste(e) {
@@ -219,6 +270,8 @@ async function onConfirm() {
     // 需求 2：导入完成后上下文自动终结——消息只留在屏幕上（刷新即消失），
     // 不会进入下一轮对话
     finalizeSession()
+    // 任务完成后启动 5 秒倒计时，时间到自动清屏（用户可保留或立即清理）
+    startFinalizeCountdown()
     // 工作台一次选了多张图：接着自动识别下一张
     sendNextPendingFile()
   } catch (e) {
@@ -241,6 +294,7 @@ function onEndConversation() {
   appendAssistantDelta('本轮识别的联系人均已存在，无需导入。对话已结束，发新截图可开始新一轮识别。')
   finishAssistant()
   finalizeSession()
+  startFinalizeCountdown()
   setPendingImportFiles([])
   scrollToBottom()
 }
@@ -248,6 +302,7 @@ onBeforeUnmount(() => {
   // 离开页面丢弃未处理的队列，避免下次进来自动发陈旧图片
   setPendingImportFiles([])
   if (idleTimer) clearInterval(idleTimer)
+  cancelCountdown()
   document.removeEventListener('paste', onDocPaste)
 })
 </script>
@@ -342,6 +397,63 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 13px;
+}
+
+/* ── 任务完成 banner：5 秒倒计时自动清理 ── */
+.finalize-banner {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 -6px;
+  padding: 11px 14px;
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.12), rgba(48, 209, 88, 0.08));
+  border: 1px solid rgba(52, 199, 89, 0.32);
+  border-radius: 14px;
+  color: var(--text-primary);
+  font-size: 13px;
+  animation: finalize-in 0.28s ease-out;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.finalize-check {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #34C759;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800;
+  box-shadow: 0 4px 10px rgba(52, 199, 89, 0.35);
+}
+.finalize-text { flex: 1; min-width: 0; line-height: 1.4; }
+.finalize-title { font-size: 13.5px; font-weight: 700; color: #1f7a3a; }
+.finalize-sub { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+.finalize-btn {
+  flex-shrink: 0;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.finalize-btn:active { transform: scale(0.96); }
+.finalize-btn.primary {
+  background: #34C759;
+  border-color: #34C759;
+  color: #fff;
+}
+.finalize-btn.primary:active { background: #2da44a; }
+@keyframes finalize-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @media (min-width: 1024px) {
   .chat-scroll { padding: 20px 32px; gap: 16px; }
