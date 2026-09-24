@@ -142,8 +142,11 @@
               <button type="button" class="df-tab" :class="{ active: activeTab === 'plate' }" @click="activeTab = 'plate'">
                 <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>两地牌
               </button>
+              <button type="button" class="df-tab" :class="{ active: activeTab === 'comprehensive' }" @click="activeTab = 'comprehensive'">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>综合
+              </button>
             </div>
-            <div class="df-tab-hint" v-if="!editingDeal">两个 Tab 都填，会同时记录两条成交</div>
+            <div class="df-tab-hint" v-if="!editingDeal">每个 Tab 独立录入，填几项就记几条成交</div>
 
             <div class="df-field" v-if="activeTab === 'vehicle'" :key="'vehicle'">
               <label>车架号</label>
@@ -188,6 +191,23 @@
               <div class="df-field">
                 <label>成交时间</label>
                 <input class="df-input" type="date" v-model="formPlate.deal_time" />
+              </div>
+            </template>
+
+            <template v-if="activeTab === 'comprehensive'">
+              <div class="df-field">
+                <label>业务描述</label>
+                <textarea
+                  class="df-input"
+                  v-model.trim="formComprehensive.vehicle_desc"
+                  rows="3"
+                  placeholder="一句话说明业务内容，如：到店办理的香港驾照、上牌服务、年检代办等"
+                  maxlength="200"
+                ></textarea>
+              </div>
+              <div class="df-field">
+                <label>成交时间</label>
+                <input class="df-input" type="date" v-model="formComprehensive.deal_time" />
               </div>
             </template>
 
@@ -243,17 +263,21 @@
               <div class="deal-item" v-for="d in deals" :key="d.id">
                 <div class="deal-tag" :class="d.deal_type">
                   <svg class="ic" v-if="d.deal_type === 'vehicle'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg>
-                  <svg class="ic" v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>
-                  {{ d.deal_type === 'vehicle' ? '车辆' : '两地牌' }}
+                  <svg class="ic" v-else-if="d.deal_type === 'plate'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg>
+                  <svg class="ic" v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                  {{ d.deal_type === 'vehicle' ? '车辆' : d.deal_type === 'plate' ? '两地牌' : '综合' }}
                 </div>
                 <div class="deal-body">
                   <template v-if="d.deal_type === 'vehicle'">
                     <div class="deal-main">{{ d.vehicle_desc || '车辆' }}</div>
                     <div class="deal-sub" v-if="d.vin">车架号 {{ d.vin }}</div>
                   </template>
-                  <template v-else>
+                  <template v-else-if="d.deal_type === 'plate'">
                     <div class="deal-main">{{ d.port || '-' }} · {{ d.plate_kind || '-' }}</div>
                     <div class="deal-sub" v-if="d.plate_number">车牌 {{ d.plate_number }}</div>
+                  </template>
+                  <template v-else>
+                    <div class="deal-main">{{ d.vehicle_desc || '综合业务' }}</div>
                   </template>
                   <div class="deal-meta">
                     <span v-if="d.deal_time"><svg class="ic meta-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> {{ d.deal_time }}</span>
@@ -337,13 +361,14 @@ const priorityDraft = ref('')
 const editingVisit = ref(null)
 const formVisit = reactive({ visit_time: today(), needs: '', remark: '' })
 
-// ── 成交表单：车辆区 / 两地牌区 各自独立，互不干扰 ──────────
+// ── 成交表单：车辆区 / 两地牌区 / 综合区 各自独立，互不干扰 ──────────
 const showDealForm = ref(false)
 const editingDeal = ref(null)
-const activeTab = ref('vehicle')   // 'vehicle' | 'plate'
+const activeTab = ref('vehicle')   // 'vehicle' | 'plate' | 'comprehensive'
 const contentTab = ref('timeline') // 记录区 Tab：'timeline' 动态 | 'deals' 成交记录
 const formVehicle = reactive({ vin: '', vehicle_desc: '', amount: '', deal_time: today(), remark: '' })
 const formPlate = reactive({ port: '', plate_kind: '期牌', plate_number: '', amount: '', deal_time: today(), remark: '' })
+const formComprehensive = reactive({ vehicle_desc: '', deal_time: today() })
 
 const confirm = reactive({
   show: false, title: '', desc: '', danger: false, confirmText: '确认', action: () => {},
@@ -614,6 +639,7 @@ function dealSummary(dealId) {
   const d = deals.value.find((x) => x.id === dealId)
   if (!d) return ''
   if (d.deal_type === 'vehicle') return d.vehicle_desc || '车辆'
+  if (d.deal_type === 'comprehensive') return d.vehicle_desc || '综合业务'
   return `${d.port || ''} ${d.plate_kind || ''}`.trim() || '两地牌'
 }
 
@@ -778,6 +804,7 @@ function confirmRemovePriority() {
 function resetForm() {
   Object.assign(formVehicle, { vin: '', vehicle_desc: '', amount: '', deal_time: today(), remark: '' })
   Object.assign(formPlate, { port: '', plate_kind: '期牌', plate_number: '', amount: '', deal_time: today(), remark: '' })
+  Object.assign(formComprehensive, { vehicle_desc: '', deal_time: today() })
 }
 
 function openDealForm(deal) {
@@ -790,13 +817,19 @@ function openDealForm(deal) {
         vin: deal.vin || '', vehicle_desc: deal.vehicle_desc || '', amount: deal.amount ?? '',
         deal_time: deal.deal_time || today(), remark: deal.remark || '',
       })
-    } else {
+    } else if (deal.deal_type === 'plate') {
       Object.assign(formPlate, {
         port: deal.port || '',
         plate_kind: deal.plate_kind || '期牌',
         plate_number: deal.plate_number || '',
         amount: deal.amount ?? '',
         deal_time: deal.deal_time || today(), remark: deal.remark || '',
+      })
+    } else {
+      // 综合业务：vehicle_desc 复用为业务描述
+      Object.assign(formComprehensive, {
+        vehicle_desc: deal.vehicle_desc || '',
+        deal_time: deal.deal_time || today(),
       })
     }
   } else {
@@ -824,18 +857,25 @@ async function submitDeal() {
           vin: formVehicle.vin, vehicle_desc: formVehicle.vehicle_desc, amount: formVehicle.amount || null,
           deal_time: formVehicle.deal_time, remark: formVehicle.remark,
         })
-      } else {
+      } else if (d.deal_type === 'plate') {
         if (!formPlate.port) return showToast('请选择口岸')
         Object.assign(payload, {
           port: formPlate.port, plate_kind: formPlate.plate_kind,
           plate_number: formPlate.plate_number, amount: formPlate.amount || null,
           deal_time: formPlate.deal_time, remark: formPlate.remark,
         })
+      } else {
+        // 综合业务编辑：vehicle_desc 即业务描述
+        if (!formComprehensive.vehicle_desc.trim()) return showToast('请填写业务描述')
+        Object.assign(payload, {
+          vehicle_desc: formComprehensive.vehicle_desc.trim(),
+          deal_time: formComprehensive.deal_time,
+        })
       }
       await api.put(`/customers/${cid}/deals/${d.id}`, payload)
       showToast('成交已更新')
     } else {
-      // 新增：车辆区/两地牌区按填写内容分别生成，可同时出 1~2 条
+      // 新增：车辆区/两地牌区/综合区按填写内容分别生成，可同时出 1~3 条
       const items = []
       if (formVehicle.vin.trim() || formVehicle.vehicle_desc.trim()) {
         items.push({
@@ -848,6 +888,12 @@ async function submitDeal() {
           deal_type: 'plate', port: formPlate.port, plate_kind: formPlate.plate_kind,
           plate_number: formPlate.plate_number.trim(), amount: formPlate.amount || null,
           deal_time: formPlate.deal_time, remark: formPlate.remark,
+        })
+      }
+      if (formComprehensive.vehicle_desc.trim()) {
+        items.push({
+          deal_type: 'comprehensive', vehicle_desc: formComprehensive.vehicle_desc.trim(),
+          deal_time: formComprehensive.deal_time,
         })
       }
       if (!items.length) return showToast('请至少填写一项成交内容')
@@ -1058,6 +1104,7 @@ function confirmDeleteDeal(deal) {
 .deal-tag .ic { width: 12px; height: 12px; }
 .deal-tag.vehicle { background: var(--blue-light, var(--primary-light)); color: var(--primary); }
 .deal-tag.plate { background: var(--purple-light, rgba(175, 82, 222, 0.12)); color: var(--purple, #AF52DE); }
+.deal-tag.comprehensive { background: rgba(52, 199, 89, 0.12); color: var(--success, #34C759); }
 .deal-body { flex: 1; min-width: 0; }
 .deal-main { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .deal-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; word-break: break-all; }
