@@ -1,9 +1,25 @@
 <template>
   <div class="stats-page">
-    <header class="st-top">
-      <h1 class="st-title">统计</h1>
-      <div class="st-sub" v-if="isAdmin">数据范围：{{ scopeUserName }}</div>
-    </header>
+    <!-- Bloom Hero -->
+    <section class="bloom-hero stats-hero">
+      <div class="blob b-coral b-sm" style="top:-40px;right:18%;width:200px;height:200px;"></div>
+      <div class="blob b-sun b-sm" style="top:38%;left:-20px;width:180px;height:180px;"></div>
+      <div class="blob b-mint b-sm" style="bottom:-30px;right:8%;width:160px;height:160px;"></div>
+
+      <div class="stats-hero-row">
+        <div>
+          <div class="stats-hero-eyebrow">{{ statsHeroEyebrow }}</div>
+          <h1 class="stats-hero-h1">{{ statsHeroHeadline }}</h1>
+          <div class="stats-hero-sub">数据范围：{{ scopeUserName }} · {{ statsHeroPeriod }}</div>
+        </div>
+        <div class="stats-hero-mark" aria-hidden="true">
+          <span class="wb-hero-mark-dot t-coral"></span>
+          <span class="wb-hero-mark-dot t-mint"></span>
+          <span class="wb-hero-mark-dot t-sun"></span>
+          <span class="wb-hero-mark-dot t-sky"></span>
+        </div>
+      </div>
+    </section>
 
     <!-- 数据总览：Bento 大数字矩阵 -->
     <div class="card overview-card">
@@ -337,6 +353,20 @@ import { useTheme } from '../composables/useTheme'
 
 const { toast, showToast } = useToast()
 const { scopeUserId, isAdmin, scopeParams, scopeUserName, loadUsers } = useScope()
+
+// ── Bloom Hero 文案 ──
+const statsHeroEyebrow = computed(() => {
+  const m = new Date().getMonth() + 1
+  if (m <= 3)  return 'Q1 · WINTER'
+  if (m <= 6)  return 'Q2 · SPRING'
+  if (m <= 9)  return 'Q3 · SUMMER'
+  return 'Q4 · AUTUMN'
+})
+const statsHeroHeadline = computed(() => '数据会说话。')
+const statsHeroPeriod = computed(() => {
+  const d = new Date()
+  return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月`
+})
 const { isDesktop: isPC } = useDevice()
 const { isDark } = useTheme()
 
@@ -966,12 +996,25 @@ onUnmounted(() => {
 .stats-page {
   padding: 18px 14px calc(80px + env(safe-area-inset-bottom));
   min-height: 100vh;
-  background: var(--bg-primary);
+  background: var(--bloom-canvas);
 }
 
-.st-top { margin-bottom: 14px; }
-.st-title { font-size: 24px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.3px; line-height: 1.2; }
-.st-sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+.stats-hero { position: relative; padding: 26px 26px 22px; margin-bottom: 16px; border-radius: 20px; }
+.stats-hero-row { position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.stats-hero-eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  color: var(--bloom-coral); margin-bottom: 8px;
+}
+.stats-hero-h1 {
+  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-size: 28px; font-weight: 400; letter-spacing: -0.01em;
+  color: var(--bloom-ink); line-height: 1.18;
+}
+.stats-hero-sub { margin-top: 8px; font-size: 12.5px; color: var(--bloom-ink-2); }
+.stats-hero-mark { display: flex; gap: 5px; padding-top: 8px; }
+.stats-hero-mark .wb-hero-mark-dot { width: 9px; height: 9px; border-radius: 999px; }
+@media (min-width: 1024px) { .stats-hero-h1 { font-size: 34px; } }
 
 .card {
   background: var(--bg-card);
@@ -1004,10 +1047,10 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 .title-chip svg { width: 15px; height: 15px; }
-.title-chip.ti-blue { background: rgba(0, 122, 255, 0.12); color: #007AFF; }
-.title-chip.ti-green { background: rgba(52, 199, 89, 0.14); color: #34C759; }
-.title-chip.ti-purple { background: rgba(175, 82, 222, 0.12); color: #AF52DE; }
-.title-chip.ti-orange { background: rgba(255, 159, 10, 0.12); color: #FF9F0A; }
+.title-chip.ti-blue   { background: var(--bloom-coral-soft);    color: var(--bloom-coral-ink); }
+.title-chip.ti-green  { background: var(--bloom-mint-soft);     color: var(--bloom-mint-ink); }
+.title-chip.ti-purple { background: var(--bloom-lavender-soft); color: var(--bloom-lavender-ink); }
+.title-chip.ti-orange { background: var(--bloom-sun-soft);      color: var(--bloom-sun-ink); }
 
 /* ── 本周重点分析 ── */
 .pa-range { font-size: 12px; font-weight: 600; color: var(--text-tertiary); }
@@ -1040,15 +1083,15 @@ onUnmounted(() => {
 }
 .bento-main { grid-column: 1 / -1; }
 /* 每张指标卡一个专属色的角落光晕，低透明度不抢数据 */
-.tint-blue { background: radial-gradient(110px 90px at top right, rgba(0, 122, 255, 0.10), transparent 70%), var(--surface); }
-.tint-purple { background: radial-gradient(110px 90px at top right, rgba(175, 82, 222, 0.10), transparent 70%), var(--surface); }
-.tint-green { background: radial-gradient(110px 90px at top right, rgba(52, 199, 89, 0.11), transparent 70%), var(--surface); }
-.tint-orange { background: radial-gradient(110px 90px at top right, rgba(255, 149, 0, 0.11), transparent 70%), var(--surface); }
+.tint-blue { background: radial-gradient(110px 90px at top right, var(--bloom-coral-soft), transparent 70%), var(--bloom-surface); }
+.tint-purple { background: radial-gradient(110px 90px at top right, var(--bloom-lavender-soft), transparent 70%), var(--bloom-surface); }
+.tint-green { background: radial-gradient(110px 90px at top right, var(--bloom-mint-soft), transparent 70%), var(--bloom-surface); }
+.tint-orange { background: radial-gradient(110px 90px at top right, var(--bloom-sun-soft), transparent 70%), var(--bloom-surface); }
 /* 夜间：角落光晕提亮，深色卡片上仍可感知 */
-.dark .tint-blue { background: radial-gradient(110px 90px at top right, rgba(10, 132, 255, 0.26), transparent 70%), var(--surface); }
-.dark .tint-purple { background: radial-gradient(110px 90px at top right, rgba(191, 90, 242, 0.24), transparent 70%), var(--surface); }
-.dark .tint-green { background: radial-gradient(110px 90px at top right, rgba(48, 209, 88, 0.22), transparent 70%), var(--surface); }
-.dark .tint-orange { background: radial-gradient(110px 90px at top right, rgba(255, 159, 10, 0.24), transparent 70%), var(--surface); }
+:root.dark .tint-blue { background: radial-gradient(110px 90px at top right, var(--bloom-coral-soft), transparent 70%), var(--bloom-surface); }
+:root.dark .tint-purple { background: radial-gradient(110px 90px at top right, var(--bloom-lavender-soft), transparent 70%), var(--bloom-surface); }
+:root.dark .tint-green { background: radial-gradient(110px 90px at top right, var(--bloom-mint-soft), transparent 70%), var(--bloom-surface); }
+:root.dark .tint-orange { background: radial-gradient(110px 90px at top right, var(--bloom-sun-soft), transparent 70%), var(--bloom-surface); }
 .bento-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .bento-label-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .bento-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
@@ -1058,10 +1101,10 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 .bento-icon svg { width: 13px; height: 13px; }
-.bento-icon.bi-blue { background: rgba(0, 122, 255, 0.12); color: #007AFF; }
-.bento-icon.bi-purple { background: rgba(175, 82, 222, 0.12); color: #AF52DE; }
-.bento-icon.bi-green { background: rgba(52, 199, 89, 0.14); color: #34C759; }
-.bento-icon.bi-orange { background: var(--orange-light); color: var(--warning); }
+.bento-icon.bi-blue   { background: var(--bloom-coral-soft);    color: var(--bloom-coral-ink); }
+.bento-icon.bi-purple { background: var(--bloom-lavender-soft); color: var(--bloom-lavender-ink); }
+.bento-icon.bi-green  { background: var(--bloom-mint-soft);     color: var(--bloom-mint-ink); }
+.bento-icon.bi-orange { background: var(--bloom-sun-soft);      color: var(--bloom-sun-ink); }
 .bento-tag {
   font-size: 9px; font-weight: 800; letter-spacing: 1px;
   color: var(--primary); background: var(--primary-light);
@@ -1071,7 +1114,7 @@ onUnmounted(() => {
 .bento-main .bento-value { font-size: 38px; }
 .bento-spark-wrap { margin-top: 8px; height: 36px; }
 .bento-trend-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-.bento-trend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.bento-trend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bloom-mint); }
 .bento-trend-text { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 .bento-trend-text.up { color: var(--success); }
 .bento-trend-text.down { color: var(--danger); }
@@ -1127,8 +1170,8 @@ onUnmounted(() => {
   font-size: 11px; font-weight: 600; color: var(--text-secondary);
   background: var(--bg-primary);
 }
-.cal-updated { background: #34c759; color: #fff; font-weight: 800; box-shadow: 0 2px 8px rgba(52, 199, 89, 0.35); }
-.cal-missed { background: #ff3b30; color: #fff; font-weight: 800; box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3); }
+.cal-updated { background: var(--bloom-mint); color: var(--bloom-ink-on-accent); font-weight: 800; box-shadow: 0 2px 8px rgba(43, 176, 127, 0.35); }
+.cal-missed  { background: var(--bloom-coral); color: var(--bloom-ink-on-accent); font-weight: 800; box-shadow: 0 2px 8px rgba(255, 107, 71, 0.3); }
 .cal-summary {
   display: flex; align-items: center;
   margin-top: 14px; padding: 10px;
@@ -1159,11 +1202,11 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 .deal-cell-icon svg { width: 14px; height: 14px; }
-.deal-cell-icon.di-blue { background: rgba(0, 122, 255, 0.12); color: #007AFF; }
-.deal-cell-icon.di-green { background: rgba(52, 199, 89, 0.14); color: #34C759; }
-.deal-cell-icon.di-green-soft { background: rgba(48, 209, 88, 0.10); color: #30D158; }
-.deal-cell-icon.di-purple { background: rgba(175, 82, 222, 0.12); color: #AF52DE; }
-.deal-cell-icon.di-orange { background: var(--orange-light); color: var(--warning); }
+.deal-cell-icon.di-blue   { background: var(--bloom-coral-soft);    color: var(--bloom-coral-ink); }
+.deal-cell-icon.di-green  { background: var(--bloom-mint-soft);     color: var(--bloom-mint-ink); }
+.deal-cell-icon.di-green-soft { background: color-mix(in srgb, var(--bloom-mint) 22%, transparent); color: var(--bloom-mint-ink); }
+.deal-cell-icon.di-purple { background: var(--bloom-lavender-soft); color: var(--bloom-lavender-ink); }
+.deal-cell-icon.di-orange { background: var(--bloom-sun-soft);      color: var(--bloom-sun-ink); }
 .deal-val { font-size: 20px; font-weight: 700; color: var(--text-primary); }
 .deal-lbl { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; font-weight: 600; }
 .deal-section { margin-top: 16px; }

@@ -1,16 +1,45 @@
 <template>
   <div class="page wb-page">
-    <!-- 顶部：标题（录入入口走 TabBar/侧栏的智能导入，不在页面内嵌快捷按钮） -->
-    <header class="wb-top">
-      <div class="wb-top-info">
-        <h1 class="wb-title">工作台</h1>
-        <div class="wb-sub" v-if="loaded">
-          共 {{ priorityCustomers.length }} 位重点客户 · {{ healthCounts.need }} 位需回访 · {{ healthCounts.none }} 位未回访
+    <!-- 顶部 Bloom Hero：问候 + KPI 三格 -->
+    <header class="bloom-hero wb-hero">
+      <div class="blob b-coral b-sm" style="top:-40px;right:18%;width:200px;height:200px;"></div>
+      <div class="blob b-sun b-sm" style="top:30%;left:-30px;width:180px;height:180px;"></div>
+
+      <div class="wb-hero-row">
+        <div>
+          <div class="wb-hero-eyebrow">{{ heroEyebrow }}</div>
+          <h1 class="wb-hero-h1">{{ heroTitle }}<span class="wb-hero-comma">，</span>{{ heroSuffix }}</h1>
+          <div class="wb-hero-sub" v-if="loaded">
+            共 {{ priorityCustomers.length }} 位重点客户 · {{ healthCounts.need }} 位需回访 · {{ healthCounts.none }} 位未回访
+          </div>
+        </div>
+        <div class="wb-hero-mark" aria-hidden="true">
+          <span class="wb-hero-mark-dot t-coral"></span>
+          <span class="wb-hero-mark-dot t-mint"></span>
+          <span class="wb-hero-mark-dot t-sun"></span>
+        </div>
+      </div>
+
+      <div class="wb-kpi-row" v-if="loaded">
+        <div class="bloom-kpi tint-coral">
+          <div class="bloom-kpi-label">Priority</div>
+          <div class="bloom-kpi-value">{{ priorityCustomers.length }}<span class="unit">位</span></div>
+          <div class="wb-kpi-cap">重点客户总数</div>
+        </div>
+        <div class="bloom-kpi tint-sun">
+          <div class="bloom-kpi-label">Need Follow</div>
+          <div class="bloom-kpi-value">{{ healthCounts.need }}<span class="unit">位</span></div>
+          <div class="wb-kpi-cap">超过 7 天未跟进</div>
+        </div>
+        <div class="bloom-kpi tint-lavender">
+          <div class="bloom-kpi-label">No Contact</div>
+          <div class="bloom-kpi-value">{{ healthCounts.none }}<span class="unit">位</span></div>
+          <div class="wb-kpi-cap">从未回访</div>
         </div>
       </div>
     </header>
 
-    <!-- 搜索框（原搜索页 + 重点页内嵌搜索合一，附搜索历史） -->
+    <!-- 搜索框 -->
     <div class="searchbar">
       <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
         <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -32,7 +61,7 @@
       <span class="hist-clear" @click="clearHistory">清空</span>
     </div>
 
-    <!-- 搜索结果模式：替代客户网格 -->
+    <!-- 搜索结果模式 -->
     <div v-if="searchQuery" class="results-section">
       <div class="results-header" v-if="searchResults.length">找到 {{ searchResults.length }} 条结果</div>
       <div class="result-card" v-for="c in searchResults" :key="c.id" @click="onResultTap(c)">
@@ -42,7 +71,7 @@
         <div class="result-info">
           <div class="result-name">
             <span class="lead-date" v-if="c.lead_date_short">{{ c.lead_date_short }}/</span>{{ c.customer_name }}
-            <span v-if="c.is_priority" class="priority-badge">重点</span>
+            <span v-if="c.is_priority" class="tag-bloom t-coral t-sm">重点</span>
           </div>
           <div class="result-meta">{{ c.current_needs || '—' }}</div>
         </div>
@@ -56,16 +85,16 @@
       </div>
     </div>
 
-    <!-- 列表模式：筛选 + 重点客户网格 -->
+    <!-- 列表模式 -->
     <template v-else>
       <div class="filter-chips">
         <button class="f-chip" :class="{ on: filter === 'all' }" @click="filter = 'all'">
           全部 <span class="cnt">{{ priorityCustomers.length }}</span>
         </button>
-        <button class="f-chip warn" :class="{ on: filter === 'need' }" @click="filter = 'need'">
+        <button class="f-chip f-warn" :class="{ on: filter === 'need' }" @click="filter = 'need'">
           需回访 <span class="cnt">{{ healthCounts.need }}</span>
         </button>
-        <button class="f-chip dang" :class="{ on: filter === 'none' }" @click="filter = 'none'">
+        <button class="f-chip f-dang" :class="{ on: filter === 'none' }" @click="filter = 'none'">
           未回访 <span class="cnt">{{ healthCounts.none }}</span>
         </button>
         <span class="sort-hint">
@@ -95,12 +124,20 @@
         <div
           v-for="c in filteredCustomers"
           :key="c.id"
-          class="cust-card"
+          class="cust-card bloom-card"
           @click="onCardTap(c)"
         >
           <div class="cc-head">
-            <div class="cc-name">{{ c.lead_date_short ? c.lead_date_short + '/' : '' }}{{ c.customer_name }}</div>
-            <span class="cc-visit" :class="c.visitStatus.class">{{ visitBadgeText(c) }}</span>
+            <div class="cc-avatar" :style="{ background: c.avatarColor.bg, color: c.avatarColor.color }">{{ c.customer_name?.charAt(0) }}</div>
+            <div class="cc-head-meta">
+              <div class="cc-name">
+                <span class="lead-date" v-if="c.lead_date_short">{{ c.lead_date_short }}/</span>{{ c.customer_name }}
+              </div>
+              <div class="cc-tags-row">
+                <span class="tag-bloom t-sm" :class="visitTagClass(c)">{{ visitBadgeText(c) }}</span>
+                <span v-if="c.is_priority" class="tag-bloom t-coral t-sm">重点</span>
+              </div>
+            </div>
             <span
               class="cc-copy"
               :class="{ copied: copiedId === c.id }"
@@ -116,21 +153,20 @@
               </svg>
             </span>
           </div>
-          <!-- 需求是卡片的核心信息：浅蓝底衬主展示，无需求时给引导性占位 -->
           <div class="cc-need" :class="{ empty: !c.current_needs }">
             <div class="cc-need-label">当前需求</div>
             <div class="cc-need-text">{{ c.current_needs || '暂无需求，点击补充' }}</div>
           </div>
-          <!-- 最新动态次要行：最新一条到店/跟进，只在有内容时出现 -->
           <div class="cc-act-row" v-if="c.last_activity">
-            <span class="cc-act-tag" :class="c.last_activity.type">{{ c.last_activity.type === 'visit' ? '到店' : '跟进' }}</span>
+            <span class="tag-bloom t-sm" :class="c.last_activity.type === 'visit' ? 't-mint' : 't-sky'">
+              {{ c.last_activity.type === 'visit' ? '到店' : '跟进' }}
+            </span>
             <span class="cc-act-text">{{ c.last_activity.content }}</span>
           </div>
         </div>
       </div>
     </template>
 
-    <!-- 客户编辑面板（跟进 / 需求 / 到店 / 成交 / 重点） -->
     <CustomerDetailPanel
       v-model:show="showDetailPanel"
       :customer="activeCustomer"
@@ -155,10 +191,9 @@ const { isDesktop } = useDevice()
 const { toast, showToast } = useToast()
 const { scopeUserId, isAdmin, scopeParams, loadUsers } = useScope()
 
-// ── 状态 ────────────────────────────────────────────────
 const priorityCustomers = ref([])
 const loaded = ref(false)
-const filter = ref('all') // all | need（>7天未跟进）| none（从未回访）
+const filter = ref('all')
 const copiedId = ref(null)
 
 const searchQuery = ref('')
@@ -172,8 +207,6 @@ const searchHistory = ref(readHistory())
 const showDetailPanel = ref(false)
 const activeCustomer = ref({})
 
-// ── 健康度统计（复用 calcVisitStatus 判定）──────────────
-// need：超过 7 天未跟进（warning / 有日期的 danger）；none：从未回访
 const healthCounts = computed(() => {
   let need = 0, none = 0
   for (const c of priorityCustomers.value) {
@@ -189,11 +222,20 @@ const filteredCustomers = computed(() => {
   return priorityCustomers.value
 })
 
-// ── 数据加载 ────────────────────────────────────────────
-// /priority 返回顺序即「最久未回访优先」（last_visit_at IS NULL 最前、其后 ASC）
+// Bloom Hero 文案：按时段问候
+const heroEyebrow = computed(() => {
+  const h = new Date().getHours()
+  if (h < 6)  return '凌晨好'
+  if (h < 12) return '早上好'
+  if (h < 14) return '中午好'
+  if (h < 18) return '下午好'
+  return '晚上好'
+})
+const heroTitle = computed(() => heroEyebrow.value)
+const heroSuffix = computed(() => '今天有 ' + healthCounts.value.need + ' 位需要回访')
+
 const loadFailed = ref(false)
 
-// 列表卡片统一装饰：线索日期缩写 / 头像色 / 回访健康度 / 最近到店短日期（MM-DD）
 function decorateCustomer(c, idx) {
   return {
     ...c,
@@ -204,9 +246,13 @@ function decorateCustomer(c, idx) {
   }
 }
 
-// 回访徽标文案：有到店记录时带上来店日期，如「09-09 · 3天前」；无记录为「未回访」
 function visitBadgeText(c) {
   return c.visitDay ? `${c.visitDay} · ${c.visitStatus.text}` : c.visitStatus.text
+}
+
+function visitTagClass(c) {
+  if (!c.last_visit_at) return 't-lavender'
+  return c.visitStatus.class === 'success' ? 't-mint' : 't-sun'
 }
 
 async function loadAll() {
@@ -222,19 +268,14 @@ async function loadAll() {
   }
 }
 
-// 面板内数据变更：刷新列表，并把 activeCustomer 重新指向列表中的最新对象
 async function onPanelUpdated() {
   await loadAll()
   const fresh = priorityCustomers.value.find((c) => c.id === activeCustomer.value.id)
   if (fresh) activeCustomer.value = fresh
 }
 
-// 管理员切换数据范围 → 联动刷新
-watch(scopeUserId, () => {
-  loadAll()
-})
+watch(scopeUserId, () => { loadAll() })
 
-// ── 搜索（含历史，原搜索页唯一增量）────────────────────
 function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => {
@@ -268,11 +309,7 @@ function applyHistory(keyword) {
 }
 
 function readHistory() {
-  try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []
-  } catch (_) {
-    return []
-  }
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [] } catch (_) { return [] }
 }
 
 function saveHistory(keyword) {
@@ -286,7 +323,6 @@ function clearHistory() {
   localStorage.removeItem(HISTORY_KEY)
 }
 
-// ── 复制 日期/姓名 ─────────────────────────────────────
 function leadName(c) {
   return c.lead_date_short ? `${c.lead_date_short}/${c.customer_name}` : (c.customer_name || '')
 }
@@ -297,7 +333,6 @@ async function copyName(c) {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text)
     } else {
-      // 非安全上下文降级：隐藏 textarea 中转
       const ta = document.createElement('textarea')
       ta.value = text
       ta.style.position = 'fixed'
@@ -317,7 +352,6 @@ async function copyName(c) {
   }
 }
 
-// ── 打开编辑面板 ────────────────────────────────────────
 function tryOpenPanel(c) {
   if (isAdmin.value) {
     showToast('管理员仅查看，不可编辑')
@@ -330,7 +364,6 @@ function tryOpenPanel(c) {
 function onCardTap(c) { tryOpenPanel(c) }
 function onResultTap(c) { tryOpenPanel(c) }
 
-// ── Ctrl+K 聚焦搜索（PC）───────────────────────────────
 function onGlobalKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
     e.preventDefault()
@@ -338,7 +371,6 @@ function onGlobalKeydown(e) {
   }
 }
 
-// ── 生命周期 ────────────────────────────────────────────
 onMounted(() => {
   loadAll()
   if (isAdmin.value) loadUsers()
@@ -352,68 +384,88 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.wb-page {
-  padding-top: 18px;
-}
+.wb-page { padding-top: 18px; padding-bottom: 16px; }
 
-/* ── 顶部 ── */
-.wb-top {
-  margin-bottom: 14px;
+/* ── Bloom Hero ── */
+.wb-hero {
+  position: relative;
+  padding: 26px 26px 22px;
+  margin-bottom: 16px;
+  border-radius: 20px;
 }
-.wb-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 0.3px;
-  line-height: 1.2;
+.wb-hero-row {
+  position: relative;
+  z-index: 2;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
 }
-.wb-sub {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 3px;
+.wb-hero-eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  color: var(--bloom-coral); margin-bottom: 8px;
+}
+.wb-hero-h1 {
+  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-size: 32px; font-weight: 400; letter-spacing: -0.01em;
+  color: var(--bloom-ink); line-height: 1.1;
+}
+.wb-hero-comma { color: var(--bloom-coral); }
+.wb-hero-sub {
+  margin-top: 8px;
+  font-size: 12.5px; color: var(--bloom-ink-2);
+}
+.wb-hero-mark { display: flex; gap: 6px; padding-top: 6px; }
+.wb-hero-mark-dot {
+  width: 10px; height: 10px; border-radius: 999px;
+}
+.t-coral { background: var(--bloom-coral); }
+.t-mint  { background: var(--bloom-mint); }
+.t-sun   { background: var(--bloom-sun); }
+
+.wb-kpi-row {
+  position: relative; z-index: 2;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px; margin-top: 18px;
+}
+.wb-kpi-cap {
+  font-size: 11px; color: var(--bloom-ink-3); font-weight: 500;
 }
 
 /* ── 搜索 ── */
 .searchbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
   border-radius: 14px;
   padding: 11px 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
-.search-icon { width: 17px; height: 17px; color: var(--text-tertiary); flex-shrink: 0; }
+.search-icon { width: 17px; height: 17px; color: var(--bloom-ink-3); flex-shrink: 0; }
 .search-input {
-  flex: 1;
-  min-width: 0;
-  font-size: 16px;
-  color: var(--text-primary);
-  font-family: inherit;
-  background: transparent;
+  flex: 1; min-width: 0;
+  font-size: 16px; color: var(--bloom-ink);
+  font-family: inherit; background: transparent;
 }
-.search-input::placeholder { color: var(--text-tertiary); }
+.search-input::placeholder { color: var(--bloom-ink-4); }
 .search-clear {
   width: 32px; height: 32px; margin-right: -8px; border-radius: 50%;
-  background: var(--bg-primary); color: var(--text-secondary);
-  font-size: 11px; flex-shrink: 0;
+  background: var(--bloom-canvas-tint); color: var(--bloom-ink-2);
+  font-size: 11px; flex-shrink: 0; border: none;
 }
 .search-kbd {
   display: none;
-  font-size: 10px; font-weight: 700; color: var(--text-tertiary);
-  border: 1px solid var(--border-glass); border-radius: 6px;
-  padding: 2px 6px; background: var(--bg-primary);
-  font-family: inherit;
+  font-size: 10px; font-weight: 700; color: var(--bloom-ink-3);
+  border: 1px solid var(--bloom-rule); border-radius: 6px;
+  padding: 2px 6px; background: var(--bloom-canvas);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 .hist-row {
   display: flex; align-items: center; gap: 7px;
-  margin-top: 9px; font-size: 11.5px; color: var(--text-tertiary);
+  margin-top: 9px; font-size: 11.5px; color: var(--bloom-ink-3);
   flex-wrap: wrap;
 }
 .hist-label { font-weight: 600; }
 .hist-chip {
-  background: var(--primary-light); color: var(--primary);
+  background: var(--bloom-coral-soft); color: var(--bloom-coral-ink);
   padding: 3px 11px; border-radius: 99px;
   font-weight: 600; font-size: 11px; cursor: pointer;
 }
@@ -426,20 +478,21 @@ onUnmounted(() => {
 }
 .f-chip {
   padding: 6px 14px; border-radius: 99px;
-  font-size: 12px; font-weight: 600; color: var(--text-secondary);
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
+  font-size: 12px; font-weight: 600; color: var(--bloom-ink-2);
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
   font-family: inherit; cursor: pointer;
 }
 .f-chip .cnt { opacity: 0.65; font-weight: 700; margin-left: 2px; font-size: 11px; }
 .f-chip.on {
-  background: var(--primary); color: #fff; border-color: transparent;
-  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.3);
+  background: var(--bloom-ink); color: var(--bloom-canvas);
+  border-color: transparent;
+  box-shadow: 0 3px 10px rgba(26, 22, 20, 0.18);
 }
-.f-chip.warn.on { background: var(--warning); box-shadow: 0 3px 10px rgba(255, 149, 0, 0.3); }
-.f-chip.dang.on { background: var(--danger); box-shadow: 0 3px 10px rgba(255, 59, 48, 0.3); }
+.f-chip.f-warn.on { background: var(--bloom-sun); color: var(--bloom-sun-ink); box-shadow: 0 3px 10px rgba(245, 201, 93, 0.4); }
+.f-chip.f-dang.on { background: var(--bloom-coral); color: var(--bloom-ink-on-accent); box-shadow: 0 3px 10px rgba(255, 107, 71, 0.4); }
 .sort-hint {
-  margin-left: auto; font-size: 11px; color: var(--text-tertiary);
+  margin-left: auto; font-size: 11px; color: var(--bloom-ink-3);
   display: flex; align-items: center; gap: 5px;
 }
 .sort-hint svg { width: 12px; height: 12px; }
@@ -447,112 +500,95 @@ onUnmounted(() => {
 /* ── 客户卡片 ── */
 .cust-grid {
   display: grid;
-  /* minmax(0,1fr)：锁死等宽列宽，长内容在卡片内部截断，而不是把列撑宽 */
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 .cust-card {
   min-width: 0;
-  background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-glass);
-  border-radius: 15px;
-  padding: 12px 13px 11px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 14px 14px 12px;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+  display: flex; flex-direction: column; gap: 10px;
 }
 .cust-card:active { transform: scale(0.985); }
-.cc-head { display: flex; align-items: center; gap: 9px; }
+.cc-head { display: flex; align-items: center; gap: 10px; }
+.cc-avatar {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; flex-shrink: 0;
+}
+.cc-head-meta { flex: 1; min-width: 0; }
 .cc-name {
-  font-size: 14.5px; font-weight: 700; color: var(--text-primary);
+  font-size: 15px; font-weight: 700; color: var(--bloom-ink);
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.cc-visit {
-  margin-left: auto; flex-shrink: 0; white-space: nowrap;
-  font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
-}
-.cc-visit.success { background: var(--green-light); color: var(--success); }
-.cc-visit.warning { background: var(--orange-light); color: var(--warning); }
-.cc-visit.danger { background: var(--red-light); color: var(--danger); }
+.cc-name .lead-date { color: var(--bloom-ink-3); font-size: 12px; margin-right: 2px; }
+.cc-tags-row { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
 .cc-copy {
-  width: 24px; height: 24px; border-radius: 7px;
-  background: var(--bg-primary); color: var(--text-tertiary);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 9px;
+  background: var(--bloom-canvas-tint); color: var(--bloom-ink-3);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: none;
 }
 .cc-copy:active { opacity: 0.5; }
-.cc-copy.copied { background: var(--green-light); color: var(--success); }
-.cc-copy svg { width: 12px; height: 12px; }
-/* 需求主体：卡片的核心信息 */
-.cc-need { background: var(--primary-light); border-radius: 10px; padding: 9px 11px; }
-.cc-need.empty { background: transparent; border: 1px dashed var(--border-glass); }
-.cc-need-label { font-size: 10px; font-weight: 700; color: var(--primary); letter-spacing: 0.5px; margin-bottom: 3px; }
-.cc-need.empty .cc-need-label { color: var(--text-tertiary); }
+.cc-copy.copied { background: var(--bloom-mint-soft); color: var(--bloom-mint-ink); }
+.cc-copy svg { width: 13px; height: 13px; }
+.cc-need {
+  background: var(--bloom-canvas-tint);
+  border-radius: 12px; padding: 10px 12px;
+  border-left: 3px solid var(--bloom-coral);
+}
+.cc-need.empty { background: transparent; border: 1px dashed var(--bloom-rule); border-left-width: 1px; }
+.cc-need-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; font-weight: 700; color: var(--bloom-coral-ink);
+  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px;
+}
+.cc-need.empty .cc-need-label { color: var(--bloom-ink-3); }
 .cc-need-text {
-  font-size: 13px; line-height: 1.55; color: var(--text-primary);
+  font-size: 13px; line-height: 1.55; color: var(--bloom-ink);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  overflow: hidden;
-  word-break: break-all;
+  overflow: hidden; word-break: break-all;
 }
-.cc-need.empty .cc-need-text { color: var(--text-tertiary); font-size: 12px; }
-/* 最新动态次要行：最新一条到店/跟进，单行截断 */
-.cc-act-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); min-width: 0; }
-.cc-act-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; border-radius: 5px; padding: 1px 6px; }
-.cc-act-tag.visit { background: rgba(52, 199, 89, 0.14); color: #1f7a3a; }
-.cc-act-tag.followup { background: var(--blue-light); color: var(--primary); }
-.cc-act-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-need.empty .cc-need-text { color: var(--bloom-ink-3); font-size: 12px; }
+.cc-act-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--bloom-ink-2); min-width: 0; }
+.cc-act-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 
 /* ── 搜索结果 ── */
 .results-section { margin-top: 4px; }
-.results-header {
-  font-size: 12px; color: var(--text-secondary);
-  margin: 10px 2px; font-weight: 600;
-}
+.results-header { font-size: 12px; color: var(--bloom-ink-2); margin: 10px 2px; font-weight: 600; }
 .result-card {
   display: flex; align-items: center; gap: 12px;
-  background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-glass);
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
   border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
   cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
-.result-card:active { background: var(--surface); }
+.result-card:active { background: var(--bloom-canvas-tint); }
 .result-avatar {
   width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; font-weight: 700;
 }
 .result-info { flex: 1; min-width: 0; }
-.result-name { font-size: 14.5px; font-weight: 700; color: var(--text-primary); }
+.result-name { font-size: 14.5px; font-weight: 700; color: var(--bloom-ink); }
 .priority-badge {
   display: inline-block; margin-left: 6px; padding: 1px 7px;
   font-size: 10px; font-weight: 700; border-radius: 99px;
-  background: var(--orange-light); color: var(--warning);
+  background: var(--bloom-coral-soft); color: var(--bloom-coral-ink);
   vertical-align: 1px;
 }
-.result-meta {
-  font-size: 12px; color: var(--text-secondary); margin-top: 2px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.result-meta { font-size: 12px; color: var(--bloom-ink-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .result-visit { font-size: 11px; font-weight: 700; flex-shrink: 0; }
-.result-visit.success { color: var(--success); }
-.result-visit.warning { color: var(--warning); }
-.result-visit.danger { color: var(--danger); }
-.action-arrow { color: var(--text-tertiary); font-size: 18px; flex-shrink: 0; }
+.result-visit.success { color: var(--bloom-mint-ink); }
+.result-visit.warning { color: var(--bloom-sun-ink); }
+.result-visit.danger { color: var(--bloom-coral-ink); }
+.action-arrow { color: var(--bloom-ink-3); font-size: 18px; flex-shrink: 0; }
 
-/* ── 空态 ── */
 .empty-retry {
   margin-top: 14px; padding: 9px 26px; border-radius: 99px;
-  background: var(--primary); color: #fff;
-  font-size: 13px; font-weight: 600; font-family: inherit;
-  border: none; cursor: pointer;
+  background: var(--bloom-coral); color: var(--bloom-ink-on-accent);
+  font-size: 13px; font-weight: 600; font-family: inherit; border: none; cursor: pointer;
 }
 
 /* ── 平板 ── */
@@ -563,22 +599,23 @@ onUnmounted(() => {
 /* ── PC ── */
 @media (min-width: 1024px) {
   .wb-page { padding-top: 24px; }
-  .wb-top { margin-bottom: 18px; }
-  .wb-title { font-size: 26px; }
+  .wb-hero { padding: 32px 32px 26px; }
+  .wb-hero-h1 { font-size: 40px; }
   .searchbar { padding: 12px 16px; }
   .search-kbd { display: inline-block; }
   .cust-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 26px -8px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 10px 26px -8px rgba(26, 22, 20, 0.18);
   }
   .cust-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
-  .result-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1); }
-  .f-chip:hover { border-color: var(--text-tertiary); }
+  .result-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(26, 22, 20, 0.1); }
+  .f-chip:hover { border-color: var(--bloom-ink-3); }
   .hist-chip:hover { filter: brightness(0.96); }
 }
 
 /* ── 超宽屏 ── */
 @media (min-width: 1440px) {
   .cust-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .wb-kpi-row { grid-template-columns: repeat(3, 280px); }
 }
 </style>

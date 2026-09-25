@@ -126,8 +126,8 @@ onMounted(() => {
   left: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: var(--surface);
-  border-right: 1px solid var(--border-glass);
+  background: var(--bloom-surface-tinted);
+  border-right: 1px solid var(--bloom-rule);
   display: flex;
   flex-direction: column;
   z-index: var(--z-sidebar);
@@ -144,13 +144,13 @@ onMounted(() => {
 .sidebar-brand-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #007AFF 0%, #32ADE6 100%);
-  color: #FFFFFF;
+  border-radius: 12px;
+  background: conic-gradient(from 0deg, var(--bloom-coral), var(--bloom-lavender), var(--bloom-mint), var(--bloom-coral));
+  color: var(--bloom-ink-on-accent);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(0, 122, 255, 0.18);
+  box-shadow: 0 6px 16px -8px rgba(255, 107, 71, 0.5);
 }
 
 .sidebar-brand-text {
@@ -159,17 +159,21 @@ onMounted(() => {
 }
 
 .sidebar-brand-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 0.5px;
+  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--bloom-ink);
+  line-height: 1;
 }
 
 .sidebar-brand-sub {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  letter-spacing: 0.4px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--bloom-ink-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4px;
 }
 
 .sidebar-nav {
@@ -185,23 +189,26 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 14px;
-  border-radius: 10px;
-  color: var(--text-secondary);
+  padding: 0 14px;
+  height: 44px;
+  border-radius: var(--bloom-r-2);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--bloom-ink-2);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out), color var(--bloom-t-fast) var(--bloom-ease-out);
 }
 
 .sidebar-item:hover {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--bloom-surface-hover);
+  color: var(--bloom-ink);
 }
 
 .sidebar-item.active {
-  background: var(--primary-light);
-  color: var(--primary);
-  font-weight: 600;
+  background: var(--bloom-ink);
+  color: var(--bloom-canvas);
 }
+.sidebar-item.active :deep(svg) { color: var(--bloom-canvas); }
 
 .sidebar-icon {
   width: 20px;
@@ -221,20 +228,11 @@ onMounted(() => {
   letter-spacing: 0.3px;
 }
 
-.sidebar-active-bar {
-  position: absolute;
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 18px;
-  background: var(--primary);
-  border-radius: 2px;
-}
+.sidebar-active-bar { display: none; }
 
 .sidebar-footer {
-  padding: 14px 16px;
-  border-top: 1px solid var(--border-glass);
+  padding: 16px 18px;
+  border-top: 1px solid var(--bloom-rule);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -245,14 +243,14 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border-radius: 12px;
-  background: var(--bg-primary);
+  border-radius: var(--bloom-r-3);
+  background: var(--bloom-surface);
 }
 
 .sidebar-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,73 +264,75 @@ onMounted(() => {
 }
 
 .sidebar-user-name {
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--bloom-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .sidebar-user-role {
+  margin-top: 2px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 10px;
-  color: var(--text-tertiary);
-  margin-top: 1px;
+  color: var(--bloom-ink-3);
 }
 
 .sidebar-scope {
-  border: 1px dashed rgba(0, 122, 255, 0.35);
-  border-radius: 10px;
+  border: 1px dashed rgba(255, 107, 71, 0.32);
+  border-radius: var(--bloom-r-2);
   padding: 8px 10px;
-  background: rgba(0, 122, 255, 0.05);
+  background: var(--bloom-coral-soft);
 }
 
 .scope-label {
   display: block;
+  margin-bottom: 4px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 10px;
   font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 4px;
-  letter-spacing: 0.5px;
+  color: var(--bloom-coral);
+  letter-spacing: 0.06em;
 }
 
 .scope-select {
   width: 100%;
+  padding: 0;
   border: none;
   outline: none;
   background: transparent;
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--bloom-ink);
   cursor: pointer;
-  padding: 0;
 }
 
 .theme-toggle {
   width: 100%;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 10px 12px;
-  margin-bottom: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border-glass);
-  background: var(--bg-primary);
-  color: var(--text-secondary);
+  border-radius: var(--bloom-r-2);
+  border: 1px solid var(--bloom-rule);
+  background: var(--bloom-surface);
+  color: var(--bloom-ink-2);
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out);
 }
 .theme-toggle svg { width: 16px; height: 16px; }
-.theme-toggle:hover { background: var(--bg-hover); }
+.theme-toggle:hover { background: var(--bloom-surface-hover); }
 
 .sidebar-version {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  letter-spacing: 0.5px;
   padding: 0 4px;
+  font-size: 11px;
+  color: var(--bloom-ink-3);
+  letter-spacing: 0.5px;
 }
 </style>

@@ -6,9 +6,14 @@
     @dragleave.prevent="onDragLeave"
     @drop.prevent="onDrop"
   >
-    <div class="ai-card">
+    <div class="ai-card bloom-card">
       <div class="ai-header">
-        <div class="ai-title">智能导入 · 客资助手</div>
+        <div class="ai-header-left">
+          <div class="ai-dot ai-dot-coral"></div>
+          <div class="ai-dot ai-dot-mint"></div>
+          <div class="ai-dot ai-dot-sun"></div>
+          <div class="ai-title">智能导入 · 客资助手</div>
+        </div>
         <button class="ai-clear" v-if="hasMessages" @click="onClear" title="清空对话">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -19,7 +24,7 @@
       <ChatAgent ref="chatRef" />
     </div>
 
-    <!-- 整页拖拽遮罩：拖入页面任意位置（顶栏/气泡/输入栏均可）即高亮，松手直接识别 -->
+    <!-- 整页拖拽遮罩 -->
     <div v-if="dragging" class="drag-overlay">
       <div class="drag-overlay-tip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -46,16 +51,10 @@ function onClear() {
   if (confirm('清空当前对话？')) clearSession()
 }
 
-// ── 整页拖拽：不必瞄准输入框，拖到页面任意位置松手即发送识别 ──
-// dragenter/dragleave 在子元素间移动会成对触发，用深度计数避免高亮闪烁
 const dragDepth = ref(0)
 const dragging = computed(() => dragDepth.value > 0)
-function onDragEnter() {
-  dragDepth.value += 1
-}
-function onDragLeave() {
-  dragDepth.value = Math.max(0, dragDepth.value - 1)
-}
+function onDragEnter() { dragDepth.value += 1 }
+function onDragLeave() { dragDepth.value = Math.max(0, dragDepth.value - 1) }
 function onDrop(e) {
   dragDepth.value = 0
   const files = Array.from(e.dataTransfer?.files || [])
@@ -68,19 +67,17 @@ function onDrop(e) {
 }
 </script>
 <style scoped>
-/* 布局对齐其他页面：外层 .page（移动端灰底 / PC 端统一内边距），
-   内容是一张 surface 圆角卡片，聊天区在卡片内滚动 */
 .ai-import-page {
   position: relative;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bloom-canvas);
 }
 @media (max-width: 1023px) {
   .ai-import-page {
     height: 100dvh;
-    /* 移动端底部 TabBar（60px + 安全区）为固定定位，给内容留出空间 */
     padding-bottom: calc(60px + env(safe-area-inset-bottom));
   }
 }
@@ -89,41 +86,50 @@ function onDrop(e) {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--border-glass);
-  border-radius: 18px;
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
+  border-radius: 20px;
   overflow: hidden;
+  box-shadow: 0 4px 20px -8px rgba(26, 22, 20, 0.08);
 }
 .ai-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border-glass);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--bloom-rule);
   flex-shrink: 0;
+  background: var(--bloom-canvas-tint);
 }
+.ai-header-left { display: flex; align-items: center; gap: 8px; }
+.ai-dot {
+  width: 8px; height: 8px; border-radius: 999px;
+}
+.ai-dot-coral { background: var(--bloom-coral); }
+.ai-dot-mint  { background: var(--bloom-mint); }
+.ai-dot-sun   { background: var(--bloom-sun); }
 .ai-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bloom-ink);
+  margin-left: 4px;
 }
 .ai-clear {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-glass);
-  color: var(--text-secondary);
+  width: 36px; height: 36px; border-radius: 12px;
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
+  color: var(--bloom-ink-2);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out);
 }
+.ai-clear:hover { background: var(--bloom-coral-soft); color: var(--bloom-coral-ink); }
 .ai-clear svg { width: 16px; height: 16px; }
 
-/* 整页拖拽遮罩：pointer-events:none 不拦截 drop，事件仍冒泡到页面根节点 */
 .drag-overlay {
   position: absolute;
   inset: 0;
@@ -131,7 +137,7 @@ function onDrop(e) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 122, 255, 0.08);
+  background: var(--bloom-coral-soft);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   pointer-events: none;
@@ -142,18 +148,18 @@ function onDrop(e) {
   align-items: center;
   gap: 10px;
   padding: 24px 36px;
-  border: 2px dashed var(--primary);
+  border: 2px dashed var(--bloom-coral);
   border-radius: 18px;
-  background: var(--surface);
-  color: var(--primary);
+  background: var(--bloom-surface);
+  color: var(--bloom-coral-ink);
   font-size: 15px;
   font-weight: 700;
-  box-shadow: 0 12px 32px rgba(0, 122, 255, 0.18);
+  box-shadow: 0 12px 32px rgba(255, 107, 71, 0.18);
 }
 .drag-overlay-tip svg { width: 34px; height: 34px; }
 
 @media (min-width: 1024px) {
-  .ai-header { padding: 14px 20px; }
-  .ai-title { font-size: 17px; }
+  .ai-header { padding: 16px 22px; }
+  .ai-title { font-size: 14px; }
 }
 </style>

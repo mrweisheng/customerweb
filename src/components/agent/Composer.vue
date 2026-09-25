@@ -45,17 +45,15 @@ const props = defineProps({
 })
 const emit = defineEmits(['send', 'update-text'])
 
-// 与后端 agent.js 的 MAX_IMAGES 对齐
 const MAX_IMAGES = 9
 
 const text = ref(props.initialText || '')
-const images = ref([]) // [{ base64, preview, file }]
+const images = ref([])
 const imageError = ref('')
 const inputRef = ref(null)
 const fileRef = ref(null)
 
 watch(text, (t) => emit('update-text', t))
-// 外部（开场白芯片 / 恢复草稿）同步文本进输入框
 watch(() => props.initialText, (t) => { text.value = t || '' })
 
 function submit() {
@@ -65,18 +63,12 @@ function submit() {
     images: images.value.map((img) => ({ base64: img.base64, preview: img.preview })),
   })
   text.value = ''
-  // 发送成功：preview URL 的所有权已移交给消息气泡，不能 revoke（否则裂图）
   images.value = []
   imageError.value = ''
 }
 
-function pickImage() {
-  fileRef.value?.click()
-}
-function onFileChange(e) {
-  addFiles(e.target.files)
-  e.target.value = ''
-}
+function pickImage() { fileRef.value?.click() }
+function onFileChange(e) { addFiles(e.target.files); e.target.value = '' }
 function onPaste(e) {
   const files = [...(e.clipboardData?.items || [])]
     .filter((i) => i.type.startsWith('image/'))
@@ -86,40 +78,27 @@ function onPaste(e) {
   e.preventDefault()
   addFiles(files)
 }
-// PC 端拖拽截图到输入栏直接添加
 function onDrop(e) {
   dragging.value = false
   if (props.busy) return
   const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type?.startsWith('image/'))
-  if (files.length === 0) {
-    imageError.value = '请拖入图片文件（JPEG/PNG）'
-    return
-  }
+  if (files.length === 0) { imageError.value = '请拖入图片文件（JPEG/PNG）'; return }
   addFiles(files)
 }
-// 附件就绪后把焦点拉回输入框：回车即可直接发送（图片可单独发，也可补文字一起发）
 async function addFiles(fileList) {
   imageError.value = ''
   const files = [...(fileList || [])]
   if (files.length === 0) return
   const room = MAX_IMAGES - images.value.length
-  if (room <= 0) {
-    imageError.value = `一次最多 ${MAX_IMAGES} 张图片`
-    return
-  }
+  if (room <= 0) { imageError.value = `一次最多 ${MAX_IMAGES} 张图片`; return }
   if (files.length > room) imageError.value = `一次最多 ${MAX_IMAGES} 张图片，已保留前 ${MAX_IMAGES} 张`
   let focused = false
   for (const file of files.slice(0, room)) {
     try {
       const { base64, preview } = await prepareAgentImage(file)
       images.value.push({ base64, preview, file })
-      if (!focused) {
-        inputRef.value?.focus()
-        focused = true
-      }
-    } catch (err) {
-      imageError.value = err.message || '图片处理失败'
-    }
+      if (!focused) { inputRef.value?.focus(); focused = true }
+    } catch (err) { imageError.value = err.message || '图片处理失败' }
   }
 }
 function removeImage(i) {
@@ -127,119 +106,90 @@ function removeImage(i) {
   if (img?.preview) URL.revokeObjectURL(img.preview)
   images.value.splice(i, 1)
 }
-onMounted(() => {
-  if (inputRef.value && !props.busy) inputRef.value.focus()
-})
+onMounted(() => { if (inputRef.value && !props.busy) inputRef.value.focus() })
 onBeforeUnmount(() => {
-  for (const img of images.value) {
-    if (img.preview) URL.revokeObjectURL(img.preview)
-  }
+  for (const img of images.value) { if (img.preview) URL.revokeObjectURL(img.preview) }
   images.value = []
 })
 </script>
+
 <style scoped>
 .composer {
-  padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--border-glass);
-  background: var(--surface);
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--bloom-rule);
+  background: var(--bloom-canvas);
   position: relative;
 }
 .composer-image-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
 }
-.composer-image-chip {
-  position: relative;
-  display: inline-block;
-}
+.composer-image-chip { position: relative; display: inline-block; }
 .chip-thumb {
-  width: 64px;
-  height: 64px;
-  object-fit: cover;
+  width: 64px; height: 64px; object-fit: cover;
   border-radius: 10px;
-  border: 1px solid var(--border-glass);
+  border: 1px solid var(--bloom-rule);
   display: block;
 }
 .chip-remove {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  position: absolute; top: -8px; right: -8px;
+  width: 26px; height: 26px; border-radius: 50%;
   border: none;
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
-  font-size: 14px;
-  line-height: 1;
+  background: var(--bloom-ink);
+  color: var(--bloom-canvas);
+  font-size: 14px; line-height: 1;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
-.composer-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
+.composer-row { display: flex; align-items: flex-end; gap: 8px; }
 .composer-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  border: 1px solid var(--border-glass);
-  background: var(--bg-primary);
-  color: var(--text-secondary);
+  width: 40px; height: 40px; border-radius: 12px;
+  border: 1px solid var(--bloom-rule);
+  background: var(--bloom-surface);
+  color: var(--bloom-ink-2);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out);
 }
+.composer-icon:hover { background: var(--bloom-surface-hover); }
 .composer-icon svg { width: 18px; height: 18px; }
 .composer-icon:disabled { opacity: 0.5; cursor: not-allowed; }
 .composer-file { display: none; }
 .composer-input {
-  flex: 1;
-  resize: none;
-  border: 1px solid var(--border-glass);
+  flex: 1; resize: none;
+  border: 1px solid var(--bloom-rule);
   border-radius: 12px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--bloom-surface);
+  color: var(--bloom-ink);
   font-family: inherit;
-  font-size: 16px;
-  line-height: 1.5;
-  padding: 9px 12px;
+  font-size: 15px; line-height: 1.5;
+  padding: 10px 14px;
   max-height: 120px;
+  transition: border-color var(--bloom-t-fast) var(--bloom-ease-out),
+              box-shadow var(--bloom-t-fast) var(--bloom-ease-out);
 }
-.composer-input:focus { outline: none; border-color: var(--primary); }
+.composer-input:focus {
+  outline: none;
+  border-color: var(--bloom-coral);
+  box-shadow: 0 0 0 3px var(--bloom-coral-soft);
+}
 .composer-input:disabled { opacity: 0.6; }
 .composer-send {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
+  width: 40px; height: 40px; border-radius: 12px;
   border: none;
-  background: var(--primary);
-  color: #fff;
+  background: var(--bloom-coral);
+  color: var(--bloom-ink-on-accent);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 10px -2px rgba(255, 107, 71, 0.4);
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out),
+              transform var(--bloom-t-fast) var(--bloom-ease-out);
 }
 .composer-send svg { width: 17px; height: 17px; }
 .composer-send:disabled { opacity: 0.4; cursor: not-allowed; }
-.composer-error {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #FF3B30;
-}
-@media (max-width: 1023px) {
-  /* 页面级已为 TabBar 留出 safe-area，这里不再叠加 */
-  .composer { padding-bottom: 12px; }
-}
-@media (min-width: 1024px) {
-  .composer { padding: 12px 20px 16px; }
-}
+.composer-send:not(:disabled):hover { background: var(--bloom-coral-ink); }
+.composer-error { margin-top: 6px; font-size: 12px; color: var(--bloom-coral-ink); }
+@media (max-width: 1023px) { .composer { padding-bottom: 12px; } }
+@media (min-width: 1024px) { .composer { padding: 14px 20px 16px; } }
 </style>

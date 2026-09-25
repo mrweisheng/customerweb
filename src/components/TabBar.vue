@@ -63,11 +63,11 @@ function switchTab(path) {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border-glass);
+  height: 68px;
+  background: color-mix(in srgb, var(--bloom-canvas) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--bloom-rule);
   display: flex;
   align-items: center;
   justify-content: space-around;
@@ -83,7 +83,8 @@ function switchTab(path) {
   flex: 1;
   padding: 6px 0;
   cursor: pointer;
-  transition: all 0.2s;
+  color: var(--bloom-ink-3);
+  transition: color var(--bloom-t-fast) var(--bloom-ease-out);
 }
 
 .tabbar-item:active {
@@ -91,30 +92,35 @@ function switchTab(path) {
 }
 
 .tabbar-icon {
-  width: 24px;
-  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 14px;
   margin-bottom: 2px;
-  color: var(--text-secondary);
-  transition: color 0.2s;
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out),
+              color var(--bloom-t-fast) var(--bloom-ease-out);
 }
 
 .tabbar-icon svg {
-  width: 100%;
-  height: 100%;
+  width: 18px;
+  height: 18px;
 }
 
 .tabbar-text {
   font-size: 10px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: color 0.2s;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
 .tabbar-item.active .tabbar-icon {
-  color: var(--primary);
+  color: var(--bloom-coral);
+  background: var(--bloom-coral-soft);
 }
 
 .tabbar-item.active .tabbar-text {
-  color: var(--primary);
+  color: var(--bloom-coral);
 }
 </style>

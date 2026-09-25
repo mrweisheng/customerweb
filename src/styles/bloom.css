@@ -1,0 +1,229 @@
+/* ============================================================
+   Bloom 设计系统底座（叠加在 global.css 的 iOS 令牌之上）
+   不替换任何现有变量，仅新增 --bloom-* / .btn-bloom-* / .tag-bloom-* /
+   .blob-* 等；保证旧组件 0 影响
+   ============================================================ */
+
+:root {
+  /* Canvas 暖奶白画布 —— 暖底替代冷灰 */
+  --bloom-canvas:        #FBF5EC;
+  --bloom-canvas-tint:   #F4ECD8;
+  --bloom-surface:       #FFFFFF;
+  --bloom-surface-tinted:#FFF7E8;
+  --bloom-surface-hover: #F2E9D5;
+
+  /* Ink 墨色梯度 */
+  --bloom-ink:   #1A1614;
+  --bloom-ink-2: #4D4541;
+  --bloom-ink-3: #8A8278;
+  --bloom-ink-4: #BFB8AB;
+  --bloom-ink-on-accent: #FFF7F2;
+
+  /* Bloom 4 主色 */
+  --bloom-coral:    #FF6B47;
+  --bloom-coral-soft:    rgba(255, 107, 71, .14);
+  --bloom-coral-ink:    #B33B1E;
+
+  --bloom-lavender: #9D7BE3;
+  --bloom-lavender-soft: rgba(157, 123, 227, .14);
+  --bloom-lavender-ink: #5E3FAE;
+
+  --bloom-mint:     #2BB07F;
+  --bloom-mint-soft:     rgba(43, 176, 127, .14);
+  --bloom-mint-ink:     #186B49;
+
+  --bloom-sun:      #F5C95D;
+  --bloom-sun-soft:      rgba(245, 201, 93, .22);
+  --bloom-sun-ink:      #8A6110;
+
+  /* Bloom 补充 2 色 */
+  --bloom-sky:      #4F9BD9;
+  --bloom-sky-soft:      rgba(79, 155, 217, .14);
+  --bloom-sky-ink:      #1F4F80;
+
+  --bloom-blush:    #F08399;
+  --bloom-blush-soft:    rgba(240, 131, 153, .16);
+  --bloom-blush-ink:    #93344A;
+
+  --bloom-accent:        var(--bloom-coral);
+  --bloom-accent-hover:  #E55530;
+  --bloom-accent-soft:   var(--bloom-coral-soft);
+  --bloom-rule:          rgba(26, 22, 20, .08);
+  --bloom-rule-strong:   rgba(26, 22, 20, .16);
+
+  --bloom-fs-caption: 11px;
+  --bloom-fs-meta:    12px;
+  --bloom-fs-body:    14px;
+  --bloom-fs-lead:    18px;
+  --bloom-fs-h3:      22px;
+  --bloom-fs-h2:      32px;
+  --bloom-fs-h1:      44px;
+
+  --bloom-r-1: 4px;
+  --bloom-r-2: 10px;
+  --bloom-r-3: 14px;
+  --bloom-r-4: 20px;
+
+  --bloom-t-fast: 180ms;
+  --bloom-t-med:  320ms;
+  --bloom-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root.dark {
+  --bloom-canvas:        #14110E;
+  --bloom-canvas-tint:   #1B1813;
+  --bloom-surface:       #1F1A14;
+  --bloom-surface-tinted:#251F18;
+  --bloom-surface-hover: #2C251E;
+
+  --bloom-ink:   #F8EFD8;
+  --bloom-ink-2: #C8BDA6;
+  --bloom-ink-3: #8A7E68;
+  --bloom-ink-4: #4F4737;
+  --bloom-ink-on-accent: #1A0F08;
+
+  --bloom-coral:    #FF8B6B;     --bloom-coral-soft:    rgba(255, 139, 107, .18);
+  --bloom-lavender: #B89EF0;     --bloom-lavender-soft: rgba(184, 158, 240, .22);
+  --bloom-mint:     #4FCFA0;     --bloom-mint-soft:     rgba(79, 207, 160, .18);
+  --bloom-sun:      #F5D58B;     --bloom-sun-soft:      rgba(245, 213, 139, .22);
+  --bloom-sky:      #7FB8E5;     --bloom-sky-soft:      rgba(127, 184, 229, .18);
+  --bloom-blush:    #F296A8;     --bloom-blush-soft:    rgba(242, 150, 168, .18);
+
+  --bloom-rule:        rgba(248, 239, 216, .10);
+  --bloom-rule-strong: rgba(248, 239, 216, .22);
+}
+
+.tx-coral    { color: var(--bloom-coral); }
+.tx-lavender { color: var(--bloom-lavender); }
+.tx-mint     { color: var(--bloom-mint); }
+.tx-sun      { color: var(--bloom-sun-ink); }
+.tx-sky      { color: var(--bloom-sky); }
+.tx-blush    { color: var(--bloom-blush); }
+
+.bg-coral-soft    { background: var(--bloom-coral-soft);    color: var(--bloom-coral-ink); }
+.bg-lavender-soft { background: var(--bloom-lavender-soft); color: var(--bloom-lavender-ink); }
+.bg-mint-soft     { background: var(--bloom-mint-soft);     color: var(--bloom-mint-ink); }
+.bg-sky-soft      { background: var(--bloom-sky-soft);      color: var(--bloom-sky-ink); }
+.bg-blush-soft    { background: var(--bloom-blush-soft);    color: var(--bloom-blush-ink); }
+.bg-sun-soft      { background: var(--bloom-sun-soft);      color: var(--bloom-sun-ink); }
+
+.tag-bloom {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  background: var(--bloom-surface-tinted);
+  color: var(--bloom-ink-2);
+  border: 1px solid var(--bloom-rule);
+  white-space: nowrap;
+}
+.tag-bloom::before {
+  content: ""; width: 6px; height: 6px;
+  border-radius: 999px; background: currentColor; opacity: .55;
+}
+.tag-bloom.t-sm { height: 22px; padding: 0 10px; font-size: 11px; }
+.tag-bloom.t-lg { height: 32px; padding: 0 14px; font-size: 13px; }
+.tag-bloom.t-coral    { background: var(--bloom-coral);    color: var(--bloom-ink-on-accent); border-color: transparent; }
+.tag-bloom.t-lavender { background: var(--bloom-lavender); color: var(--bloom-ink-on-accent); border-color: transparent; }
+.tag-bloom.t-mint     { background: var(--bloom-mint);     color: var(--bloom-ink-on-accent); border-color: transparent; }
+.tag-bloom.t-sun      { background: var(--bloom-sun);      color: var(--bloom-sun-ink); border-color: transparent; }
+.tag-bloom.t-sky      { background: var(--bloom-sky);      color: var(--bloom-ink-on-accent); border-color: transparent; }
+.tag-bloom.t-blush    { background: var(--bloom-blush);    color: var(--bloom-ink-on-accent); border-color: transparent; }
+
+.blob {
+  position: absolute; border-radius: 999px; pointer-events: none;
+  filter: blur(80px); opacity: .55; z-index: 0;
+}
+.blob.b-sm { filter: blur(50px); opacity: .4; }
+.blob.b-lg { filter: blur(120px); opacity: .65; }
+.blob-coral    { background: var(--bloom-coral); }
+.blob-lavender { background: var(--bloom-lavender); }
+.blob-mint     { background: var(--bloom-mint); }
+.blob-sun      { background: var(--bloom-sun); }
+.blob-sky      { background: var(--bloom-sky); }
+.blob-blush    { background: var(--bloom-blush); }
+
+.bloom-card {
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
+  border-radius: var(--bloom-r-4);
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  transition: transform var(--bloom-t-fast) var(--bloom-ease-out),
+              box-shadow var(--bloom-t-fast) var(--bloom-ease-out);
+}
+.bloom-card:hover { box-shadow: 0 8px 24px -16px rgba(26,22,20,.15); }
+
+.bloom-hero {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 10%, var(--bloom-blush-soft),  transparent 55%),
+    radial-gradient(circle at  0% 90%, var(--bloom-coral-soft), transparent 55%),
+    radial-gradient(circle at 60% 50%, var(--bloom-sun-soft),   transparent 60%),
+    var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
+  border-radius: var(--bloom-r-4);
+  padding: 28px 32px;
+}
+
+.bloom-kpi {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 20px 22px;
+  border-radius: var(--bloom-r-4);
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
+}
+.bloom-kpi.tint-coral    { background: linear-gradient(135deg, var(--bloom-coral-soft), transparent 65%), var(--bloom-surface); }
+.bloom-kpi.tint-lavender { background: linear-gradient(135deg, var(--bloom-lavender-soft), transparent 65%), var(--bloom-surface); }
+.bloom-kpi.tint-mint     { background: linear-gradient(135deg, var(--bloom-mint-soft), transparent 65%), var(--bloom-surface); }
+.bloom-kpi.tint-sun      { background: linear-gradient(135deg, var(--bloom-sun-soft), transparent 65%), var(--bloom-surface); }
+.bloom-kpi.tint-sky      { background: linear-gradient(135deg, var(--bloom-sky-soft), transparent 65%), var(--bloom-surface); }
+.bloom-kpi.tint-blush    { background: linear-gradient(135deg, var(--bloom-blush-soft), transparent 65%), var(--bloom-surface); }
+
+.bloom-kpi-label {
+  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--bloom-ink-3); font-weight: 600;
+}
+.bloom-kpi-value {
+  font-family: "DM Serif Display", "Instrument Serif", "Noto Serif SC", Georgia, serif;
+  font-size: 36px; line-height: 1.05; color: var(--bloom-ink);
+}
+.bloom-kpi-value .unit { font-size: 16px; color: var(--bloom-ink-3); margin-left: 4px; }
+
+.bloom-chat {
+  background: var(--bloom-canvas);
+  display: flex; flex-direction: column;
+  border-radius: var(--bloom-r-4);
+  border: 1px solid var(--bloom-rule);
+  overflow: hidden;
+}
+.bloom-msg {
+  display: flex; gap: 12px; max-width: 720px;
+  margin: 8px 18px;
+}
+.bloom-msg.is-ai   { align-self: flex-start; }
+.bloom-msg.is-user { align-self: flex-end; flex-direction: row-reverse; }
+.bloom-msg-meta {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 11px; color: var(--bloom-ink-3); margin-bottom: 4px;
+}
+.bloom-msg.is-user .bloom-msg-meta { justify-content: flex-end; }
+.bloom-msg-author { color: var(--bloom-ink-2); font-weight: 600; }
+.bloom-msg-body {
+  padding: 12px 16px; border-radius: 18px;
+  font-size: 14px; line-height: 1.65;
+  background: var(--bloom-surface);
+  border: 1px solid var(--bloom-rule);
+  color: var(--bloom-ink);
+}
+.bloom-msg.is-ai   .bloom-msg-body { border-bottom-left-radius: 4px; }
+.bloom-msg.is-user .bloom-msg-body {
+  background: var(--bloom-ink); color: var(--bloom-canvas);
+  border-color: var(--bloom-ink);
+  border-bottom-right-radius: 4px;
+}
+
+@media (max-width: 600px) {
+  .bloom-msg { flex-direction: column; align-items: flex-start; gap: 4px; max-width: 100%; }
+  .bloom-msg.is-user { align-items: flex-end; flex-direction: column; }
+  .bloom-msg-meta { margin-bottom: 0; }
+}

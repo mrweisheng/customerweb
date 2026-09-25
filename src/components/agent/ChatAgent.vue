@@ -1,9 +1,9 @@
 <template>
-  <div class="chat-agent">
+  <div class="chat-agent bloom-chat">
     <div ref="scrollRef" class="chat-scroll">
       <div v-if="!hasMessages" class="chat-empty">
         <div class="chat-empty-avatar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" id="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
         </div>
         <div class="chat-empty-title">嗨，我是客资助手</div>
         <div class="chat-empty-desc">
@@ -25,7 +25,6 @@
       </div>
     </div>
 
-    <!-- 任务完成 banner：导入成功后 5 秒倒计时，时间到自动清屏；可保留或立即清理 -->
     <div v-if="finalizedCountdown !== null" class="finalize-banner" role="status" aria-live="polite">
       <span class="finalize-check" aria-hidden="true">✓</span>
       <div class="finalize-text">
@@ -73,10 +72,6 @@ const committing = ref(false)
 const toolRunning = ref(false)
 let idleTimer = null
 
-// ── 任务完成后的自动清理倒计时 ────────────────────────────────
-// 导入成功后 5 秒自动清屏（不叫"删除"，文案"任务完成·自动清理"）。
-// 用户可点"保留"取消定时器，或点"立即清理"立刻清屏。
-// 用户发新消息 / 输入框有草稿时自动放弃倒计时（视作继续对话）
 const FINALIZE_COUNTDOWN_SEC = 5
 const finalizedCountdown = ref(null)
 let countdownTimer = null
@@ -96,14 +91,8 @@ function startFinalizeCountdown() {
     }
   }, 1000)
 }
-function onKeep() {
-  cancelCountdown()
-}
-function onClearNow() {
-  cancelCountdown()
-  clearSession()
-}
-// 空闲超时触发：屏幕消息保留，补一条系统提示（不再持久化，刷新即全部消失）
+function onKeep() { cancelCountdown() }
+function onClearNow() { cancelCountdown(); clearSession() }
 function onIdleCheck() {
   if (state.busy || !hasMessages.value || !isSessionExpired()) return
   expireSession()
@@ -119,28 +108,20 @@ function scrollToBottom() {
 }
 onMounted(() => {
   scrollToBottom()
-  // 取出队列中剩余的待识别截图继续发（多图时第一张已发，其余排队在此）
   sendNextPendingFile()
-  // 恢复的会话若已空闲超时：数据不再可用，直接进过期态
   if (hasMessages.value && isSessionExpired()) expireSession()
-  // 空闲过期兜底检查：页面一直开着时由定时器触发（SSE 进行中会顺延到下一轮检查）
   idleTimer = setInterval(onIdleCheck, 20 * 1000)
-  // 焦点不在输入框时的整页粘贴（Ctrl+V 常见）：直接发送识别
   document.addEventListener('paste', onDocPaste)
 })
 watch(() => state.messages.length, scrollToBottom)
 watch(() => state.busy, scrollToBottom)
-// 倒计时期间用户发了新消息或输入草稿：视作继续对话，放弃自动清理
 watch(
   () => [state.messages.length, state.lastUserText],
   ([len, text], [prevLen, prevText]) => {
     if (finalizedCountdown.value === null) return
-    // 仅在用户主动输入时取消（系统内部追加 assistant 消息、messages.length 短暂增减都不算）
     if (text && text !== prevText) cancelCountdown()
   },
 )
-// 焦点在输入框/输入类元素上时交给 Composer 自己的 @paste 处理（附加到输入栏可先补文字），
-// 否则整页任意位置粘贴截图直接发送
 function onDocPaste(e) {
   const t = e.target
   if (t && typeof t.closest === 'function' && t.closest('textarea, input')) return
@@ -150,16 +131,11 @@ function onDocPaste(e) {
     void sendImageFiles(files)
   }
 }
-// 发送图片（可多张）：一次全部发给后端识别。
-// 助手正在回复时先入队，本轮结束后由确认/取消动作接续。
-// 整页拖拽、整页粘贴共用这条通路
 async function sendImageFiles(fileList) {
   const incoming = Array.from(fileList || []).filter((f) => f?.type?.startsWith('image/'))
   if (incoming.length === 0) return
-  // 用户发了新截图 → 终止上一轮结束对话的倒计时清理
   cancelCountdown()
   if (state.busy) {
-    // 助手正在回复：先入队，本轮结束后由确认/取消动作接续
     setPendingImportFiles([...takePendingImportFiles(), ...incoming])
     return
   }
@@ -176,18 +152,14 @@ async function sendImageFiles(fileList) {
     setError(e.message || '图片处理失败')
   }
 }
-// 从队列取出下一张自动发送；队列空则什么都不做
 function sendNextPendingFile() {
   return sendImageFiles(takePendingImportFiles())
 }
 
-// 供宿主页面（整页拖拽落图）调用
 defineExpose({ sendImageFiles })
 async function onSend({ text, images }) {
   if (state.busy) return
-  // 只在发新截图时清掉上一轮确认卡片，避免用户打字误清
   if (images && images.length > 0) clearPendingImport()
-  // 过期会话来了新消息：开启新一轮（旧消息只留在屏幕上）
   if (state.expired) resumeAfterExpire()
   setError(null)
   appendUserMessage(text, (images || []).map((img) => img.preview))
@@ -195,7 +167,6 @@ async function onSend({ text, images }) {
   setBusy(true)
   toolRunning.value = false
   try {
-    // 导入完成后上下文已终结，只发送 contextStart 之后的新消息
     const reqMessages = buildRequestMessages(state.messages.slice(state.contextStart))
     await streamAgentChat(
       { messages: reqMessages, imagesBase64: (images || []).map((img) => img.base64) },
@@ -213,8 +184,6 @@ async function onSend({ text, images }) {
           scrollToBottom()
         },
         onToolResult: (name, content) => {
-          // 工具结果按调用顺序到达，占位 tool 消息也是按调用顺序追加的：
-          // 取最早的未填充占位回填，多工具调用时才不会错配 id
           const placeholder = state.messages.find((m) => m.role === 'tool' && m._pending)
           if (placeholder?.tool_call_id) recordToolResult(placeholder.tool_call_id, content)
           scrollToBottom()
@@ -226,19 +195,15 @@ async function onSend({ text, images }) {
   } catch (e) {
     setError(e.message || '请求失败')
   } finally {
-    // 流异常中断时 onDone 不会触发，这里兜底清掉 streaming 标志，
-    // 防止下一轮回复被追加进卡死的旧消息
     finishAssistant()
     toolRunning.value = false
     setBusy(false)
     scrollToBottom()
-    // 回复期间跨过 10 分钟线的话，结束后立即过期（不等定时器）
     onIdleCheck()
   }
 }
 async function onConfirm() {
   if (!state.pendingImport || committing.value) return
-  // 会话已空闲超时：识别数据已清理，卡片只是残留在屏幕上，不允许再导入
   if (state.expired) {
     clearPendingImport()
     setError('本次会话已超过 10 分钟未操作，识别数据已清理，请重新发送截图识别。')
@@ -255,19 +220,14 @@ async function onConfirm() {
   try {
     const result = await api.post('/customers/batch-import', { contacts })
     clearPendingImport()
-    // 拼成中文短句加进会话，让用户看到结果；不走 LLM
     const parts = []
     if (result.added) parts.push(`新增 ${result.added} 位`)
     if (result.updated) parts.push(`更新 ${result.updated} 位`)
     if (result.skipped) parts.push(`跳过 ${result.skipped} 位已存在`)
     appendAssistantDelta(parts.length > 0 ? `已导入：${parts.join('，')}。` : '已导入完成。')
     finishAssistant()
-    // 需求 2：导入完成后上下文自动终结——消息只留在屏幕上（刷新即消失），
-    // 不会进入下一轮对话
     finalizeSession()
-    // 任务完成后启动 5 秒倒计时，时间到自动清屏（用户可保留或立即清理）
     startFinalizeCountdown()
-    // 工作台一次选了多张图：接着自动识别下一张
     sendNextPendingFile()
   } catch (e) {
     setError(e.message || '导入失败')
@@ -277,12 +237,8 @@ async function onConfirm() {
 }
 function onCancelImport() {
   clearPendingImport()
-  // 用户放弃这张，队列里若还有图继续下一张
   sendNextPendingFile()
 }
-// 全部重复：无需导入，用户选择结束当前对话——
-// 与导入完成同款收尾（finalizeSession）：消息留在屏幕上，刷新即清空，
-// 后续消息不再携带本轮上下文；排队中的截图一并丢弃
 function onEndConversation() {
   if (!state.pendingImport) return
   clearPendingImport()
@@ -294,151 +250,147 @@ function onEndConversation() {
   scrollToBottom()
 }
 onBeforeUnmount(() => {
-  // 离开页面丢弃未处理的队列，避免下次进来自动发陈旧图片
   setPendingImportFiles([])
   if (idleTimer) clearInterval(idleTimer)
   cancelCountdown()
   document.removeEventListener('paste', onDocPaste)
 })
 </script>
+
 <style scoped>
 .chat-agent {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  background: var(--bloom-canvas);
+  border: 1px solid var(--bloom-rule);
+  border-radius: var(--bloom-r-4);
+  overflow: hidden;
 }
 .chat-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 14px;
+  padding: 22px 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 .chat-empty {
-  margin: 32px auto 12px;
+  margin: 36px auto 12px;
   text-align: center;
   max-width: 360px;
-  color: var(--text-secondary);
+  color: var(--bloom-ink-2);
 }
 .chat-empty-avatar {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #007AFF 0%, #32ADE6 100%);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.22);
+  width: 56px; height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  background: conic-gradient(from 0deg, var(--bloom-coral), var(--bloom-lavender), var(--bloom-mint), var(--bloom-coral));
+  color: var(--bloom-ink-on-accent);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 20px -10px rgba(255, 107, 71, 0.45);
 }
 .chat-empty-avatar svg { width: 28px; height: 28px; }
-.chat-empty-title { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.chat-empty-desc { font-size: 13px; line-height: 1.7; }
+.chat-empty-title {
+  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-size: 22px; font-weight: 400;
+  color: var(--bloom-ink); margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+.chat-empty-desc { font-size: 13px; line-height: 1.7; color: var(--bloom-ink-2); }
 .kbd {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 5px;
-  border: 1px solid var(--border-glass);
-  background: var(--surface);
-  font-family: monospace;
-  font-size: 11px;
-  color: var(--text-primary);
+  padding: 1px 6px; border-radius: 5px;
+  border: 1px solid var(--bloom-rule);
+  background: var(--bloom-surface-tinted);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px; color: var(--bloom-ink-2);
 }
 .chat-typing {
   align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 14px;
-  background: var(--surface);
-  border-radius: 14px;
-  border: 1px solid var(--border-glass);
-  color: var(--text-secondary);
+  background: var(--bloom-surface);
+  border-radius: 18px;
+  border: 1px solid var(--bloom-rule);
+  color: var(--bloom-ink-2);
   font-size: 13px;
+  border-bottom-left-radius: 4px;
 }
 .chat-typing .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-tertiary);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--bloom-coral);
   animation: dotPulse 1.2s ease-in-out infinite;
 }
-.chat-typing .dot:nth-child(2) { animation-delay: 0.15s; }
-.chat-typing .dot:nth-child(3) { animation-delay: 0.3s; }
+.chat-typing .dot:nth-child(2) { animation-delay: 0.15s; background: var(--bloom-sun); }
+.chat-typing .dot:nth-child(3) { animation-delay: 0.3s; background: var(--bloom-mint); }
 @keyframes dotPulse {
   0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-2px); }
 }
 .chat-error {
   align-self: stretch;
-  background: rgba(255, 59, 48, 0.1);
-  color: #FF3B30;
-  border: 1px solid rgba(255, 59, 48, 0.25);
-  border-radius: 10px;
+  background: var(--bloom-coral-soft);
+  color: var(--bloom-coral-ink);
+  border: 1px solid var(--bloom-coral);
+  border-radius: 12px;
   padding: 10px 14px;
   font-size: 13px;
 }
 
-/* ── 任务完成 banner：5 秒倒计时自动清理 ── */
 .finalize-banner {
   position: sticky;
   bottom: 0;
   z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 6px 0 -6px;
+  display: flex; align-items: center; gap: 12px;
+  margin: 6px 12px -6px;
   padding: 11px 14px;
-  background: linear-gradient(135deg, rgba(52, 199, 89, 0.12), rgba(48, 209, 88, 0.08));
-  border: 1px solid rgba(52, 199, 89, 0.32);
+  background: linear-gradient(135deg, var(--bloom-mint-soft), color-mix(in srgb, var(--bloom-mint) 8%, transparent));
+  border: 1px solid var(--bloom-mint);
   border-radius: 14px;
-  color: var(--text-primary);
+  color: var(--bloom-ink);
   font-size: 13px;
   animation: finalize-in 0.28s ease-out;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
 }
 .finalize-check {
   flex-shrink: 0;
   width: 28px; height: 28px;
   border-radius: 50%;
-  background: #34C759;
-  color: #fff;
+  background: var(--bloom-mint);
+  color: var(--bloom-ink-on-accent);
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; font-weight: 800;
-  box-shadow: 0 4px 10px rgba(52, 199, 89, 0.35);
+  box-shadow: 0 4px 10px rgba(43, 176, 127, 0.35);
 }
 .finalize-text { flex: 1; min-width: 0; line-height: 1.4; }
-.finalize-title { font-size: 13.5px; font-weight: 700; color: #1f7a3a; }
-.finalize-sub { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+.finalize-title { font-size: 13.5px; font-weight: 700; color: var(--bloom-mint-ink); }
+.finalize-sub { font-size: 12px; color: var(--bloom-ink-2); margin-top: 1px; }
 .finalize-btn {
   flex-shrink: 0;
   padding: 7px 13px;
   border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border-glass);
+  background: var(--bloom-surface);
+  color: var(--bloom-ink);
+  border: 1px solid var(--bloom-rule);
   font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 12.5px; font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out);
 }
 .finalize-btn:active { transform: scale(0.96); }
 .finalize-btn.primary {
-  background: #34C759;
-  border-color: #34C759;
-  color: #fff;
+  background: var(--bloom-mint);
+  border-color: var(--bloom-mint);
+  color: var(--bloom-ink-on-accent);
 }
-.finalize-btn.primary:active { background: #2da44a; }
+.finalize-btn.primary:active { filter: brightness(0.95); }
 @keyframes finalize-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @media (min-width: 1024px) {
-  .chat-scroll { padding: 20px 32px; gap: 16px; }
+  .chat-scroll { padding: 24px 28px; gap: 16px; }
+  .chat-agent { border-radius: 20px; }
 }
 </style>
