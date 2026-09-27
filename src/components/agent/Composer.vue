@@ -7,11 +7,22 @@
       </div>
     </div>
     <div class="composer-row">
-      <label class="composer-icon" :class="{ disabled: busy }" title="选择截图（可多选）">
+      <label
+        class="composer-icon"
+        :class="{ disabled: busy, active: tapActive }"
+        title="选择截图（可多选）"
+        @click="onIconClick"
+        @touchstart.passive="tapActive = true"
+        @touchend.passive="tapActive = false"
+        @touchcancel.passive="tapActive = false"
+        @mousedown="tapActive = true"
+        @mouseup="tapActive = false"
+        @mouseleave="tapActive = false"
+      >
         <input
           ref="fileRef"
           type="file"
-          accept="image/jpeg,image/png"
+          accept="image/*"
           multiple
           class="composer-file"
           @change="onFileChange"
@@ -57,11 +68,23 @@ const MAX_IMAGES = 9
 const text = ref(props.initialText || '')
 const images = ref([])
 const imageError = ref('')
+const tapActive = ref(false)
 const inputRef = ref(null)
 const fileRef = ref(null)
 
 watch(text, (t) => emit('update-text', t))
 watch(() => props.initialText, (t) => { text.value = t || '' })
+
+// 兼容策略：
+// 1) iOS Safari 只能通过点击包裹 <label> 让浏览器原生触发 picker；
+// 2) 大量 Android 端浏览器（OEM 内核、微信/小程序 webview、较旧版本）
+//    对 label 转发不可靠，必须主动 .click() 才能弹起选择器。
+// 因此这里同时依赖 label 转发 + 主动 click：当 label 转发成功时浏览器已弹起
+// 选择器，随后的程序化 click 会被系统静默忽略，不存在双开问题。
+function onIconClick() {
+  if (props.busy) return
+  fileRef.value?.click()
+}
 
 function submit() {
   if (props.busy || (!text.value.trim() && images.value.length === 0)) return
@@ -157,6 +180,7 @@ onBeforeUnmount(() => {
 }
 .composer-icon:hover { background: var(--bloom-surface-hover); }
 .composer-icon:active { background: var(--bloom-coral-soft); color: var(--bloom-coral-ink); transform: scale(0.94); }
+.composer-icon.active { background: var(--bloom-coral-soft); color: var(--bloom-coral-ink); transform: scale(0.94); }
 .composer-icon svg { width: 18px; height: 18px; display: block; pointer-events: none; }
 .composer-icon.disabled { opacity: 0.5; cursor: not-allowed; }
 .composer-icon.disabled:active { background: var(--bloom-surface); color: var(--bloom-ink-2); transform: none; }
