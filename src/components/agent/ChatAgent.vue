@@ -286,14 +286,14 @@ onBeforeUnmount(() => {
   width: 56px; height: 56px;
   margin: 0 auto 14px;
   border-radius: 16px;
-  background: conic-gradient(from 0deg, var(--bloom-coral), var(--bloom-lavender), var(--bloom-mint), var(--bloom-coral));
+  background: var(--bloom-coral);
   color: var(--bloom-ink-on-accent);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 8px 20px -10px rgba(255, 107, 71, 0.45);
 }
 .chat-empty-avatar svg { width: 28px; height: 28px; }
 .chat-empty-title {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-family: "Noto Serif SC", Georgia, serif;
   font-size: 22px; font-weight: 400;
   color: var(--bloom-ink); margin-bottom: 10px;
   letter-spacing: -0.01em;
@@ -394,3 +394,5 @@ onBeforeUnmount(() => {
   .chat-agent { border-radius: 20px; }
 }
 </style>
+
+

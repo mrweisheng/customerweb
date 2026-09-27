@@ -2,36 +2,32 @@
   <div class="page wb-page">
     <!-- 顶部 Bloom Hero：问候 + KPI 三格 -->
     <header class="bloom-hero wb-hero">
-      <div class="blob b-coral b-sm" style="top:-40px;right:18%;width:200px;height:200px;"></div>
-      <div class="blob b-sun b-sm" style="top:30%;left:-30px;width:180px;height:180px;"></div>
+      <div class="blob b-blush b-sm" style="top:-60px;right:-40px;width:240px;height:240px;"></div>
 
       <div class="wb-hero-row">
         <div>
           <div class="wb-hero-eyebrow">{{ heroEyebrow }}</div>
-          <h1 class="wb-hero-h1">{{ heroTitle }}<span class="wb-hero-comma">，</span>{{ heroSuffix }}</h1>
+          <h1 class="wb-hero-h1">
+            <span class="wb-hero-greeting">{{ heroTitle }}</span><span class="wb-hero-comma">，</span><span class="wb-hero-tail">{{ heroSuffix }}</span>
+          </h1>
           <div class="wb-hero-sub" v-if="loaded">
             共 {{ priorityCustomers.length }} 位重点客户 · {{ healthCounts.need }} 位需回访 · {{ healthCounts.none }} 位未回访
           </div>
         </div>
-        <div class="wb-hero-mark" aria-hidden="true">
-          <span class="wb-hero-mark-dot t-coral"></span>
-          <span class="wb-hero-mark-dot t-mint"></span>
-          <span class="wb-hero-mark-dot t-sun"></span>
-        </div>
       </div>
 
       <div class="wb-kpi-row" v-if="loaded">
-        <div class="bloom-kpi tint-coral">
+        <div class="bloom-kpi tint-coral-soft">
           <div class="bloom-kpi-label">Priority</div>
           <div class="bloom-kpi-value">{{ priorityCustomers.length }}<span class="unit">位</span></div>
           <div class="wb-kpi-cap">重点客户总数</div>
         </div>
-        <div class="bloom-kpi tint-sun">
+        <div class="bloom-kpi tint-sun-soft">
           <div class="bloom-kpi-label">Need Follow</div>
           <div class="bloom-kpi-value">{{ healthCounts.need }}<span class="unit">位</span></div>
           <div class="wb-kpi-cap">超过 7 天未跟进</div>
         </div>
-        <div class="bloom-kpi tint-lavender">
+        <div class="bloom-kpi tint-lavender-soft">
           <div class="bloom-kpi-label">No Contact</div>
           <div class="bloom-kpi-value">{{ healthCounts.none }}<span class="unit">位</span></div>
           <div class="wb-kpi-cap">从未回访</div>
@@ -389,9 +385,11 @@ onUnmounted(() => {
 /* ── Bloom Hero ── */
 .wb-hero {
   position: relative;
-  padding: 26px 26px 22px;
+  padding: 24px 24px 20px;
   margin-bottom: 16px;
   border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--bloom-rule);
 }
 .wb-hero-row {
   position: relative;
@@ -400,26 +398,32 @@ onUnmounted(() => {
 }
 .wb-hero-eyebrow {
   font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em;
   color: var(--bloom-coral); margin-bottom: 8px;
 }
 .wb-hero-h1 {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
-  font-size: 32px; font-weight: 400; letter-spacing: -0.01em;
-  color: var(--bloom-ink); line-height: 1.1;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 28px; font-weight: 600; letter-spacing: -0.005em;
+  color: var(--bloom-ink); line-height: 1.25;
+  text-wrap: balance;
 }
 .wb-hero-comma { color: var(--bloom-coral); }
+/* 问候 + 数字+单位各为一个 nowrap 单元，避免移动端把「位需要回访」拆到下一行 */
+.wb-hero-greeting { white-space: nowrap; }
+.wb-hero-tail { white-space: nowrap; }
 .wb-hero-sub {
   margin-top: 8px;
   font-size: 12.5px; color: var(--bloom-ink-2);
 }
-.wb-hero-mark { display: flex; gap: 6px; padding-top: 6px; }
-.wb-hero-mark-dot {
-  width: 10px; height: 10px; border-radius: 999px;
+/* 原来右侧三色装饰点已去掉：留一个克制的色点作为视觉锚 */
+.wb-hero-row::after {
+  content: '';
+  flex-shrink: 0;
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--bloom-coral);
+  margin-top: 8px;
+  align-self: flex-start;
 }
-.t-coral { background: var(--bloom-coral); }
-.t-mint  { background: var(--bloom-mint); }
-.t-sun   { background: var(--bloom-sun); }
 
 .wb-kpi-row {
   position: relative; z-index: 2;

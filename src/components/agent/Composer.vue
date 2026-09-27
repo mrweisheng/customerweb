@@ -7,14 +7,21 @@
       </div>
     </div>
     <div class="composer-row">
-      <button class="composer-icon" @click="pickImage" :disabled="busy" title="选择截图（可多选）">
+      <label class="composer-icon" :class="{ disabled: busy }" title="选择截图（可多选）">
+        <input
+          ref="fileRef"
+          type="file"
+          accept="image/jpeg,image/png"
+          multiple
+          class="composer-file"
+          @change="onFileChange"
+        />
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"></rect>
           <circle cx="8.5" cy="8.5" r="1.5"></circle>
           <polyline points="21 15 16 10 5 21"></polyline>
         </svg>
-      </button>
-      <input ref="fileRef" type="file" accept="image/jpeg,image/png" multiple class="composer-file" @change="onFileChange" />
+      </label>
       <textarea
         ref="inputRef"
         class="composer-input"
@@ -67,7 +74,6 @@ function submit() {
   imageError.value = ''
 }
 
-function pickImage() { fileRef.value?.click() }
 function onFileChange(e) { addFiles(e.target.files); e.target.value = '' }
 function onPaste(e) {
   const files = [...(e.clipboardData?.items || [])]
@@ -76,13 +82,6 @@ function onPaste(e) {
     .filter(Boolean)
   if (files.length === 0) return
   e.preventDefault()
-  addFiles(files)
-}
-function onDrop(e) {
-  dragging.value = false
-  if (props.busy) return
-  const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type?.startsWith('image/'))
-  if (files.length === 0) { imageError.value = '请拖入图片文件（JPEG/PNG）'; return }
   addFiles(files)
 }
 async function addFiles(fileList) {
@@ -141,6 +140,9 @@ onBeforeUnmount(() => {
   display: flex; align-items: center; justify-content: center;
 }
 .composer-row { display: flex; align-items: flex-end; gap: 8px; }
+/* label 包裹隐藏的 file input，跨平台最稳的「点击触发选图」模式：
+   iOS Safari 对 display:none 的 input 程序化 click 会忽略，
+   但点击包裹它的 label 元素可以原生穿透，无需任何 JS。 */
 .composer-icon {
   width: 40px; height: 40px; border-radius: 12px;
   border: 1px solid var(--bloom-rule);
@@ -149,12 +151,24 @@ onBeforeUnmount(() => {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  transition: background var(--bloom-t-fast) var(--bloom-ease-out);
+  transition: background var(--bloom-t-fast) var(--bloom-ease-out),
+              color var(--bloom-t-fast) var(--bloom-ease-out),
+              transform var(--bloom-t-fast) var(--bloom-ease-out);
 }
 .composer-icon:hover { background: var(--bloom-surface-hover); }
-.composer-icon svg { width: 18px; height: 18px; }
-.composer-icon:disabled { opacity: 0.5; cursor: not-allowed; }
-.composer-file { display: none; }
+.composer-icon:active { background: var(--bloom-coral-soft); color: var(--bloom-coral-ink); transform: scale(0.94); }
+.composer-icon svg { width: 18px; height: 18px; display: block; pointer-events: none; }
+.composer-icon.disabled { opacity: 0.5; cursor: not-allowed; }
+.composer-icon.disabled:active { background: var(--bloom-surface); color: var(--bloom-ink-2); transform: none; }
+.composer-file {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
 .composer-input {
   flex: 1; resize: none;
   border: 1px solid var(--bloom-rule);
@@ -189,7 +203,15 @@ onBeforeUnmount(() => {
 .composer-send svg { width: 17px; height: 17px; }
 .composer-send:disabled { opacity: 0.4; cursor: not-allowed; }
 .composer-send:not(:disabled):hover { background: var(--bloom-coral-ink); }
+.composer-send:not(:disabled):active { transform: scale(0.94); }
 .composer-error { margin-top: 6px; font-size: 12px; color: var(--bloom-coral-ink); }
-@media (max-width: 1023px) { .composer { padding-bottom: 12px; } }
-@media (min-width: 1024px) { .composer { padding: 14px 20px 16px; } }
+/* 移动端点击区提到 44px（iOS HIG 最小），缩窄内边距给键盘更多空间 */
+@media (max-width: 1023px) {
+  .composer { padding-bottom: 12px; }
+  .composer-icon,
+  .composer-send { width: 44px; height: 44px; }
+}
+@media (min-width: 1024px) {
+  .composer { padding: 14px 20px 16px; }
+}
 </style>

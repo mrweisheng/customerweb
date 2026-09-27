@@ -2,9 +2,7 @@
   <div class="stats-page">
     <!-- Bloom Hero -->
     <section class="bloom-hero stats-hero">
-      <div class="blob b-coral b-sm" style="top:-40px;right:18%;width:200px;height:200px;"></div>
-      <div class="blob b-sun b-sm" style="top:38%;left:-20px;width:180px;height:180px;"></div>
-      <div class="blob b-mint b-sm" style="bottom:-30px;right:8%;width:160px;height:160px;"></div>
+      <div class="blob b-blush b-sm" style="top:-60px;right:-40px;width:240px;height:240px;"></div>
 
       <div class="stats-hero-row">
         <div>
@@ -12,12 +10,7 @@
           <h1 class="stats-hero-h1">{{ statsHeroHeadline }}</h1>
           <div class="stats-hero-sub">数据范围：{{ scopeUserName }} · {{ statsHeroPeriod }}</div>
         </div>
-        <div class="stats-hero-mark" aria-hidden="true">
-          <span class="wb-hero-mark-dot t-coral"></span>
-          <span class="wb-hero-mark-dot t-mint"></span>
-          <span class="wb-hero-mark-dot t-sun"></span>
-          <span class="wb-hero-mark-dot t-sky"></span>
-        </div>
+
       </div>
     </section>
 
@@ -154,13 +147,13 @@
               <div class="pa-names" v-if="m.customers.length">{{ m.customers.map(paDisplayName).join('、') }}</div>
               <div class="pa-names empty" v-else>本周暂无</div>
             </div>
-            <div class="pa-module" v-if="paData.others.count > 0">
-              <div class="pa-module-head">
-                <span class="pa-module-name">未归类</span>
-                <span class="pa-module-count">{{ paData.others.count }} 个</span>
-              </div>
-              <div class="pa-names">{{ paData.others.customers.map(paDisplayName).join('、') }}</div>
-            </div>
+           <div class="pa-module" v-if="paData.others && paData.others.count > 0">
+             <div class="pa-module-head">
+               <span class="pa-module-name">未归类</span>
+                <span class="pa-module-count">{{ paData.others?.count || 0 }} 个</span>
+             </div>
+              <div class="pa-names">{{ (paData.others?.customers || []).map(paDisplayName).join('、') }}</div>
+           </div>
           </div>
         </template>
       </div>
@@ -965,7 +958,8 @@ function paDisplayName(c) {
 }
 function paBarWidth(count) {
   const d = paData.value
-  const max = d ? Math.max(1, ...d.modules.map((m) => m.count)) : 1
+  if (!d || !Array.isArray(d.modules) || d.modules.length === 0) return '0%'
+  const max = Math.max(1, ...d.modules.map((m) => Number(m?.count) || 0))
   return Math.round((count / max) * 100) + '%'
 }
 async function loadPriorityAnalysis() {
@@ -999,22 +993,30 @@ onUnmounted(() => {
   background: var(--bloom-canvas);
 }
 
-.stats-hero { position: relative; padding: 26px 26px 22px; margin-bottom: 16px; border-radius: 20px; }
+.stats-hero { position: relative; padding: 24px 24px 20px; margin-bottom: 16px; border-radius: 20px; overflow: hidden; border: 1px solid var(--bloom-rule); }
 .stats-hero-row { position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .stats-hero-eyebrow {
   font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em;
   color: var(--bloom-coral); margin-bottom: 8px;
 }
 .stats-hero-h1 {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
-  font-size: 28px; font-weight: 400; letter-spacing: -0.01em;
-  color: var(--bloom-ink); line-height: 1.18;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 26px; font-weight: 600; letter-spacing: -0.005em;
+  color: var(--bloom-ink); line-height: 1.25;
+  text-wrap: balance;
 }
 .stats-hero-sub { margin-top: 8px; font-size: 12.5px; color: var(--bloom-ink-2); }
-.stats-hero-mark { display: flex; gap: 5px; padding-top: 8px; }
-.stats-hero-mark .wb-hero-mark-dot { width: 9px; height: 9px; border-radius: 999px; }
-@media (min-width: 1024px) { .stats-hero-h1 { font-size: 34px; } }
+/* 替代原来的右侧四色装饰点 */
+.stats-hero-row::after {
+  content: '';
+  flex-shrink: 0;
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--bloom-coral);
+  margin-top: 8px;
+  align-self: flex-start;
+}
+@media (min-width: 1024px) { .stats-hero-h1 { font-size: 30px; } }
 
 .card {
   background: var(--bg-card);
@@ -1309,3 +1311,8 @@ onUnmounted(() => {
   .deal-grid { grid-template-columns: repeat(5, 1fr); }
 }
 </style>
+
+
+
+
+

@@ -178,13 +178,20 @@
 .bloom-kpi.tint-sun      { background: linear-gradient(135deg, var(--bloom-sun-soft), transparent 65%), var(--bloom-surface); }
 .bloom-kpi.tint-sky      { background: linear-gradient(135deg, var(--bloom-sky-soft), transparent 65%), var(--bloom-surface); }
 .bloom-kpi.tint-blush    { background: linear-gradient(135deg, var(--bloom-blush-soft), transparent 65%), var(--bloom-surface); }
+/* 克制版：颜色信号只在顶部 2px 装饰条 + 数字色上出现，卡片底几乎中性 */
+.bloom-kpi.tint-coral-soft { background: var(--bloom-surface); border-top: 2px solid var(--bloom-coral); }
+.bloom-kpi.tint-coral-soft .bloom-kpi-value { color: var(--bloom-coral-ink); }
+.bloom-kpi.tint-sun-soft { background: var(--bloom-surface); border-top: 2px solid var(--bloom-sun); }
+.bloom-kpi.tint-sun-soft .bloom-kpi-value { color: var(--bloom-sun-ink); }
+.bloom-kpi.tint-lavender-soft { background: var(--bloom-surface); border-top: 2px solid var(--bloom-lavender); }
+.bloom-kpi.tint-lavender-soft .bloom-kpi-value { color: var(--bloom-lavender-ink); }
 
 .bloom-kpi-label {
   font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--bloom-ink-3); font-weight: 600;
 }
 .bloom-kpi-value {
-  font-family: "DM Serif Display", "Instrument Serif", "Noto Serif SC", Georgia, serif;
+  font-family: "Noto Serif SC", Georgia, serif;
   font-size: 36px; line-height: 1.05; color: var(--bloom-ink);
 }
 .bloom-kpi-value .unit { font-size: 16px; color: var(--bloom-ink-3); margin-left: 4px; }
@@ -227,3 +234,7 @@
   .bloom-msg.is-user { align-items: flex-end; flex-direction: column; }
   .bloom-msg-meta { margin-bottom: 0; }
 }
+
+
+
+

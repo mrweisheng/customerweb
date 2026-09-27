@@ -41,7 +41,7 @@
         <label class="scope-label">数据范围</label>
         <select class="scope-select" :value="scopeValue" @change="onScopeChange">
           <option value="all">全部用户</option>
-          <option v-for="u in users" :key="u.id" :value="u.id">{{ u.nickname }}</option>
+          <option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.nickname }}</option>
         </select>
       </div>
       <button class="theme-toggle" @click="toggle" :title="isDark ? '切换到浅色模式' : '切换到深色模式'">
@@ -74,6 +74,8 @@ const avatarText = computed(() => {
 })
 const avatarColor = computed(() => getAvatarColor(userInfo.value?.nickname || userInfo.value?.username))
 const scopeValue = computed(() => (scopeUserId.value === null ? 'all' : scopeUserId.value))
+// 防御性：users 在 mock/异常场景可能被赋成 {code,data} 包装对象或 null，过滤后只保留含 id 的项
+const usersList = computed(() => (Array.isArray(users.value) ? users.value : []).filter((u) => u && u.id != null))
 
 const tabs = [
   {
@@ -145,7 +147,7 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: conic-gradient(from 0deg, var(--bloom-coral), var(--bloom-lavender), var(--bloom-mint), var(--bloom-coral));
+  background: var(--bloom-coral);
   color: var(--bloom-ink-on-accent);
   display: flex;
   align-items: center;
@@ -159,7 +161,7 @@ onMounted(() => {
 }
 
 .sidebar-brand-title {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-family: "Noto Serif SC", Georgia, serif;
   font-size: 22px;
   font-weight: 400;
   letter-spacing: -0.02em;
@@ -336,3 +338,5 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 </style>
+
+

@@ -72,7 +72,7 @@
         <div class="menu-text">数据范围</div>
         <select class="scope-select" :value="scopeValue" @change="onScopeChange">
           <option value="all">全部用户</option>
-          <option v-for="u in users" :key="u.id" :value="u.id">{{ u.nickname }}</option>
+          <option v-for="u in usersList" :key="u.id" :value="u.id">{{ u.nickname }}</option>
         </select>
       </div>
       <!-- 关于 -->
@@ -128,6 +128,8 @@ const avatarUrl = computed(() => {
 })
 const displayAvatar = computed(() => localPreviewUrl.value || avatarUrl.value)
 const scopeValue = computed(() => (scopeUserId.value === null ? 'all' : scopeUserId.value))
+// 防御性：users 在 mock/异常场景可能被赋成 {code,data} 包装对象或 null，过滤后只保留含 id 的项
+const usersList = computed(() => (Array.isArray(users.value) ? users.value : []).filter((u) => u && u.id != null))
 
 function onScopeChange(e) {
   const v = e.target.value
@@ -253,13 +255,13 @@ onMounted(() => {
   color: var(--bloom-coral); margin-bottom: 6px;
 }
 .mine-hero-name {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-family: "Noto Serif SC", Georgia, serif;
   font-size: 26px; font-weight: 400; letter-spacing: -0.01em;
   color: var(--bloom-ink); line-height: 1.15;
 }
 .mine-hero-name-input {
   width: 100%;
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-family: "Noto Serif SC", Georgia, serif;
   font-size: 26px; font-weight: 400; letter-spacing: -0.01em;
   color: var(--bloom-ink); line-height: 1.15;
   border: none; outline: none; background: transparent; padding: 0;
@@ -380,3 +382,4 @@ onMounted(() => {
   .btn-logout:hover { background: var(--bloom-coral-soft); }
 }
 </style>
+

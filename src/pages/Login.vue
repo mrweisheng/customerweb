@@ -1,9 +1,7 @@
 <template>
   <div class="login-page">
     <section class="login-hero">
-      <div class="blob b-blush b-lg" style="top:-120px;left:-100px;width:380px;height:380px;"></div>
-      <div class="blob b-coral" style="bottom:-90px;right:-80px;width:300px;height:300px;"></div>
-      <div class="blob b-sun b-sm" style="top:35%;left:42%;width:220px;height:220px;"></div>
+      <div class="blob b-blush b-lg" style="top:-120px;right:-100px;width:340px;height:340px;"></div>
 
       <div class="hero-brand">
         <div class="hero-logo">
@@ -106,9 +104,7 @@ async function onLogin() {
   overflow: hidden;
   padding: 56px 64px;
   background:
-    radial-gradient(circle at 90% 8%,  var(--bloom-blush-soft),  transparent 55%),
-    radial-gradient(circle at  0% 95%, var(--bloom-coral-soft), transparent 55%),
-    radial-gradient(circle at 60% 60%, var(--bloom-sun-soft),   transparent 60%),
+    radial-gradient(circle at 90% 8%, var(--bloom-blush-soft), transparent 55%),
     var(--bloom-canvas);
 }
 
@@ -116,13 +112,13 @@ async function onLogin() {
 .hero-logo {
   width: 44px; height: 44px;
   border-radius: 14px;
-  background: conic-gradient(from 0deg, var(--bloom-coral), var(--bloom-lavender), var(--bloom-mint), var(--bloom-coral));
+  background: var(--bloom-coral);
   color: var(--bloom-ink-on-accent);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 20px -10px rgba(255, 107, 71, 0.55);
+  box-shadow: 0 4px 12px -6px rgba(255, 107, 71, 0.35);
 }
 .hero-brand-title {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-family: "Noto Serif SC", Georgia, serif;
   font-size: 22px; font-weight: 400; letter-spacing: -0.02em;
   color: var(--bloom-ink); line-height: 1;
 }
@@ -135,12 +131,12 @@ async function onLogin() {
 .hero-headline { position: relative; z-index: 2; margin-top: 96px; max-width: 460px; }
 .hero-eyebrow {
   font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
-  color: var(--bloom-coral); margin-bottom: 18px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em;
+  color: var(--bloom-coral); margin-bottom: 14px;
 }
 .hero-h1 {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
-  font-size: 56px; font-weight: 400; line-height: 1.05;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 44px; font-weight: 600; line-height: 1.2;
   letter-spacing: -0.02em; color: var(--bloom-ink); margin-bottom: 18px;
 }
 .hero-desc { font-size: 16px; line-height: 1.65; color: var(--bloom-ink-2); max-width: 420px; }
@@ -148,8 +144,8 @@ async function onLogin() {
 .hero-stats { position: relative; z-index: 2; margin-top: 64px; display: flex; gap: 32px; }
 .hero-stat { display: flex; flex-direction: column; gap: 4px; }
 .hero-stat-num {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
-  font-size: 32px; font-weight: 400; color: var(--bloom-ink); line-height: 1;
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 26px; font-weight: 600; color: var(--bloom-ink); line-height: 1;
 }
 .hero-stat-num .unit { font-size: 14px; color: var(--bloom-ink-3); margin-left: 2px; }
 .hero-stat-cap {
@@ -162,11 +158,11 @@ async function onLogin() {
 .login-form-card { width: 100%; max-width: 380px; padding: 36px 32px 28px; display: flex; flex-direction: column; }
 .form-eyebrow {
   font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em;
   color: var(--bloom-coral); margin-bottom: 10px;
 }
 .form-title {
-  font-family: "DM Serif Display", "Noto Serif SC", Georgia, serif;
+  font-family: "Noto Serif SC", Georgia, serif;
   font-size: 30px; font-weight: 400; letter-spacing: -0.01em;
   color: var(--bloom-ink); line-height: 1.15;
 }
@@ -221,7 +217,11 @@ async function onLogin() {
 
 @media (min-width: 1280px) {
   .login-hero { padding: 64px 80px; }
-  .hero-h1 { font-size: 64px; }
+  .hero-h1 { font-size: 48px; }
   .hero-headline { margin-top: 120px; }
 }
 </style>
+
+
+
+

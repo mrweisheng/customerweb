@@ -48,7 +48,7 @@ const imageList = computed(() => {
 .bubble-avatar {
   width: 32px; height: 32px;
   border-radius: 12px;
-  background: conic-gradient(from 0deg, var(--bloom-coral), var(--bloom-lavender), var(--bloom-mint), var(--bloom-coral));
+  background: var(--bloom-coral);
   color: var(--bloom-ink-on-accent);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
@@ -116,3 +116,4 @@ const imageList = computed(() => {
   51%, 100% { opacity: 0; }
 }
 </style>
+
