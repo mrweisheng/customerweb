@@ -7,11 +7,12 @@
       </div>
     </div>
     <div class="composer-row">
-      <label
+      <button
         class="composer-icon"
-        :class="{ disabled: busy, active: tapActive }"
+        :class="{ active: tapActive }"
+        :disabled="busy"
         title="选择截图（可多选）"
-        @click="onIconClick"
+        @click="pickImage"
         @touchstart.passive="tapActive = true"
         @touchend.passive="tapActive = false"
         @touchcancel.passive="tapActive = false"
@@ -19,20 +20,20 @@
         @mouseup="tapActive = false"
         @mouseleave="tapActive = false"
       >
-        <input
-          ref="fileRef"
-          type="file"
-          accept="image/*"
-          multiple
-          class="composer-file"
-          @change="onFileChange"
-        />
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"></rect>
           <circle cx="8.5" cy="8.5" r="1.5"></circle>
           <polyline points="21 15 16 10 5 21"></polyline>
         </svg>
-      </label>
+      </button>
+      <input
+        ref="fileRef"
+        type="file"
+        accept="image/*"
+        multiple
+        class="composer-file"
+        @change="onFileChange"
+      />
       <textarea
         ref="inputRef"
         class="composer-input"
@@ -75,13 +76,10 @@ const fileRef = ref(null)
 watch(text, (t) => emit('update-text', t))
 watch(() => props.initialText, (t) => { text.value = t || '' })
 
-// 兼容策略：
-// 1) iOS Safari 只能通过点击包裹 <label> 让浏览器原生触发 picker；
-// 2) 大量 Android 端浏览器（OEM 内核、微信/小程序 webview、较旧版本）
-//    对 label 转发不可靠，必须主动 .click() 才能弹起选择器。
-// 因此这里同时依赖 label 转发 + 主动 click：当 label 转发成功时浏览器已弹起
-// 选择器，随后的程序化 click 会被系统静默忽略，不存在双开问题。
-function onIconClick() {
+// 点击按钮直接程序化触发隐藏 file input 的 click。
+// 这是 Android Chrome / 大多数 Android WebView 上最稳的选择器触发方式；
+// 之前用 <label> 包 input 的方案在 OEM 内核 / 微信 WebView 上不可靠，已回滚到此方案。
+function pickImage() {
   if (props.busy) return
   fileRef.value?.click()
 }
@@ -162,10 +160,10 @@ onBeforeUnmount(() => {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
+/* <button> + 隐藏 file input：Android Chrome / OEM 内核 / 微信 WebView 下最稳的选图触发方式。
+   注意：iOS Safari 对 display:none 的 input 程序化 click 不可用，
+   但本项目目前部署目标以 Android 为主，如未来要兼顾 iOS 再做兼容（视觉隐藏 input 即可）。 */
 .composer-row { display: flex; align-items: flex-end; gap: 8px; }
-/* label 包裹隐藏的 file input，跨平台最稳的「点击触发选图」模式：
-   iOS Safari 对 display:none 的 input 程序化 click 会忽略，
-   但点击包裹它的 label 元素可以原生穿透，无需任何 JS。 */
 .composer-icon {
   width: 40px; height: 40px; border-radius: 12px;
   border: 1px solid var(--bloom-rule);
@@ -182,16 +180,11 @@ onBeforeUnmount(() => {
 .composer-icon:active { background: var(--bloom-coral-soft); color: var(--bloom-coral-ink); transform: scale(0.94); }
 .composer-icon.active { background: var(--bloom-coral-soft); color: var(--bloom-coral-ink); transform: scale(0.94); }
 .composer-icon svg { width: 18px; height: 18px; display: block; pointer-events: none; }
-.composer-icon.disabled { opacity: 0.5; cursor: not-allowed; }
-.composer-icon.disabled:active { background: var(--bloom-surface); color: var(--bloom-ink-2); transform: none; }
+.composer-icon:disabled { opacity: 0.5; cursor: not-allowed; }
+.composer-icon:disabled.active,
+.composer-icon:disabled:active { background: var(--bloom-surface); color: var(--bloom-ink-2); transform: none; }
 .composer-file {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
+  display: none;
 }
 .composer-input {
   flex: 1; resize: none;
