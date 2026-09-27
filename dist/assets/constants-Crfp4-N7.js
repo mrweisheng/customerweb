@@ -1,0 +1,1 @@
+function e(e){if(!e)return``;let t=String(e).match(/(\d{1,2})-(\d{1,2})\s*$/);return t?`${t[1]}${t[2]}`:``}function t(e){if(!e)return{text:`未回访`,class:`danger`};let t=new Date,n=new Date(e),r=Math.floor((t-n)/(1e3*60*60*24));return r<=7?{text:`${r}天前`,class:`success`}:r<=30?{text:`${r}天前`,class:`warning`}:{text:`${r}天前`,class:`danger`}}export{e as n,t};

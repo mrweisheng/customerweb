@@ -61,8 +61,8 @@
     <div v-if="searchQuery" class="results-section">
       <div class="results-header" v-if="searchResults.length">找到 {{ searchResults.length }} 条结果</div>
       <div class="result-card" v-for="c in searchResults" :key="c.id" @click="onResultTap(c)">
-        <div class="result-avatar" :style="{ background: c.avatarColor.bg, color: c.avatarColor.color }">
-          {{ c.customer_name?.charAt(0) || '?' }}
+        <div class="result-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 18.5c.7-3 3.3-4.8 6.5-4.8s5.8 1.8 6.5 4.8"/></svg>
         </div>
         <div class="result-info">
           <div class="result-name">
@@ -124,7 +124,9 @@
           @click="onCardTap(c)"
         >
           <div class="cc-head">
-            <div class="cc-avatar" :style="{ background: c.avatarColor.bg, color: c.avatarColor.color }">{{ c.customer_name?.charAt(0) }}</div>
+            <div class="cc-avatar" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 18.5c.7-3 3.3-4.8 6.5-4.8s5.8 1.8 6.5 4.8"/></svg>
+            </div>
             <div class="cc-head-meta">
               <div class="cc-name">
                 <span class="lead-date" v-if="c.lead_date_short">{{ c.lead_date_short }}/</span>{{ c.customer_name }}
@@ -177,7 +179,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import api from '../utils/api'
-import { AVATAR_COLORS, calcVisitStatus, leadDateShort } from '../utils/constants'
+import { calcVisitStatus, leadDateShort } from '../utils/constants'
 import { useDevice } from '../composables/useDevice'
 import { useToast } from '../composables/useToast'
 import { useScope } from '../composables/useScope'
@@ -236,7 +238,6 @@ function decorateCustomer(c, idx) {
   return {
     ...c,
     lead_date_short: leadDateShort(c.lead_date),
-    avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
     visitStatus: calcVisitStatus(c.last_visit_at),
     visitDay: c.last_visit_at ? String(c.last_visit_at).slice(5, 10) : '',
   }
@@ -518,8 +519,10 @@ onUnmounted(() => {
 .cc-avatar {
   width: 40px; height: 40px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 700; flex-shrink: 0;
+  background: var(--bloom-canvas-tint); color: var(--bloom-ink-2);
+  flex-shrink: 0;
 }
+.cc-avatar svg { width: 22px; height: 22px; display: block; }
 .cc-head-meta { flex: 1; min-width: 0; }
 .cc-name {
   font-size: 15px; font-weight: 700; color: var(--bloom-ink);
@@ -572,8 +575,9 @@ onUnmounted(() => {
 .result-avatar {
   width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px; font-weight: 700;
+  background: var(--bloom-canvas-tint); color: var(--bloom-ink-2);
 }
+.result-avatar svg { width: 22px; height: 22px; display: block; }
 .result-info { flex: 1; min-width: 0; }
 .result-name { font-size: 14.5px; font-weight: 700; color: var(--bloom-ink); }
 .priority-badge {

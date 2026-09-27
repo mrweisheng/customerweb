@@ -29,8 +29,8 @@
 
     <div class="sidebar-footer">
       <div class="sidebar-user" v-if="userInfo">
-        <div class="sidebar-avatar" :style="{ background: avatarColor.bg, color: avatarColor.color }">
-          {{ avatarText }}
+        <div class="sidebar-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 18.5c.7-3 3.3-4.8 6.5-4.8s5.8 1.8 6.5 4.8"/></svg>
         </div>
         <div class="sidebar-user-info">
           <div class="sidebar-user-name">{{ userInfo.nickname || userInfo.username || '用户' }}</div>
@@ -58,7 +58,6 @@
 import { computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getUserInfo } from '../utils/auth'
-import { getAvatarColor } from '../utils/constants'
 import { useScope } from '../composables/useScope'
 import { useTheme } from '../composables/useTheme'
 
@@ -68,11 +67,6 @@ const { scopeUserId, users, isAdmin, setScope, loadUsers } = useScope()
 const { isDark, toggle } = useTheme()
 
 const userInfo = computed(() => getUserInfo())
-const avatarText = computed(() => {
-  const name = userInfo.value?.nickname || userInfo.value?.username || 'U'
-  return name.charAt(0).toUpperCase()
-})
-const avatarColor = computed(() => getAvatarColor(userInfo.value?.nickname || userInfo.value?.username))
 const scopeValue = computed(() => (scopeUserId.value === null ? 'all' : scopeUserId.value))
 // 防御性：users 在 mock/异常场景可能被赋成 {code,data} 包装对象或 null，过滤后只保留含 id 的项
 const usersList = computed(() => (Array.isArray(users.value) ? users.value : []).filter((u) => u && u.id != null))
@@ -253,13 +247,14 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 12px;
+  background: var(--bloom-canvas-tint);
+  color: var(--bloom-ink-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
   flex-shrink: 0;
 }
+.sidebar-avatar svg { width: 18px; height: 18px; display: block; }
 
 .sidebar-user-info {
   min-width: 0;

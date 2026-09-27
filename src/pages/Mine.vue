@@ -7,9 +7,9 @@
 
       <div class="mine-hero-row">
         <div class="avatar-wrapper" @click="triggerAvatarUpload">
-          <div class="avatar" :style="{ background: avatarColor.bg, color: avatarColor.color }">
+          <div class="avatar" aria-hidden="true">
             <img v-if="displayAvatar" :src="displayAvatar" class="avatar-img" />
-            <span v-else>{{ avatarText }}</span>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M5.5 18.5c.7-3 3.3-4.8 6.5-4.8s5.8 1.8 6.5 4.8"/></svg>
           </div>
           <div v-if="avatarUploading" class="avatar-loading" aria-label="上传中">
             <div class="spinner"></div>
@@ -114,13 +114,6 @@ const avatarInput = ref(null)
 const avatarUploading = ref(false)
 const localPreviewUrl = ref('')
 
-const avatarText = computed(() => {
-  const name = userInfo.value?.nickname || userInfo.value?.username || 'U'
-  return name.charAt(0).toUpperCase()
-})
-const avatarColor = computed(() => {
-  return getAvatarColor(userInfo.value?.nickname || userInfo.value?.username)
-})
 const avatarUrl = computed(() => {
   if (!userInfo.value?.avatar_url) return ''
   const baseUrl = import.meta.env.VITE_API_BASE
@@ -221,10 +214,12 @@ onMounted(() => {
 .avatar {
   width: 64px; height: 64px; border-radius: 18px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; font-weight: 700; overflow: hidden;
+  background: var(--bloom-canvas-tint); color: var(--bloom-ink-2);
+  overflow: hidden;
   box-shadow: 0 6px 18px -8px rgba(26, 22, 20, 0.18);
 }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.avatar svg { width: 32px; height: 32px; display: block; }
 .avatar-badge {
   position: absolute; bottom: -2px; right: -2px;
   width: 22px; height: 22px;
