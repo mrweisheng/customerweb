@@ -8,7 +8,8 @@
       <!-- 头部：头像 + 客户名 + 阶段徽标（已成交/已到店/重点）+ 关闭 -->
       <div class="cdp-header">
         <div class="cdp-avatar" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <img v-if="props.customer?.customer_avatar_url && !avatarErr" :src="props.customer.customer_avatar_url" class="cdp-avatar-img" @error="avatarErr = true" />
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <div class="cdp-titlewrap">
           <div class="cdp-title">{{ customerName }}</div>
@@ -329,6 +330,11 @@ const props = defineProps({
   readonly: { type: Boolean, default: false }, // 管理员只读：隐藏一切写入口
 })
 const emit = defineEmits(['update:show', 'updated'])
+
+// 头像加载失败兜底：URL 404/403 等场景降级回默认 SVG，避免 broken 图标
+const avatarErr = ref(false)
+// 切换客户时重置加载失败状态（避免上一个客户的失败状态带到下一个）
+watch(() => props.customer?.id, () => { avatarErr.value = false })
 
 const { toast, showToast } = useToast()
 
@@ -976,6 +982,7 @@ function confirmDeleteDeal(deal) {
   display: flex; align-items: center; justify-content: center;
 }
 .cdp-avatar svg { width: 21px; height: 21px; }
+.cdp-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
 .cdp-titlewrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .cdp-title { font-size: 17px; font-weight: 700; color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 头部阶段徽标：已成交/已到店/重点，单一位置表达客户当前阶段 */
