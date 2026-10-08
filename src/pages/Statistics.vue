@@ -199,6 +199,31 @@
       </div>
     </div>
 
+    <!-- 每日新增（每天加了多少人 + 名单，格式同工作台：日期短码/姓名） -->
+    <div class="card daily-card">
+      <div class="card-header">
+        <div class="card-title"><span class="title-chip ti-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>每日新增</div>
+        <div class="trend-pills">
+          <div class="pill" :class="{ active: dailyDays === 7 }" @click="switchDailyDays(7)">7天</div>
+          <div class="pill" :class="{ active: dailyDays === 15 }" @click="switchDailyDays(15)">15天</div>
+          <div class="pill" :class="{ active: dailyDays === 30 }" @click="switchDailyDays(30)">30天</div>
+        </div>
+      </div>
+      <div class="daily-total">近 {{ dailyDays }} 天共新增 <b>{{ dailyTotal }}</b> 人</div>
+      <div v-if="dailyList.length === 0">
+        <EmptyState icon="clipboard" text="该时段暂无新增" />
+      </div>
+      <div v-else class="daily-list">
+        <div class="daily-row" v-for="d in dailyList" :key="d.date_full">
+          <div class="daily-day">
+            <span class="daily-date">{{ d.date }}</span>
+            <span class="daily-count">{{ d.count }} 人</span>
+          </div>
+          <div class="daily-names">{{ d.customers.map(dailyName).join('、') }}</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 成交 / 到店明细（吸收原重点页月度面板，可切月；点行打开编辑面板） -->
     <div class="card detail-card">
       <div class="card-header">
@@ -771,7 +796,7 @@ function onVisitRowTap(v) {
 
 // ── 数据加载 ────────────────────────────────────────────
 async function loadAll() {
-  await Promise.all([loadStats(), loadTrend(), loadDealStats(), loadCalendar(), loadMonthData()])
+  await Promise.all([loadStats(), loadTrend(), loadDealStats(), loadCalendar(), loadMonthData(), loadDailyAdditions()])
 }
 
 async function loadStats() {
@@ -872,6 +897,32 @@ async function loadTrend() {
 function switchTrendDays(days) {
   trendDays.value = days
   loadTrend()
+}
+
+// ── 每日新增 ────────────────────────────────────────────
+const dailyDays = ref(7)
+const dailyList = ref([]) // [{ date, date_full, count, customers }]
+const dailyTotal = ref(0)
+
+// 名单与工作台/重点分析同款格式：日期短码/姓名（如 0610/王生）
+function dailyName(c) {
+  const lead = c.lead_date ? leadDateShort(c.lead_date) : ''
+  return lead ? `${lead}/${c.customer_name}` : (c.customer_name || '')
+}
+
+async function loadDailyAdditions() {
+  try {
+    const res = await api.get('/customers/daily-additions', { params: scopeParams({ days: dailyDays.value }) })
+    dailyList.value = Array.isArray(res.items) ? res.items : []
+    dailyTotal.value = res.total || 0
+  } catch (e) {
+    showToast(e.message || '加载每日新增失败')
+  }
+}
+
+function switchDailyDays(days) {
+  dailyDays.value = days
+  loadDailyAdditions()
 }
 
 // ── 更新日历 ────────────────────────────────────────────
@@ -1190,6 +1241,19 @@ onUnmounted(() => {
 .cal-label-icon.c-missed { color: var(--danger); }
 .cal-label-icon.c-rate { color: var(--primary); }
 .cal-summary-divider { width: 1px; height: 26px; background: var(--border-glass); }
+
+/* ── 每日新增 ── */
+.daily-total { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+.daily-total b { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 2px; }
+.daily-row { padding: 10px 2px; border-bottom: 1px solid var(--border-glass); }
+.daily-row:last-child { border-bottom: none; }
+.daily-day { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.daily-date { font-size: 12.5px; font-weight: 800; color: var(--text-primary); }
+.daily-count {
+  font-size: 10.5px; font-weight: 800; color: var(--primary);
+  background: var(--primary-light); padding: 1px 8px; border-radius: 99px;
+}
+.daily-names { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
 
 /* ── 成交统计 ── */
 .deal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
