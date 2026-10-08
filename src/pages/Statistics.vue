@@ -1,7 +1,8 @@
 <template>
   <div class="stats-page">
-    <!-- Bloom Hero -->
-    <section class="bloom-hero stats-hero">
+    <div class="stats-grid">
+    <!-- Bloom Hero：一行式（标题左 · 日期章右） -->
+    <section class="bloom-hero stats-hero s12">
       <div class="blob b-blush b-sm" style="top:-60px;right:-40px;width:240px;height:240px;"></div>
 
       <div class="stats-hero-row">
@@ -10,87 +11,77 @@
           <h1 class="stats-hero-h1">{{ statsHeroHeadline }}</h1>
           <div class="stats-hero-sub">数据范围：{{ scopeUserName }} · {{ statsHeroPeriod }}</div>
         </div>
-
+        <div class="stats-hero-date">
+          <div class="shd-day">{{ heroDateShort }}</div>
+          <div class="shd-meta">{{ heroWeekdayText }}<template v-if="heroTodayAdds > 0"> · 今日 +{{ heroTodayAdds }}</template></div>
+        </div>
       </div>
     </section>
 
-    <!-- 数据总览：Bento 大数字矩阵 -->
-    <div class="card overview-card">
-      <div class="card-header">
-        <div class="card-title"><span class="title-chip ti-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>数据总览</div>
+    <!-- 数据总览：四张 KPI 卡（各占 3 栏） -->
+    <div class="card kpi-card kpi-hero s3 tint-blue">
+      <div class="bento-head">
+        <div class="bento-label-wrap">
+          <span class="bento-icon bi-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+          <span class="bento-label">历史客户</span>
+        </div>
+        <span class="bento-tag">ALL</span>
       </div>
-      <div class="bento-grid">
-        <!-- 主卡：历史客户 + sparkline -->
-        <div class="bento-card bento-main tint-blue">
-          <div class="bento-head">
-            <div class="bento-label-wrap">
-              <span class="bento-icon bi-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
-              <span class="bento-label">历史客户</span>
-            </div>
-            <span class="bento-tag">ALL</span>
-          </div>
-          <div class="bento-value">{{ formatNumber(bigNumbers.history) }}</div>
-          <div class="bento-spark-wrap">
-            <BaseChart :option="sparkOption" height="36px" />
-          </div>
-          <div class="bento-trend-row">
-            <span class="bento-trend-dot"></span>
-            <span class="bento-trend-text">{{ historyTrendText }}</span>
-          </div>
-        </div>
-
-        <!-- 上月客户：对比条 -->
-        <div class="bento-card tint-purple">
-          <div class="bento-head">
-            <div class="bento-label-wrap">
-              <span class="bento-icon bi-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-              <span class="bento-label">上月客户</span>
-            </div>
-          </div>
-          <div class="bento-value">{{ formatNumber(bigNumbers.lastMonth) }}</div>
-          <div class="bento-compare-bar">
-            <div class="bento-compare-fill last" :style="{ width: compareBars.lastMonth + '%' }"></div>
-          </div>
-          <div class="bento-trend-text flat">— 持平</div>
-        </div>
-
-        <!-- 本月客户：对比条 + 趋势 -->
-        <div class="bento-card tint-green">
-          <div class="bento-head">
-            <div class="bento-label-wrap">
-              <span class="bento-icon bi-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
-              <span class="bento-label">本月客户</span>
-            </div>
-          </div>
-          <div class="bento-value">{{ formatNumber(bigNumbers.month) }}</div>
-          <div class="bento-compare-bar">
-            <div class="bento-compare-fill current" :style="{ width: compareBars.month + '%' }"></div>
-          </div>
-          <div class="bento-trend-text" :class="monthTrendDir">{{ monthTrendText }}</div>
-        </div>
-
-        <!-- 重点客户：dot grid -->
-        <div class="bento-card tint-orange">
-          <div class="bento-head">
-            <div class="bento-label-wrap">
-              <span class="bento-icon bi-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
-              <span class="bento-label">重点客户</span>
-            </div>
-          </div>
-          <div class="bento-value">{{ formatNumber(bigNumbers.priority) }}</div>
-          <div class="bento-dot-grid">
-            <span v-for="i in Math.min(bigNumbers.priority, 8)" :key="i" class="bento-dot-cell filled"></span>
-            <span v-for="i in Math.max(0, 8 - Math.min(bigNumbers.priority, 8))" :key="'e' + i" class="bento-dot-cell empty"></span>
-          </div>
-          <div class="bento-trend-text flat">待回访优先</div>
-        </div>
+      <div class="bento-value">{{ formatNumber(bigNumbers.history) }}</div>
+      <div class="bento-spark-wrap">
+        <BaseChart :option="sparkOption" height="36px" />
+      </div>
+      <div class="bento-trend-row">
+        <span class="bento-trend-dot"></span>
+        <span class="bento-trend-text">{{ historyTrendText }}</span>
       </div>
     </div>
 
-    <!-- 客户趋势 + 更新日历 -->
-    <div class="two-col">
-      <!-- 客户趋势（自首页迁入，全系统唯一趋势图） -->
-      <div class="card chart-trend">
+    <div class="card kpi-card s3 tint-purple">
+      <div class="bento-head">
+        <div class="bento-label-wrap">
+          <span class="bento-icon bi-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+          <span class="bento-label">上月客户</span>
+        </div>
+      </div>
+      <div class="bento-value">{{ formatNumber(bigNumbers.lastMonth) }}</div>
+      <div class="bento-compare-bar">
+        <div class="bento-compare-fill last" :style="{ width: compareBars.lastMonth + '%' }"></div>
+      </div>
+      <div class="bento-trend-text flat">— 持平</div>
+    </div>
+
+    <div class="card kpi-card s3 tint-green">
+      <div class="bento-head">
+        <div class="bento-label-wrap">
+          <span class="bento-icon bi-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+          <span class="bento-label">本月客户</span>
+        </div>
+      </div>
+      <div class="bento-value">{{ formatNumber(bigNumbers.month) }}</div>
+      <div class="bento-compare-bar">
+        <div class="bento-compare-fill current" :style="{ width: compareBars.month + '%' }"></div>
+      </div>
+      <div class="bento-trend-text" :class="monthTrendDir">{{ monthTrendText }}</div>
+    </div>
+
+    <div class="card kpi-card s3 tint-orange">
+      <div class="bento-head">
+        <div class="bento-label-wrap">
+          <span class="bento-icon bi-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+          <span class="bento-label">重点客户</span>
+        </div>
+      </div>
+      <div class="bento-value">{{ formatNumber(bigNumbers.priority) }}</div>
+      <div class="bento-dot-grid">
+        <span v-for="i in Math.min(bigNumbers.priority, 8)" :key="i" class="bento-dot-cell filled"></span>
+        <span v-for="i in Math.max(0, 8 - Math.min(bigNumbers.priority, 8))" :key="'e' + i" class="bento-dot-cell empty"></span>
+      </div>
+      <div class="bento-trend-text flat">待回访优先</div>
+    </div>
+
+    <!-- 客户趋势（8 栏）+ 每日新增（4 栏）同行等高 -->
+    <div class="card chart-trend s8 card-trend">
         <div class="card-header">
           <div class="card-title"><span class="title-chip ti-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>客户趋势</div>
           <div class="trend-pills">
@@ -104,7 +95,9 @@
           <div class="legend-item"><div class="legend-dot previous"></div>上期</div>
           <span class="legend-range">{{ trendRangeOptions[trendDays] }}</span>
         </div>
-        <BaseChart :option="trendOption" :height="trendChartHeight" />
+        <div class="trend-chart-wrap">
+          <BaseChart :option="trendOption" height="100%" />
+        </div>
         <div class="summary" v-if="trendSummary">
           <div class="summary-item">
             <div class="summary-range">{{ trendSummary.currentRange }}</div>
@@ -124,8 +117,88 @@
         </div>
       </div>
 
+    <!-- 每日新增流水（4 栏，与趋势图同行等高；名单格式同工作台：日期短码/姓名） -->
+    <div class="card daily-card s4">
+      <div class="card-header">
+        <div class="card-title"><span class="title-chip ti-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>每日新增</div>
+        <div class="trend-pills">
+          <div class="pill" :class="{ active: dailyDays === 7 }" @click="switchDailyDays(7)">7天</div>
+          <div class="pill" :class="{ active: dailyDays === 15 }" @click="switchDailyDays(15)">15天</div>
+          <div class="pill" :class="{ active: dailyDays === 30 }" @click="switchDailyDays(30)">30天</div>
+        </div>
+      </div>
+      <div class="daily-total">近 {{ dailyDays }} 天共新增 <b>{{ dailyTotal }}</b> 人<template v-if="heroTodayAdds > 0"> · 含今日 {{ heroTodayAdds }} 人</template></div>
+      <div v-if="dailyList.length === 0" class="daily-feed-empty">
+        <EmptyState icon="clipboard" text="该时段暂无新增" />
+      </div>
+      <div v-else class="daily-feed">
+        <div class="feed-row" v-for="d in dailyList" :key="d.date_full" :class="{ today: d.date_full === todayStr }">
+          <div class="feed-date">
+            <div class="feed-day">{{ Number(d.date_full.slice(8)) }}</div>
+            <div class="feed-wk">{{ weekdayOf(d.date_full) }}</div>
+          </div>
+          <div class="feed-body">
+            <div class="feed-meta">
+              <span class="feed-count">{{ d.count }} 人</span>
+              <span v-if="d.date_full === todayStr" class="feed-today-tag">今日</span>
+            </div>
+            <div class="chips">
+              <template v-if="expandedDays.has(d.date_full)">
+                <span class="name-chip" v-for="c in d.customers" :key="c.id"><b>{{ leadDateShort(c.lead_date) }}/</b>{{ c.customer_name }}</span>
+              </template>
+              <template v-else>
+                <span class="name-chip" v-for="c in d.customers.slice(0, 8)" :key="c.id"><b>{{ leadDateShort(c.lead_date) }}/</b>{{ c.customer_name }}</span>
+                <span v-if="d.count > 8" class="name-chip more" @click="expandedDays.add(d.date_full)">+{{ d.count - 8 }} 人</span>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      <!-- 更新日历（紧凑格：悬浮显示当天新增人数） -->
+      <div class="card calendar-card s5">
+        <div class="card-header">
+          <div class="card-title"><span class="title-chip ti-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>更新日历</div>
+          <div class="cal-nav">
+            <div class="cal-nav-btn" @click="prevMonth">‹</div>
+            <div class="cal-month-label">{{ calendarYear }}年{{ calendarMonth }}月</div>
+            <div class="cal-nav-btn" :class="{ disabled: isCurrentMonth }" @click="nextMonth">›</div>
+          </div>
+        </div>
+        <div class="cal-grid cal-header">
+          <div class="cal-cell-header" v-for="day in calWeekdays" :key="day">{{ day }}</div>
+        </div>
+        <div class="cal-grid cal-body">
+          <div class="cal-cell" v-for="(item, index) in calendarDays" :key="index">
+            <div v-if="item !== null" class="cal-day">
+              <div class="cal-day-inner" :class="item.status === 'updated' ? 'cal-updated' : item.status === 'missed' ? 'cal-missed' : ''">
+                <span class="cal-day-num">{{ item.day }}</span>
+                <span v-if="item.status === 'updated' && item.count" class="cal-tip">{{ calendarMonth }}/{{ String(item.day).padStart(2, '0') }} 新增 {{ item.count }} 人</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cal-summary" v-if="calendarData">
+          <div class="cal-summary-item">
+            <div class="cal-summary-value cal-text-updated">{{ calendarData.updated_count }}</div>
+            <div class="cal-summary-label"><svg class="cal-label-icon c-updated" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>已更新天数</div>
+          </div>
+          <div class="cal-summary-divider"></div>
+          <div class="cal-summary-item">
+            <div class="cal-summary-value cal-text-missed">{{ calendarData.missed_count }}</div>
+            <div class="cal-summary-label"><svg class="cal-label-icon c-missed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>未更新天数</div>
+          </div>
+          <div class="cal-summary-divider"></div>
+          <div class="cal-summary-item">
+            <div class="cal-summary-value cal-text-rate">{{ calendarData.update_rate }}%</div>
+            <div class="cal-summary-label"><svg class="cal-label-icon c-rate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>更新率</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 本周重点分析（线索→重点转化 + AI 板块归类） -->
-      <div class="card pa-card">
+      <div class="card pa-card s7">
         <div class="card-header">
           <div class="card-title"><span class="title-chip ti-orange"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>本周重点分析</div>
           <div class="pa-range" v-if="paData">{{ paShortRange }}</div>
@@ -158,74 +231,88 @@
         </template>
       </div>
 
-      <!-- 更新日历（自首页迁入） -->
-      <div class="card calendar-card">
-        <div class="card-header">
-          <div class="card-title"><span class="title-chip ti-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>更新日历</div>
-          <div class="cal-nav">
-            <div class="cal-nav-btn" @click="prevMonth">‹</div>
-            <div class="cal-month-label">{{ calendarYear }}年{{ calendarMonth }}月</div>
-            <div class="cal-nav-btn" :class="{ disabled: isCurrentMonth }" @click="nextMonth">›</div>
+    <!-- 成交统计 -->
+    <div class="card deal-stats-card s12">
+      <div class="card-header">
+        <div class="card-title"><span class="title-chip ti-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>成交统计</div>
+      </div>
+
+      <!-- 成交总览 5 格（客户数/单数/车辆/两地牌/综合） -->
+      <div class="deal-grid">
+        <div class="deal-cell">
+          <span class="deal-cell-icon di-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <div class="deal-val">{{ dealStats.customer_count }}</div>
+          <div class="deal-lbl">成交客户数</div>
+        </div>
+        <div class="deal-cell">
+          <span class="deal-cell-icon di-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>
+          <div class="deal-val">{{ dealStats.total_count }}</div>
+          <div class="deal-lbl">成交单数</div>
+        </div>
+        <div class="deal-cell">
+          <span class="deal-cell-icon di-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg></span>
+          <div class="deal-val">{{ dealStats.vehicle_count }}</div>
+          <div class="deal-lbl">车辆</div>
+        </div>
+        <div class="deal-cell">
+          <span class="deal-cell-icon di-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg></span>
+          <div class="deal-val">{{ dealStats.plate_count }}</div>
+          <div class="deal-lbl">两地牌</div>
+        </div>
+        <div class="deal-cell">
+          <span class="deal-cell-icon di-green-soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
+          <div class="deal-val">{{ dealStats.comprehensive_count }}</div>
+          <div class="deal-lbl">综合</div>
+        </div>
+      </div>
+
+      <template v-if="dealStats.total_count">
+        <div class="deal-lower">
+          <!-- 左：月度成交单数 + 口岸分布 -->
+          <div class="deal-col">
+            <div class="deal-section">
+              <div class="deal-sub-title">月度成交单数</div>
+              <BaseChart :option="dealMonthlyOption" :height="dealChartHeight" />
+            </div>
+            <div class="deal-section" v-if="dealStats.plate_count && portRows.length">
+              <div class="deal-sub-title">口岸分布 <span class="ds-cap">占两地牌</span></div>
+              <BaseChart :option="portsOption" height="148px" />
+            </div>
           </div>
-        </div>
-        <div class="cal-grid cal-header">
-          <div class="cal-cell-header" v-for="day in calWeekdays" :key="day">{{ day }}</div>
-        </div>
-        <div class="cal-grid cal-body">
-          <div class="cal-cell" v-for="(item, index) in calendarDays" :key="index">
-            <div v-if="item !== null" class="cal-day">
-              <div class="cal-day-inner" :class="item.status === 'updated' ? 'cal-updated' : item.status === 'missed' ? 'cal-missed' : ''">
-                <span class="cal-day-num">{{ item.day }}</span>
+
+          <!-- 右：成交结构环形（占总成交）+ 牌照类型分段（占两地牌），口径分层展示 -->
+          <div class="deal-col">
+            <div class="deal-section">
+              <div class="deal-sub-title">成交结构</div>
+              <div class="deal-struct">
+                <BaseChart :option="typeDonutOption" height="148px" width="148px" />
+                <div class="ds-legend">
+                  <div class="ds-item"><i class="ds-dot" style="background:#007AFF"></i><span>车辆</span><b>{{ dealStats.vehicle_count }} 单</b><em>{{ pct(dealStats.vehicle_count, dealStats.total_count) }}%</em></div>
+                  <div class="ds-item"><i class="ds-dot" style="background:#AF52DE"></i><span>两地牌</span><b>{{ dealStats.plate_count }} 单</b><em>{{ pct(dealStats.plate_count, dealStats.total_count) }}%</em></div>
+                  <div class="ds-item"><i class="ds-dot" style="background:#34C759"></i><span>综合</span><b>{{ dealStats.comprehensive_count }} 单</b><em>{{ pct(dealStats.comprehensive_count, dealStats.total_count) }}%</em></div>
+                </div>
+              </div>
+            </div>
+            <div class="deal-section" v-if="dealStats.plate_count && kindRows.length">
+              <div class="deal-sub-title">牌照类型 <span class="ds-cap">占两地牌</span></div>
+              <div class="ds-seg">
+                <div v-for="(k, i) in kindRows" :key="k.name" class="ds-seg-item" :class="'seg-' + i" :style="{ width: k.pct + '%' }">{{ k.name }} {{ k.value }} 单</div>
+              </div>
+              <div class="ds-seg-legend">
+                <span v-for="k in kindRows" :key="k.name">{{ k.name }} {{ fmtPct(k.value / (dealStats.plate_count || 1) * 100) }}%</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="cal-summary" v-if="calendarData">
-          <div class="cal-summary-item">
-            <div class="cal-summary-value cal-text-updated">{{ calendarData.updated_count }}</div>
-            <div class="cal-summary-label"><svg class="cal-label-icon c-updated" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>已更新天数</div>
-          </div>
-          <div class="cal-summary-divider"></div>
-          <div class="cal-summary-item">
-            <div class="cal-summary-value cal-text-missed">{{ calendarData.missed_count }}</div>
-            <div class="cal-summary-label"><svg class="cal-label-icon c-missed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>未更新天数</div>
-          </div>
-          <div class="cal-summary-divider"></div>
-          <div class="cal-summary-item">
-            <div class="cal-summary-value cal-text-rate">{{ calendarData.update_rate }}%</div>
-            <div class="cal-summary-label"><svg class="cal-label-icon c-rate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>更新率</div>
-          </div>
-        </div>
+      </template>
+
+      <div v-else>
+        <EmptyState icon="banknote" text="暂无成交记录" desc="在客户编辑面板记录成交后，这里展示统计" />
       </div>
     </div>
 
-    <!-- 每日新增（每天加了多少人 + 名单，格式同工作台：日期短码/姓名） -->
-    <div class="card daily-card">
-      <div class="card-header">
-        <div class="card-title"><span class="title-chip ti-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>每日新增</div>
-        <div class="trend-pills">
-          <div class="pill" :class="{ active: dailyDays === 7 }" @click="switchDailyDays(7)">7天</div>
-          <div class="pill" :class="{ active: dailyDays === 15 }" @click="switchDailyDays(15)">15天</div>
-          <div class="pill" :class="{ active: dailyDays === 30 }" @click="switchDailyDays(30)">30天</div>
-        </div>
-      </div>
-      <div class="daily-total">近 {{ dailyDays }} 天共新增 <b>{{ dailyTotal }}</b> 人</div>
-      <div v-if="dailyList.length === 0">
-        <EmptyState icon="clipboard" text="该时段暂无新增" />
-      </div>
-      <div v-else class="daily-list">
-        <div class="daily-row" v-for="d in dailyList" :key="d.date_full">
-          <div class="daily-day">
-            <span class="daily-date">{{ d.date }}</span>
-            <span class="daily-count">{{ d.count }} 人</span>
-          </div>
-          <div class="daily-names">{{ d.customers.map(dailyName).join('、') }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 成交 / 到店明细（吸收原重点页月度面板，可切月；点行打开编辑面板） -->
-    <div class="card detail-card">
+    <!-- 成交 / 到店明细（月份切换；点行打开编辑面板） -->
+    <div class="card detail-card s12">
       <div class="card-header">
         <div class="dt-tabs">
           <div class="dt-tab" :class="{ active: detailTab === 'deal' }" @click="detailTab = 'deal'">成交明细</div>
@@ -269,82 +356,7 @@
         </div>
       </template>
     </div>
-
-    <!-- 成交统计 -->
-    <div class="card deal-stats-card">
-      <div class="card-header">
-        <div class="card-title"><span class="title-chip ti-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>成交统计</div>
-      </div>
-
-      <!-- 成交总览 5 格（客户数/单数/车辆/两地牌/综合） -->
-      <div class="deal-grid">
-        <div class="deal-cell">
-          <span class="deal-cell-icon di-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
-          <div class="deal-val">{{ dealStats.customer_count }}</div>
-          <div class="deal-lbl">成交客户数</div>
-        </div>
-        <div class="deal-cell">
-          <span class="deal-cell-icon di-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>
-          <div class="deal-val">{{ dealStats.total_count }}</div>
-          <div class="deal-lbl">成交单数</div>
-        </div>
-        <div class="deal-cell">
-          <span class="deal-cell-icon di-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg></span>
-          <div class="deal-val">{{ dealStats.vehicle_count }}</div>
-          <div class="deal-lbl">车辆</div>
-        </div>
-        <div class="deal-cell">
-          <span class="deal-cell-icon di-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg></span>
-          <div class="deal-val">{{ dealStats.plate_count }}</div>
-          <div class="deal-lbl">两地牌</div>
-        </div>
-        <div class="deal-cell">
-          <span class="deal-cell-icon di-green-soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
-          <div class="deal-val">{{ dealStats.comprehensive_count }}</div>
-          <div class="deal-lbl">综合</div>
-        </div>
-      </div>
-
-      <template v-if="dealStats.total_count">
-        <!-- 月度成交单数（ECharts 柱状图） -->
-        <div class="deal-section">
-          <div class="deal-sub-title">月度成交单数</div>
-          <BaseChart :option="dealMonthlyOption" :height="dealChartHeight" />
-        </div>
-
-        <!-- 成交结构：环形图（占总成交）+ 口岸条形/牌照分段（占两地牌），口径分层展示 -->
-        <div class="deal-section">
-          <div class="deal-sub-title">成交结构</div>
-          <div class="ds-layout">
-            <div class="ds-donut">
-              <BaseChart :option="typeDonutOption" height="198px" />
-              <div class="ds-legend">
-                <div class="ds-item"><i class="ds-dot" style="background:#007AFF"></i><span>车辆</span><b>{{ dealStats.vehicle_count }} 单</b><em>{{ pct(dealStats.vehicle_count, dealStats.total_count) }}%</em></div>
-                <div class="ds-item"><i class="ds-dot" style="background:#AF52DE"></i><span>两地牌</span><b>{{ dealStats.plate_count }} 单</b><em>{{ pct(dealStats.plate_count, dealStats.total_count) }}%</em></div>
-                <div class="ds-item"><i class="ds-dot" style="background:#34C759"></i><span>综合</span><b>{{ dealStats.comprehensive_count }} 单</b><em>{{ pct(dealStats.comprehensive_count, dealStats.total_count) }}%</em></div>
-              </div>
-            </div>
-            <div class="ds-bars" v-if="dealStats.plate_count">
-              <div class="ds-mini-title">口岸分布 <span class="ds-cap">占两地牌</span></div>
-              <BaseChart v-if="portRows.length" :option="portsOption" height="148px" />
-              <template v-if="kindRows.length">
-                <div class="ds-mini-title">牌照类型 <span class="ds-cap">占两地牌</span></div>
-                <div class="ds-seg">
-                  <div v-for="(k, i) in kindRows" :key="k.name" class="ds-seg-item" :class="'seg-' + i" :style="{ width: k.pct + '%' }">{{ k.name }} {{ k.value }} 单</div>
-                </div>
-                <div class="ds-seg-legend">
-                  <span v-for="k in kindRows" :key="k.name">{{ k.name }} {{ fmtPct(k.value / (dealStats.plate_count || 1) * 100) }}%</span>
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <div v-else>
-        <EmptyState icon="banknote" text="暂无成交记录" desc="在客户编辑面板记录成交后，这里展示统计" />
-      </div>
-    </div>
+    </div><!-- /stats-grid -->
 
     <!-- 客户编辑面板 -->
     <CustomerDetailPanel
@@ -428,7 +440,6 @@ const trendRangeOptions = computed(() => {
   return out
 })
 
-const trendChartHeight = computed(() => (isPC.value ? '170px' : '120px'))
 const dealChartHeight = computed(() => (isPC.value ? '150px' : '120px'))
 
 // 三张图共用的悬浮提示样式：PC 悬停 / 移动端点按都会显示数值（随夜间模式换肤）
@@ -904,11 +915,24 @@ const dailyDays = ref(7)
 const dailyList = ref([]) // [{ date, date_full, count, customers }]
 const dailyTotal = ref(0)
 
-// 名单与工作台/重点分析同款格式：日期短码/姓名（如 0610/王生）
-function dailyName(c) {
-  const lead = c.lead_date ? leadDateShort(c.lead_date) : ''
-  return lead ? `${lead}/${c.customer_name}` : (c.customer_name || '')
+// 今日（YYYY-MM-DD，本地时区）：流水「今日」标记 / Hero 日期章共用
+const todayStr = computed(() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+})
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
+function weekdayOf(dateFull) {
+  const d = new Date(dateFull + 'T00:00:00')
+  return Number.isNaN(d.getTime()) ? '' : `周${WEEKDAYS[d.getDay()]}`
 }
+const heroDateShort = computed(() => todayStr.value.slice(5).replace('-', '/'))
+const heroWeekdayText = computed(() => weekdayOf(todayStr.value))
+const heroTodayAdds = computed(() => {
+  const t = dailyList.value.find((x) => x.date_full === todayStr.value)
+  return t ? t.count : 0
+})
+// 单日超过 8 人默认折叠，点「+N 人」展开
+const expandedDays = ref(new Set())
 
 async function loadDailyAdditions() {
   try {
@@ -1044,7 +1068,40 @@ onUnmounted(() => {
   background: var(--bloom-canvas);
 }
 
-.stats-hero { position: relative; padding: 24px 24px 20px; margin-bottom: 16px; border-radius: 20px; overflow: hidden; border: 1px solid var(--bloom-rule); }
+/* ── 12 栏显式网格：每张卡声明栏位，杜绝自动流空洞 ── */
+.stats-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 13px; }
+.s3 { grid-column: span 3; } .s4 { grid-column: span 4; }
+.s5 { grid-column: span 5; } .s7 { grid-column: span 7; }
+.s8 { grid-column: span 8; } .s12 { grid-column: span 12; }
+
+/* 趋势 + 每日新增同行等高：PC 固定行高，趋势图吃满剩余空间，流水内部滚动 */
+.card-trend { display: flex; flex-direction: column; }
+.trend-chart-wrap { flex: 1; min-height: 150px; }
+.daily-card { display: flex; flex-direction: column; }
+.daily-feed { flex: 1; min-height: 0; overflow-y: auto; }
+
+@media (max-width: 1279px) {
+  .stats-grid .s8 { grid-column: span 12; }
+  .stats-grid .s4 { grid-column: span 6; }
+  .stats-grid .s5 { grid-column: span 6; }
+  .stats-grid .s7 { grid-column: span 12; }
+  .stats-grid .s3 { grid-column: span 6; }
+}
+@media (max-width: 1023px) {
+  .stats-grid > * { grid-column: 1 / -1; }
+  .stats-grid .kpi-card { grid-column: span 6; }
+  .stats-grid .kpi-hero { grid-column: 1 / -1; }
+  .daily-feed { max-height: 420px; }
+  .deal-lower { grid-template-columns: 1fr; }
+}
+@media (min-width: 1280px) {
+  .card-trend, .daily-card { height: 600px; }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .daily-card { height: 540px; }
+}
+
+.stats-hero { position: relative; padding: 20px 24px 18px; border-radius: 20px; overflow: hidden; border: 1px solid var(--bloom-rule); }
 .stats-hero-row { position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .stats-hero-eyebrow {
   font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -1058,15 +1115,11 @@ onUnmounted(() => {
   text-wrap: balance;
 }
 .stats-hero-sub { margin-top: 8px; font-size: 12.5px; color: var(--bloom-ink-2); }
-/* 替代原来的右侧四色装饰点 */
-.stats-hero-row::after {
-  content: '';
-  flex-shrink: 0;
-  width: 8px; height: 8px; border-radius: 999px;
-  background: var(--bloom-coral);
-  margin-top: 8px;
-  align-self: flex-start;
-}
+/* 右侧日期章：MM/DD 大字 + 周几/今日新增 */
+.stats-hero-row { align-items: center; }
+.stats-hero-date { flex-shrink: 0; text-align: right; font-family: "Noto Serif SC", Georgia, serif; }
+.stats-hero-date .shd-day { font-size: 34px; font-weight: 900; line-height: 1; color: var(--bloom-ink); letter-spacing: -0.01em; }
+.stats-hero-date .shd-meta { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--bloom-ink-3); margin-top: 6px; text-transform: uppercase; }
 @media (min-width: 1024px) { .stats-hero-h1 { font-size: 30px; } }
 
 .card {
@@ -1077,7 +1130,6 @@ onUnmounted(() => {
   border-radius: 16px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  margin-bottom: 13px;
 }
 .card-header {
   display: flex;
@@ -1124,17 +1176,11 @@ onUnmounted(() => {
 .pa-names.empty { color: var(--text-tertiary); }
 .title-chip.ti-orange { background: var(--orange-light); color: var(--warning); }
 
-/* ── Bento 总览 ── */
-.bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.bento-card {
-  background: var(--surface);
-  border: 1px solid var(--border-glass);
-  border-radius: 14px;
-  padding: 14px;
+/* ── KPI 卡（原 Bento 矩阵拆为独立卡片，等高拉伸） ── */
+.kpi-card {
   display: flex;
   flex-direction: column;
 }
-.bento-main { grid-column: 1 / -1; }
 /* 每张指标卡一个专属色的角落光晕，低透明度不抢数据 */
 .tint-blue { background: radial-gradient(110px 90px at top right, var(--bloom-coral-soft), transparent 70%), var(--bloom-surface); }
 .tint-purple { background: radial-gradient(110px 90px at top right, var(--bloom-lavender-soft), transparent 70%), var(--bloom-surface); }
@@ -1163,8 +1209,7 @@ onUnmounted(() => {
   color: var(--primary); background: var(--primary-light);
   padding: 2px 7px; border-radius: 99px;
 }
-.bento-value { font-size: 32px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; line-height: 1.1; }
-.bento-main .bento-value { font-size: 38px; }
+.bento-value { font-family: "Noto Serif SC", Georgia, serif; font-size: 32px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; line-height: 1.1; }
 .bento-spark-wrap { margin-top: 8px; height: 36px; }
 .bento-trend-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .bento-trend-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bloom-mint); }
@@ -1218,11 +1263,23 @@ onUnmounted(() => {
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal-cell-header { text-align: center; font-size: 10px; color: var(--text-tertiary); font-weight: 700; padding-bottom: 4px; }
 .cal-day-inner {
+  position: relative;
   aspect-ratio: 1; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 600; color: var(--text-secondary);
   background: var(--bg-primary);
 }
+/* 悬浮提示：绿格显示当天新增人数（数据来自 /calendar 的 count 字段） */
+.cal-tip {
+  position: absolute; bottom: calc(100% + 7px); left: 50%;
+  transform: translateX(-50%) translateY(3px);
+  background: var(--text-primary); color: var(--bg-primary);
+  font-size: 10.5px; font-weight: 600;
+  padding: 4px 9px; border-radius: 7px; white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity .15s, transform .15s; z-index: 5;
+}
+.cal-updated:hover .cal-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
 .cal-updated { background: var(--bloom-mint); color: var(--bloom-ink-on-accent); font-weight: 800; box-shadow: 0 2px 8px rgba(43, 176, 127, 0.35); }
 .cal-missed  { background: var(--bloom-coral); color: var(--bloom-ink-on-accent); font-weight: 800; box-shadow: 0 2px 8px rgba(255, 107, 71, 0.3); }
 .cal-summary {
@@ -1242,18 +1299,35 @@ onUnmounted(() => {
 .cal-label-icon.c-rate { color: var(--primary); }
 .cal-summary-divider { width: 1px; height: 26px; background: var(--border-glass); }
 
-/* ── 每日新增 ── */
-.daily-total { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
-.daily-total b { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 2px; }
-.daily-row { padding: 10px 2px; border-bottom: 1px solid var(--border-glass); }
-.daily-row:last-child { border-bottom: none; }
-.daily-day { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.daily-date { font-size: 12.5px; font-weight: 800; color: var(--text-primary); }
-.daily-count {
-  font-size: 10.5px; font-weight: 800; color: var(--primary);
-  background: var(--primary-light); padding: 1px 8px; border-radius: 99px;
+/* ── 每日新增流水 ── */
+.daily-total { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; }
+.daily-total b { font-family: "Noto Serif SC", Georgia, serif; font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0 2px; }
+.daily-feed { margin: 0 -6px; padding: 0 6px; scrollbar-width: thin; }
+.daily-feed::-webkit-scrollbar { width: 4px; }
+.daily-feed::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 99px; }
+.daily-feed-empty { padding: 12px 0; }
+.feed-row { display: flex; gap: 12px; padding: 11px 2px; border-bottom: 1px dashed var(--border-glass); }
+.feed-row:last-child { border-bottom: none; }
+.feed-date { width: 44px; flex-shrink: 0; text-align: center; padding-top: 2px; }
+.feed-day { font-family: "Noto Serif SC", Georgia, serif; font-size: 21px; font-weight: 700; line-height: 1; color: var(--text-primary); }
+.feed-row.today .feed-day { color: var(--bloom-coral); }
+.feed-wk { font-size: 9.5px; color: var(--text-tertiary); margin-top: 3px; font-weight: 600; }
+.feed-body { flex: 1; min-width: 0; }
+.feed-meta { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.feed-count { font-size: 10.5px; font-weight: 800; color: var(--primary); background: var(--primary-light); padding: 1.5px 8px; border-radius: 99px; }
+.feed-row.today .feed-count { color: var(--bloom-coral-ink); background: var(--bloom-coral-soft); }
+.feed-today-tag { font-size: 9.5px; font-weight: 800; color: var(--bloom-coral); border: 1px solid var(--bloom-coral); border-radius: 99px; padding: 1px 7px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.name-chip {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  background: var(--bg-primary); border: 1px solid var(--border-glass);
+  padding: 2.5px 9px; border-radius: 99px; white-space: nowrap;
+  cursor: default; transition: color .15s, border-color .15s, background .15s;
 }
-.daily-names { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.name-chip b { font-weight: 800; color: var(--text-tertiary); margin-right: 1px; }
+.name-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.name-chip:hover b { color: inherit; }
+.name-chip.more { color: var(--text-tertiary); cursor: pointer; border-style: dashed; }
 
 /* ── 成交统计 ── */
 .deal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -1284,17 +1358,16 @@ onUnmounted(() => {
   content: ''; width: 3px; height: 12px; border-radius: 2px;
   background: linear-gradient(180deg, #5AC8FA, #007AFF);
 }
-/* ── 成交结构 ── */
-.ds-layout { display: flex; flex-direction: column; gap: 8px; }
-.ds-donut { display: flex; flex-direction: column; align-items: center; }
-.ds-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; width: 100%; max-width: 250px; }
+/* ── 成交结构：左（月度+口岸）右（环形+牌照）分栏 ── */
+.deal-lower { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 20px; }
+.deal-col { min-width: 0; }
+.deal-struct { display: flex; align-items: center; gap: 16px; }
+.ds-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
 .ds-item { display: flex; align-items: center; gap: 7px; background: var(--bg-primary); border-radius: 9px; padding: 7px 11px; font-size: 12px; }
 .ds-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
 .ds-item span { color: var(--text-secondary); font-weight: 600; }
 .ds-item b { margin-left: auto; font-size: 12.5px; color: var(--text-primary); }
 .ds-item em { font-style: normal; color: var(--text-tertiary); font-size: 11px; width: 38px; text-align: right; }
-.ds-bars { min-width: 0; display: flex; flex-direction: column; }
-.ds-mini-title { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--text-primary); margin: 2px 0 2px; }
 .ds-cap { font-size: 10px; font-weight: 600; color: var(--text-tertiary); background: var(--bg-primary); border-radius: 99px; padding: 2px 8px; }
 .ds-seg { display: flex; height: 30px; border-radius: 9px; overflow: hidden; margin-top: 10px; }
 .ds-seg-item { display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; }
@@ -1356,14 +1429,9 @@ onUnmounted(() => {
   .stats-page { padding: 24px 28px 40px; }
   .st-title { font-size: 26px; }
   .card { padding: 20px 22px; border-radius: 18px; }
-  .two-col { display: grid; grid-template-columns: 1.55fr 1fr; gap: 13px; margin-bottom: 0; }
-  .two-col .card { margin-bottom: 13px; }
-  .bento-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .bento-main { grid-column: auto; }
+  .cal-day-inner { aspect-ratio: auto; height: 46px; font-size: 12.5px; }
   .deal-grid { gap: 10px; grid-template-columns: repeat(5, 1fr); }
   .deal-cell { padding: 14px 10px; }
-  .ds-layout { flex-direction: row; gap: 18px; align-items: stretch; }
-  .ds-donut { width: 218px; flex-shrink: 0; }
   .dt-row:hover { background: var(--bg-hover); border-radius: 8px; }
   .pill:hover, .dt-tab:hover { opacity: 0.72; }
   .cal-nav-btn:hover, .dt-month-btn:not(.disabled):hover { background: var(--bg-hover); }
