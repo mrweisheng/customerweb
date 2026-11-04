@@ -264,6 +264,11 @@
           <div class="deal-val">{{ dealStats.comprehensive_count }}</div>
           <div class="deal-lbl">综合</div>
         </div>
+        <div class="deal-cell">
+          <span class="deal-cell-icon di-sun-soft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+          <div class="deal-val">{{ dealStats.hk_migration_count }}</div>
+          <div class="deal-lbl">香港移民</div>
+        </div>
       </div>
 
       <template v-if="dealStats.total_count">
@@ -290,6 +295,7 @@
                   <div class="ds-item"><i class="ds-dot" style="background:#007AFF"></i><span>车辆</span><b>{{ dealStats.vehicle_count }} 单</b><em>{{ pct(dealStats.vehicle_count, dealStats.total_count) }}%</em></div>
                   <div class="ds-item"><i class="ds-dot" style="background:#AF52DE"></i><span>两地牌</span><b>{{ dealStats.plate_count }} 单</b><em>{{ pct(dealStats.plate_count, dealStats.total_count) }}%</em></div>
                   <div class="ds-item"><i class="ds-dot" style="background:#34C759"></i><span>综合</span><b>{{ dealStats.comprehensive_count }} 单</b><em>{{ pct(dealStats.comprehensive_count, dealStats.total_count) }}%</em></div>
+                  <div class="ds-item"><i class="ds-dot" style="background:#FF9500"></i><span>香港移民</span><b>{{ dealStats.hk_migration_count }} 单</b><em>{{ pct(dealStats.hk_migration_count, dealStats.total_count) }}%</em></div>
                 </div>
               </div>
             </div>
@@ -334,7 +340,7 @@
           <div class="dt-row" v-for="d in monthDeals" :key="d.id" @click="onDealRowTap(d)">
             <span class="dt-date">{{ d.deal_time?.slice(5) || '—' }}</span>
             <span class="dt-name"><span class="lead" v-if="d.lead_date_short">{{ d.lead_date_short }}/</span>{{ d.customer_name || '—' }}</span>
-            <span class="dt-tag" :class="d.deal_type"><svg class="dt-tag-icon" v-if="d.deal_type === 'vehicle'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg><svg class="dt-tag-icon" v-else-if="d.deal_type === 'plate'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg><svg class="dt-tag-icon" v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>{{ d.deal_type === 'vehicle' ? '车辆' : d.deal_type === 'plate' ? '两地牌' : '综合' }}</span>
+            <span class="dt-tag" :class="d.deal_type"><svg class="dt-tag-icon" v-if="d.deal_type === 'vehicle'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9-1.8-.5-4.5-1.1-4.5-1.1s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 12.4 1 13.2 1 14v2c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></svg><svg class="dt-tag-icon" v-else-if="d.deal_type === 'plate'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="10" y2="10"/><line x1="6" y1="14" x2="9" y2="14"/><line x1="14" y1="14" x2="18" y2="14"/></svg><svg class="dt-tag-icon" v-else-if="d.deal_type === 'comprehensive'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg><svg class="dt-tag-icon" v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>{{ d.deal_type === 'vehicle' ? '车辆' : d.deal_type === 'plate' ? '两地牌' : d.deal_type === 'comprehensive' ? '综合' : '香港移民' }}</span>
             <span class="dt-desc">{{ dealDesc(d) }}</span>
             <span class="dt-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
           </div>
@@ -638,6 +644,7 @@ const typeDonutOption = computed(() => ({
       { name: '车辆', value: dealStats.value.vehicle_count || 0, itemStyle: { color: '#007AFF' } },
       { name: '两地牌', value: dealStats.value.plate_count || 0, itemStyle: { color: '#AF52DE' } },
       { name: '综合', value: dealStats.value.comprehensive_count || 0, itemStyle: { color: '#34C759' } },
+      { name: '香港移民', value: dealStats.value.hk_migration_count || 0, itemStyle: { color: '#FF9500' } },
     ],
   }],
 }))
@@ -705,19 +712,21 @@ const isCurrentMonth = computed(() =>
 
 // ── 成交统计 ────────────────────────────────────────────
 const dealStats = ref({
-  total_count: 0, customer_count: 0, vehicle_count: 0, plate_count: 0, comprehensive_count: 0, month_count: 0,
+  total_count: 0, customer_count: 0, vehicle_count: 0, plate_count: 0, comprehensive_count: 0, hk_migration_count: 0, month_count: 0,
   monthly: { months: [], counts: [] }, by_port: {}, by_plate_kind: {}, recent: [],
 })
 function pct(part, total) { return total > 0 ? Math.round((part / total) * 100) : 0 }
 function dealDesc(d) {
   if (d.deal_type === 'vehicle') return d.vehicle_desc || d.vin || '车辆'
   if (d.deal_type === 'comprehensive') return d.vehicle_desc || '综合业务'
+  if (d.deal_type === 'hk_migration') return d.vehicle_desc || '香港移民服务'
   return [d.port, d.plate_kind, d.plate_number].filter(Boolean).join(' · ')
 }
 function visitDesc(v) {
   if (v.is_deal) {
     if (v.deal_type === 'vehicle') return v.vehicle_desc ? `成交 · ${v.vehicle_desc}` : '成交 · 车辆'
     if (v.deal_type === 'comprehensive') return v.vehicle_desc ? `成交 · ${v.vehicle_desc}` : '成交 · 综合业务'
+    if (v.deal_type === 'hk_migration') return v.vehicle_desc ? `成交 · ${v.vehicle_desc}` : '成交 · 香港移民'
     const p = [v.port, v.plate_kind].filter(Boolean).join(' ')
     return `成交 · ${p || '两地牌'}`
   }
@@ -1345,6 +1354,7 @@ onUnmounted(() => {
 .deal-cell-icon.di-blue   { background: var(--bloom-coral-soft);    color: var(--bloom-coral-ink); }
 .deal-cell-icon.di-green  { background: var(--bloom-mint-soft);     color: var(--bloom-mint-ink); }
 .deal-cell-icon.di-green-soft { background: color-mix(in srgb, var(--bloom-mint) 22%, transparent); color: var(--bloom-mint-ink); }
+.deal-cell-icon.di-sun-soft { background: color-mix(in srgb, var(--bloom-sun) 22%, transparent); color: var(--bloom-sun-ink); }
 .deal-cell-icon.di-purple { background: var(--bloom-lavender-soft); color: var(--bloom-lavender-ink); }
 .deal-cell-icon.di-orange { background: var(--bloom-sun-soft);      color: var(--bloom-sun-ink); }
 .deal-val { font-size: 20px; font-weight: 700; color: var(--text-primary); }
@@ -1415,6 +1425,7 @@ onUnmounted(() => {
 .dt-tag.vehicle { background: var(--blue-light); color: var(--primary); }
 .dt-tag.plate { background: var(--purple-light); color: var(--purple); }
 .dt-tag.comprehensive { background: rgba(52, 199, 89, 0.12); color: var(--success); }
+.dt-tag.hk_migration { background: rgba(255, 149, 0, 0.12); color: var(--warning); }
 .dt-tag.ok { background: rgba(52, 199, 89, 0.12); color: var(--success); }
 .dt-tag.no { background: var(--orange-light); color: var(--warning); }
 .dt-desc { flex: 1; min-width: 0; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
