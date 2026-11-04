@@ -236,6 +236,11 @@
               </div>
             </template>
 
+            <div class="df-field">
+              <label>服务群名称</label>
+              <input class="df-input" v-model.trim="dealServiceGroup" placeholder="该笔成交对应的服务群，选填" maxlength="50" />
+            </div>
+
             <div class="df-btns">
               <button class="btn-plain" @click="showDealForm = false">取消</button>
               <button class="btn-primary" :disabled="loading" @click="submitDeal">{{ loading ? '保存中…' : '保存' }}</button>
@@ -308,6 +313,7 @@
                   <template v-else>
                     <div class="deal-main">{{ d.vehicle_desc || '香港移民服务' }}</div>
                   </template>
+                  <div class="deal-sub" v-if="d.service_group">服务群 {{ d.service_group }}</div>
                   <div class="deal-meta">
                     <span v-if="d.deal_time"><svg class="ic meta-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> {{ d.deal_time }}</span>
                     <span class="deal-amount" v-if="d.amount !== null && d.amount !== undefined">¥{{ formatAmount(d.amount) }}</span>
@@ -404,6 +410,7 @@ const formVehicle = reactive({ vin: '', vehicle_desc: '', amount: '', deal_time:
 const formPlate = reactive({ port: '', plate_kind: '期牌', plate_number: '', amount: '', deal_time: today(), remark: '' })
 const formComprehensive = reactive({ vehicle_desc: '', deal_time: today() })
 const formHkMigration = reactive({ vehicle_desc: '', amount: '', deal_time: today() })
+const dealServiceGroup = ref('')   // 服务群名称：各类型成交通用，选填
 
 const confirm = reactive({
   show: false, title: '', desc: '', danger: false, confirmText: '确认', action: () => {},
@@ -842,6 +849,7 @@ function resetForm() {
   Object.assign(formPlate, { port: '', plate_kind: '期牌', plate_number: '', amount: '', deal_time: today(), remark: '' })
   Object.assign(formComprehensive, { vehicle_desc: '', deal_time: today() })
   Object.assign(formHkMigration, { vehicle_desc: '', amount: '', deal_time: today() })
+  dealServiceGroup.value = ''
 }
 
 function openDealForm(deal) {
@@ -849,6 +857,7 @@ function openDealForm(deal) {
   if (deal) {
     editingDeal.value = deal
     activeTab.value = deal.deal_type      // 编辑：切到该条对应 Tab
+    dealServiceGroup.value = deal.service_group || ''
     if (deal.deal_type === 'vehicle') {
       Object.assign(formVehicle, {
         vin: deal.vin || '', vehicle_desc: deal.vehicle_desc || '', amount: deal.amount ?? '',
@@ -894,7 +903,7 @@ async function submitDeal() {
     if (editingDeal.value) {
       // 编辑：单条，按原类型提交
       const d = editingDeal.value
-      const payload = { deal_type: d.deal_type }
+      const payload = { deal_type: d.deal_type, service_group: dealServiceGroup.value.trim() || null }
       if (d.deal_type === 'vehicle') {
         if (!formVehicle.vin.trim() && !formVehicle.vehicle_desc.trim()) return showToast('请填写车架号或车辆描述')
         Object.assign(payload, {
@@ -955,6 +964,9 @@ async function submitDeal() {
         })
       }
       if (!items.length) return showToast('请至少填写一项成交内容')
+      // 服务群名称为本次表单公共字段：同时录入多条成交时每条都写入
+      const serviceGroup = dealServiceGroup.value.trim() || null
+      items.forEach((it) => { it.service_group = serviceGroup })
       for (const it of items) await api.post(`/customers/${cid}/deals`, it)
       showToast(`已记录 ${items.length} 条成交，已自动移出重点列表`)
     }
